@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Volume2, Sparkles, Loader2, AlignLeft } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Volume2, Volume1, VolumeX, Sparkles, Loader2, AlignLeft } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { GoogleGenAI } from '@google/genai';
@@ -15,6 +15,12 @@ export function MiniPlayer() {
   
   const [lyricsExplanation, setLyricsExplanation] = useState<string | null>(null);
   const [isExplaining, setIsExplaining] = useState(false);
+
+  // Volume states
+  const [isHoveringVolume, setIsHoveringVolume] = useState(false);
+  const [isDraggingVolume, setIsDraggingVolume] = useState(false);
+  const [previousVolume, setPreviousVolume] = useState(1);
+  const volumeBarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Reset explanation and lyrics view when track changes
@@ -44,6 +50,48 @@ export function MiniPlayer() {
       audioRef.current.volume = volume;
     }
   }, [volume]);
+
+  const handleVolumeChange = (e: MouseEvent | React.MouseEvent) => {
+    if (volumeBarRef.current) {
+      const bounds = volumeBarRef.current.getBoundingClientRect();
+      const percent = (e.clientX - bounds.left) / bounds.width;
+      const newVolume = Math.max(0, Math.min(1, percent));
+      useStore.getState().setVolume(newVolume);
+      if (newVolume > 0) {
+        setPreviousVolume(newVolume);
+      }
+    }
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isDraggingVolume) {
+        handleVolumeChange(e);
+      }
+    };
+    const handleMouseUp = () => {
+      setIsDraggingVolume(false);
+    };
+
+    if (isDraggingVolume) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDraggingVolume]);
+
+  const toggleMute = () => {
+    if (volume > 0) {
+      setPreviousVolume(volume);
+      useStore.getState().setVolume(0);
+    } else {
+      useStore.getState().setVolume(previousVolume > 0 ? previousVolume : 1);
+    }
+  };
 
   const handleTimeUpdate = () => {
     if (audioRef.current) {
@@ -290,17 +338,55 @@ export function MiniPlayer() {
             </div>
 
             {/* Volume */}
-            <div className="flex items-center gap-3 w-full max-w-[200px] text-text-mid">
-              <Volume2 size={16} />
+            <div 
+              className="flex items-center gap-3 w-full max-w-[200px] text-text-mid group/volume"
+              onMouseEnter={() => setIsHoveringVolume(true)}
+              onMouseLeave={() => setIsHoveringVolume(false)}
+            >
+              <button 
+                onClick={toggleMute}
+                className="hover:text-text-high transition-colors"
+              >
+                {volume === 0 ? <VolumeX size={16} /> : volume < 0.5 ? <Volume1 size={16} /> : <Volume2 size={16} />}
+              </button>
+              
               <div 
-                className="h-1 flex-1 bg-border rounded-full relative cursor-pointer"
-                onClick={(e) => {
-                  const bounds = e.currentTarget.getBoundingClientRect();
-                  const percent = (e.clientX - bounds.left) / bounds.width;
-                  useStore.getState().setVolume(Math.max(0, Math.min(1, percent)));
+                className="h-1.5 flex-1 bg-border rounded-full relative cursor-pointer flex items-center"
+                ref={volumeBarRef}
+                onMouseDown={(e) => {
+                  setIsDraggingVolume(true);
+                  handleVolumeChange(e);
                 }}
               >
-                <div className="absolute top-0 left-0 h-full bg-text-high rounded-full" style={{ width: `${volume * 100}%` }} />
+                <div 
+                  className={cn(
+                    "absolute top-0 left-0 h-full rounded-full transition-colors",
+                    isHoveringVolume || isDraggingVolume ? "bg-primary" : "bg-text-high"
+                  )} 
+                  style={{ width: `${volume * 100}%` }} 
+                />
+                <div 
+                  className={cn(
+                    "absolute w-3 h-3 bg-text-high rounded-full shadow-[0_0_10px_var(--primary)] transition-opacity",
+                    isHoveringVolume || isDraggingVolume ? "opacity-100" : "opacity-0"
+                  )}
+                  style={{ left: `calc(${volume * 100}% - 6px)` }}
+                />
+                
+                {/* Volume Popup */}
+                <AnimatePresence>
+                  {(isHoveringVolume || isDraggingVolume) && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.8 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.8 }}
+                      className="absolute -top-8 bg-surface border border-border text-text-high text-[10px] font-mono px-2 py-1 rounded shadow-lg pointer-events-none"
+                      style={{ left: `calc(${volume * 100}% - 16px)` }}
+                    >
+                      {Math.round(volume * 100)}%
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
           </div>
