@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Volume2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Volume2, Sparkles, Loader2 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
+import { GoogleGenAI } from '@google/genai';
 
 export function MiniPlayer() {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -10,11 +11,26 @@ export function MiniPlayer() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState('0:00');
+  
+  const [lyricsExplanation, setLyricsExplanation] = useState<string | null>(null);
+  const [isExplaining, setIsExplaining] = useState(false);
+
+  useEffect(() => {
+    // Reset explanation when track changes
+    setLyricsExplanation(null);
+  }, [currentTrack?.id]);
 
   useEffect(() => {
     if (audioRef.current) {
       if (isPlaying) {
-        audioRef.current.play().catch(e => console.error("Error playing audio:", e));
+        const playPromise = audioRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(e => {
+            if (e.name !== 'AbortError') {
+              console.error("Error playing audio:", e);
+            }
+          });
+        }
       } else {
         audioRef.current.pause();
       }
@@ -46,6 +62,36 @@ export function MiniPlayer() {
       const bounds = e.currentTarget.getBoundingClientRect();
       const percent = (e.clientX - bounds.left) / bounds.width;
       audioRef.current.currentTime = percent * audioRef.current.duration;
+    }
+  };
+
+  const handleExplainLyrics = async () => {
+    if (!currentTrack?.lyrics) return;
+    
+    setIsExplaining(true);
+    try {
+      // @ts-ignore
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      
+      const prompt = `Você é um crítico musical e poeta místico. Analise a seguinte letra da música "${currentTrack.title}" do artista "${currentTrack.artist}":
+      
+      "${currentTrack.lyrics}"
+      
+      Decifre os versos, explique os sentimentos transmitidos pela música e relacione trechos específicos com emoções e conceitos profundos (ex: "esta música transmite o sentimento X por causa do verso Y que diz Z, relacionando-se a W"). Mantenha um tom acadêmico, poético e levemente gótico/melancólico. Seja conciso (máximo de 2 parágrafos).`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt
+      });
+
+      if (response.text) {
+        setLyricsExplanation(response.text);
+      }
+    } catch (err) {
+      console.error("Erro ao gerar explicação da letra:", err);
+      setLyricsExplanation("As vozes do passado estão inaudíveis no momento. Tente novamente mais tarde.");
+    } finally {
+      setIsExplaining(false);
     }
   };
 
@@ -144,10 +190,41 @@ export function MiniPlayer() {
             </div>
 
             {currentTrack.lyrics && (
-              <div className="w-full max-h-32 overflow-y-auto mb-8 text-center scrollbar-hide">
-                <p className="text-text-low text-sm whitespace-pre-line italic">
-                  {currentTrack.lyrics}
-                </p>
+              <div className="w-full mb-8 flex flex-col items-center">
+                <div className="w-full max-h-32 overflow-y-auto mb-4 text-center scrollbar-hide">
+                  <p className="text-text-low text-sm whitespace-pre-line italic">
+                    {currentTrack.lyrics}
+                  </p>
+                </div>
+                
+                {!lyricsExplanation && (
+                  <button
+                    onClick={handleExplainLyrics}
+                    disabled={isExplaining}
+                    className="flex items-center gap-2 px-4 py-2 bg-surface border border-primary/30 text-primary rounded-full hover:bg-primary/10 transition-colors text-xs font-medium"
+                  >
+                    {isExplaining ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                    Decifrar Letra
+                  </button>
+                )}
+
+                <AnimatePresence>
+                  {lyricsExplanation && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      className="w-full bg-primary/5 border border-primary/20 rounded-lg p-4 mt-2 text-left max-h-48 overflow-y-auto scrollbar-hide"
+                    >
+                      <div className="flex items-center gap-2 text-primary mb-2">
+                        <Sparkles size={14} />
+                        <h4 className="font-display text-sm">Visão do Arquivista</h4>
+                      </div>
+                      <p className="text-text-mid text-xs leading-relaxed italic whitespace-pre-line">
+                        {lyricsExplanation}
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             )}
 

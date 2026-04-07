@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { motion } from 'motion/react';
+import { motion, useScroll, useSpring } from 'motion/react';
 import { useStore, Theme } from '@/store/useStore';
 import { Menu, X, Moon, Sun, Droplet, Leaf, Waves, Sunset, Square } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -29,6 +29,13 @@ export function Header() {
   const { theme, setTheme } = useStore();
   const location = useLocation();
 
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001
+  });
+
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 80);
@@ -50,7 +57,13 @@ export function Header() {
           isScrolled ? 'py-3 glass' : 'py-6 bg-transparent'
         )}
       >
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+        {/* Reading Progress Bar */}
+        <motion.div
+          className="absolute top-0 left-0 right-0 h-[2px] bg-primary origin-left z-50"
+          style={{ scaleX }}
+        />
+        
+        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between mt-[2px]">
           <Link to="/" className="font-display text-2xl tracking-[0.1em] text-text-high z-50 relative">
             KYVRA
           </Link>
