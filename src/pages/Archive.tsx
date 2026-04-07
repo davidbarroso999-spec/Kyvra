@@ -3,8 +3,7 @@ import { motion } from 'motion/react';
 import { Search, Play, Pause } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
-
-const MOCK_TRACKS: any[] = [];
+import { supabase } from '@/lib/supabase';
 
 const VIBES = ['Todos', 'Melancólico', 'Dark', 'Etéreo', 'Ambient', 'Introspectivo'];
 
@@ -13,6 +12,39 @@ export function Archive() {
   const [selectedVibe, setSelectedVibe] = useState('Todos');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { currentTrack, isPlaying, setCurrentTrack, setIsPlaying, setQueue } = useStore();
+  const [tracks, setTracks] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchTracks() {
+      const { data, error } = await supabase
+        .from('tracks')
+        .select(`
+          *,
+          albums (
+            title,
+            cover_url
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        setTracks(data.map(t => ({
+          id: t.id,
+          title: t.title,
+          artist: t.artist || 'Kyvra',
+          vibe: t.vibe || 'Introspectivo',
+          duration: t.duration || '0:00',
+          coverUrl: t.albums?.cover_url || '',
+          audioUrl: t.audio_url,
+          albumTitle: t.albums?.title || '',
+          lyrics: t.lyrics
+        })));
+      }
+      setLoading(false);
+    }
+    fetchTracks();
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -26,18 +58,18 @@ export function Archive() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const filteredTracks = MOCK_TRACKS.filter(track => {
+  const filteredTracks = tracks.filter(track => {
     const matchesSearch = track.title.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesVibe = selectedVibe === 'Todos' || track.vibe === selectedVibe;
     return matchesSearch && matchesVibe;
   });
 
-  const handlePlay = (track: typeof MOCK_TRACKS[0]) => {
+  const handlePlay = (track: any) => {
     if (currentTrack?.id === track.id) {
       setIsPlaying(!isPlaying);
     } else {
       setCurrentTrack(track);
-      setQueue(MOCK_TRACKS);
+      setQueue(tracks);
     }
   };
 

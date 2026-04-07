@@ -4,6 +4,7 @@ import { Upload, Lock, X, Plus, Sparkles, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { GoogleGenAI } from '@google/genai';
 import { supabase } from '@/lib/supabase';
+import { getAudioMetadata } from '@/lib/audioMetadata';
 
 export function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -11,7 +12,7 @@ export function Admin() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   
-  const [albumTracks, setAlbumTracks] = useState<{ id: number; title: string; file: File | null }[]>([{ id: 1, title: '', file: null }]);
+  const [albumTracks, setAlbumTracks] = useState<{ id: number; title: string; file: File | null; duration?: string; genre?: string; lyrics?: string; artist?: string }[]>([{ id: 1, title: '', file: null }]);
   const [albumTitle, setAlbumTitle] = useState('');
   const [albumYear, setAlbumYear] = useState('');
   const [albumDesc, setAlbumDesc] = useState('');
@@ -209,7 +210,11 @@ export function Admin() {
           album_id: albumData.id,
           title: track.title,
           audio_url: audioUrlData.publicUrl,
-          track_number: i + 1
+          track_number: i + 1,
+          duration: track.duration,
+          vibe: track.genre,
+          lyrics: track.lyrics,
+          artist: track.artist
         });
 
         if (trackDbError) throw trackDbError;
@@ -382,14 +387,23 @@ export function Admin() {
                 accept="audio/*" 
                 ref={bulkAudioInputRef} 
                 className="hidden" 
-                onChange={(e) => {
+                onChange={async (e) => {
                   if (e.target.files && e.target.files.length > 0) {
                     const files = Array.from(e.target.files) as File[];
-                    const newTracks = files.map((file, index) => ({
-                      id: Date.now() + index,
-                      title: file.name.replace(/\.[^/.]+$/, ""),
-                      file: file
+                    
+                    const newTracks = await Promise.all(files.map(async (file, index) => {
+                      const metadata = await getAudioMetadata(file);
+                      return {
+                        id: Date.now() + index,
+                        title: metadata.title || file.name.replace(/\.[^/.]+$/, ""),
+                        file: file,
+                        duration: metadata.duration,
+                        genre: metadata.genre,
+                        lyrics: metadata.lyrics,
+                        artist: metadata.artist
+                      };
                     }));
+
                     if (albumTracks.length === 1 && !albumTracks[0].title && !albumTracks[0].file) {
                       setAlbumTracks(newTracks);
                     } else {
@@ -438,10 +452,20 @@ export function Admin() {
                 accept="audio/*" 
                 ref={audioInputRef} 
                 className="hidden" 
-                onChange={(e) => {
+                onChange={async (e) => {
                   if (e.target.files && e.target.files[0] && activeTrackId) {
                     const file = e.target.files[0];
-                    setAlbumTracks(albumTracks.map(t => t.id === activeTrackId ? { ...t, file, title: t.title || file.name.replace(/\.[^/.]+$/, "") } : t));
+                    const metadata = await getAudioMetadata(file);
+                    
+                    setAlbumTracks(albumTracks.map(t => t.id === activeTrackId ? { 
+                      ...t, 
+                      file, 
+                      title: metadata.title || t.title || file.name.replace(/\.[^/.]+$/, ""),
+                      duration: metadata.duration,
+                      genre: metadata.genre,
+                      lyrics: metadata.lyrics,
+                      artist: metadata.artist
+                    } : t));
                   }
                 }} 
               />

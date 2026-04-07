@@ -1,42 +1,97 @@
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Play } from 'lucide-react';
 import { useStore } from '@/store/useStore';
-
-const MOCK_ALBUM = {
-  id: '1',
-  title: 'Espelho das Eras',
-  artist: 'Kyvra',
-  year: '2023',
-  coverUrl: 'https://picsum.photos/seed/album1/800/1040',
-  description: 'Uma reflexão sobre o tempo e a memória, gravada nas profundezas do inverno.',
-  tracks: [
-    { id: '1', title: 'O Despertar', duration: '3:45' },
-    { id: '2', title: 'Reflexo Distorcido', duration: '4:12' },
-    { id: '3', title: 'Ecos do Passado', duration: '5:30' },
-    { id: '4', title: 'Fragmento de Vidro', duration: '2:50' },
-    { id: '5', title: 'A Queda', duration: '6:15' },
-  ]
-};
+import { supabase } from '@/lib/supabase';
 
 export function AlbumDetail() {
   const { id } = useParams();
   const { setCurrentTrack, setIsPlaying, setQueue } = useStore();
-  
-  // In a real app, fetch album by id
-  const album = MOCK_ALBUM;
+  const [album, setAlbum] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchAlbum() {
+      if (!id) return;
+      
+      const { data, error } = await supabase
+        .from('albums')
+        .select(`
+          *,
+          tracks (*)
+        `)
+        .eq('id', id)
+        .single();
+
+      if (!error && data) {
+        // Sort tracks by track_number
+        const sortedTracks = data.tracks.sort((a: any, b: any) => a.track_number - b.track_number);
+        
+        setAlbum({
+          id: data.id,
+          title: data.title,
+          artist: 'Kyvra',
+          year: data.release_year,
+          coverUrl: data.cover_url,
+          description: data.description,
+          tracks: sortedTracks.map((t: any) => ({
+            id: t.id,
+            title: t.title,
+            duration: t.duration || '0:00',
+            audioUrl: t.audio_url,
+            vibe: t.vibe || 'Introspectivo',
+            lyrics: t.lyrics,
+            artist: t.artist || 'Kyvra'
+          }))
+        });
+      }
+      setLoading(false);
+    }
+    fetchAlbum();
+  }, [id]);
 
   const handlePlayAlbum = () => {
-    const tracksToPlay = album.tracks.map(t => ({
+    if (!album) return;
+    const tracksToPlay = album.tracks.map((t: any) => ({
       ...t,
-      artist: album.artist,
+      artist: t.artist || album.artist,
       coverUrl: album.coverUrl,
-      vibe: 'Album Track'
+      vibe: t.vibe || 'Album Track'
     }));
     setQueue(tracksToPlay);
     setCurrentTrack(tracksToPlay[0]);
     setIsPlaying(true);
   };
+
+  const handlePlayTrack = (track: any) => {
+    if (!album) return;
+    const trackToPlay = {
+      ...track,
+      artist: track.artist || album.artist,
+      coverUrl: album.coverUrl,
+      vibe: track.vibe || 'Album Track'
+    };
+    
+    const allTracks = album.tracks.map((t: any) => ({
+      ...t,
+      artist: t.artist || album.artist,
+      coverUrl: album.coverUrl,
+      vibe: t.vibe || 'Album Track'
+    }));
+    
+    setQueue(allTracks);
+    setCurrentTrack(trackToPlay);
+    setIsPlaying(true);
+  };
+
+  if (loading) {
+    return <div className="w-full min-h-screen flex items-center justify-center text-primary">Carregando...</div>;
+  }
+
+  if (!album) {
+    return <div className="w-full min-h-screen flex items-center justify-center text-text-low">Álbum não encontrado.</div>;
+  }
 
   return (
     <div className="w-full min-h-screen pb-32">
@@ -107,7 +162,8 @@ export function AlbumDetail() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 + index * 0.05 }}
-              className="group flex items-center gap-4 py-3 px-4 hover:bg-surface rounded-lg transition-colors border border-transparent hover:border-border"
+              onClick={() => handlePlayTrack(track)}
+              className="group flex items-center gap-4 py-3 px-4 hover:bg-surface rounded-lg transition-colors border border-transparent hover:border-border cursor-pointer"
             >
               <span className="w-6 text-right font-mono text-text-low text-sm group-hover:text-primary">
                 {index + 1}

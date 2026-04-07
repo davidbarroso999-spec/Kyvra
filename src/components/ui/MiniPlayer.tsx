@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Volume2 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
@@ -6,12 +6,62 @@ import { cn } from '@/lib/utils';
 
 export function MiniPlayer() {
   const [isExpanded, setIsExpanded] = useState(false);
-  const { currentTrack, isPlaying, setIsPlaying, playNext, playPrevious } = useStore();
+  const { currentTrack, isPlaying, setIsPlaying, playNext, playPrevious, volume } = useStore();
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [progress, setProgress] = useState(0);
+  const [currentTime, setCurrentTime] = useState('0:00');
+
+  useEffect(() => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.play().catch(e => console.error("Error playing audio:", e));
+      } else {
+        audioRef.current.pause();
+      }
+    }
+  }, [isPlaying, currentTrack]);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+    }
+  }, [volume]);
+
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      const current = audioRef.current.currentTime;
+      const duration = audioRef.current.duration;
+      if (duration > 0) {
+        setProgress((current / duration) * 100);
+      }
+      
+      const minutes = Math.floor(current / 60);
+      const seconds = Math.floor(current % 60);
+      setCurrentTime(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+    }
+  };
+
+  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (audioRef.current) {
+      const bounds = e.currentTarget.getBoundingClientRect();
+      const percent = (e.clientX - bounds.left) / bounds.width;
+      audioRef.current.currentTime = percent * audioRef.current.duration;
+    }
+  };
 
   if (!currentTrack) return null;
 
   return (
     <>
+      {currentTrack.audioUrl && (
+        <audio 
+          ref={audioRef} 
+          src={currentTrack.audioUrl} 
+          onTimeUpdate={handleTimeUpdate}
+          onEnded={playNext}
+        />
+      )}
+      
       {/* Compact Player */}
       <motion.div
         initial={{ y: 100, opacity: 0 }}
@@ -41,7 +91,7 @@ export function MiniPlayer() {
         </div>
         {/* Progress Bar (Visual only for compact) */}
         <div className="absolute bottom-0 left-0 w-full h-[2px] bg-border rounded-b-xl overflow-hidden">
-          <div className="h-full bg-primary w-1/3" />
+          <div className="h-full bg-primary" style={{ width: `${progress}%` }} />
         </div>
       </motion.div>
 
@@ -85,17 +135,33 @@ export function MiniPlayer() {
 
             <div className="w-full text-center mb-8">
               <h2 className="text-3xl font-display text-text-high mb-2">{currentTrack.title}</h2>
-              <p className="text-lg text-text-mid">{currentTrack.artist}</p>
+              <p className="text-lg text-text-mid mb-2">{currentTrack.artist}</p>
+              {currentTrack.vibe && (
+                <span className="inline-block px-3 py-1 rounded-full bg-surface border border-border text-xs text-text-mid">
+                  {currentTrack.vibe}
+                </span>
+              )}
             </div>
 
+            {currentTrack.lyrics && (
+              <div className="w-full max-h-32 overflow-y-auto mb-8 text-center scrollbar-hide">
+                <p className="text-text-low text-sm whitespace-pre-line italic">
+                  {currentTrack.lyrics}
+                </p>
+              </div>
+            )}
+
             {/* Progress */}
-            <div className="w-full mb-8 group cursor-pointer">
+            <div className="w-full mb-8 group cursor-pointer" onClick={handleSeek}>
               <div className="h-1.5 bg-border rounded-full relative">
-                <div className="absolute top-0 left-0 h-full bg-primary rounded-full w-1/3" />
-                <div className="absolute top-1/2 -translate-y-1/2 left-1/3 w-3 h-3 bg-text-high rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-[0_0_10px_var(--primary)]" />
+                <div className="absolute top-0 left-0 h-full bg-primary rounded-full" style={{ width: `${progress}%` }} />
+                <div 
+                  className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-text-high rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-[0_0_10px_var(--primary)]" 
+                  style={{ left: `calc(${progress}% - 6px)` }}
+                />
               </div>
               <div className="flex justify-between mt-2 font-mono text-xs text-text-low">
-                <span>1:24</span>
+                <span>{currentTime}</span>
                 <span>{currentTrack.duration}</span>
               </div>
             </div>
@@ -117,8 +183,15 @@ export function MiniPlayer() {
             {/* Volume */}
             <div className="flex items-center gap-3 w-full max-w-[200px] text-text-mid">
               <Volume2 size={16} />
-              <div className="h-1 flex-1 bg-border rounded-full relative cursor-pointer">
-                <div className="absolute top-0 left-0 h-full bg-text-high rounded-full w-4/5" />
+              <div 
+                className="h-1 flex-1 bg-border rounded-full relative cursor-pointer"
+                onClick={(e) => {
+                  const bounds = e.currentTarget.getBoundingClientRect();
+                  const percent = (e.clientX - bounds.left) / bounds.width;
+                  useStore.getState().setVolume(Math.max(0, Math.min(1, percent)));
+                }}
+              >
+                <div className="absolute top-0 left-0 h-full bg-text-high rounded-full" style={{ width: `${volume * 100}%` }} />
               </div>
             </div>
           </div>

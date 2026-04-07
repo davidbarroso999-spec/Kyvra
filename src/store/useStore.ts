@@ -11,6 +11,7 @@ interface Track {
   coverUrl: string;
   vibe: string;
   audioUrl?: string;
+  lyrics?: string;
 }
 
 interface AppState {
