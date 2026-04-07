@@ -30,7 +30,10 @@ export function Admin() {
 
   const coverInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
+  const bulkAudioInputRef = useRef<HTMLInputElement>(null);
+  const loreImageInputRef = useRef<HTMLInputElement>(null);
   const [activeTrackId, setActiveTrackId] = useState<number | null>(null);
+  const [loreImageFile, setLoreImageFile] = useState<File | null>(null);
 
   const handleGenerateImage = async () => {
     if (!loreContent) {
@@ -91,8 +94,15 @@ export function Admin() {
     try {
       let imageUrl = null;
 
-      // Se houver uma imagem gerada (base64), fazemos o upload para o bucket
-      if (generatedImage) {
+      // Se houver uma imagem gerada (base64) ou arquivo manual, fazemos o upload para o bucket
+      if (loreImageFile) {
+        const fileExt = loreImageFile.name.split('.').pop();
+        const fileName = `lore_${Date.now()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage.from('kyvra_images').upload(fileName, loreImageFile);
+        if (uploadError) throw uploadError;
+        const { data: publicUrlData } = supabase.storage.from('kyvra_images').getPublicUrl(fileName);
+        imageUrl = publicUrlData.publicUrl;
+      } else if (generatedImage) {
         const res = await fetch(generatedImage);
         const blob = await res.blob();
         const fileName = `lore_${Date.now()}.png`;
@@ -127,6 +137,7 @@ export function Admin() {
       setLoreChapter('');
       setLoreTimeline('');
       setGeneratedImage(null);
+      setLoreImageFile(null);
       
       setTimeout(() => setLoreSuccess(''), 5000);
     } catch (err: any) {
@@ -357,11 +368,36 @@ export function Admin() {
               </div>
 
               {/* Bulk Upload Dropzone */}
-              <div className="border-2 border-dashed border-border rounded-lg p-8 flex flex-col items-center justify-center text-text-low hover:border-primary hover:text-primary transition-colors cursor-pointer group mb-8">
+              <div 
+                onClick={() => bulkAudioInputRef.current?.click()}
+                className="border-2 border-dashed border-border rounded-lg p-8 flex flex-col items-center justify-center text-text-low hover:border-primary hover:text-primary transition-colors cursor-pointer group mb-8"
+              >
                 <Upload className="mb-2 group-hover:-translate-y-1 transition-transform" />
                 <span className="font-medium mb-1 text-text-high group-hover:text-primary transition-colors">Upload em Massa</span>
-                <span className="text-sm text-center">Arraste múltiplos arquivos de áudio aqui para criar as faixas automaticamente</span>
+                <span className="text-sm text-center">Clique aqui para selecionar múltiplos arquivos de áudio</span>
               </div>
+              <input 
+                type="file" 
+                multiple 
+                accept="audio/*" 
+                ref={bulkAudioInputRef} 
+                className="hidden" 
+                onChange={(e) => {
+                  if (e.target.files && e.target.files.length > 0) {
+                    const files = Array.from(e.target.files) as File[];
+                    const newTracks = files.map((file, index) => ({
+                      id: Date.now() + index,
+                      title: file.name.replace(/\.[^/.]+$/, ""),
+                      file: file
+                    }));
+                    if (albumTracks.length === 1 && !albumTracks[0].title && !albumTracks[0].file) {
+                      setAlbumTracks(newTracks);
+                    } else {
+                      setAlbumTracks([...albumTracks, ...newTracks]);
+                    }
+                  }
+                }} 
+              />
 
               {/* Track List */}
               <div className="space-y-4">
@@ -388,7 +424,7 @@ export function Admin() {
                           track.file ? "border-primary text-primary" : "border-border text-text-low hover:border-primary hover:text-primary"
                         )}
                       >
-                        {track.file ? track.file.name : 'Selecionar Áudio'}
+                        {track.file ? (track.file as File).name : 'Selecionar Áudio'}
                       </div>
                     </div>
                     <button onClick={() => removeTrack(track.id)} className="text-text-low hover:text-red-400 transition-colors p-2">
@@ -523,6 +559,8 @@ export function Admin() {
                   <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                   <span className="text-sm text-primary animate-pulse">Conjurando imagem...</span>
                 </div>
+              ) : loreImageFile ? (
+                <img src={URL.createObjectURL(loreImageFile)} alt="Capa manual" className="absolute inset-0 w-full h-full object-cover" />
               ) : generatedImage ? (
                 <img src={generatedImage} alt="Capa gerada" className="absolute inset-0 w-full h-full object-cover" />
               ) : (
@@ -538,7 +576,22 @@ export function Admin() {
                 <Sparkles size={16} />
                 Gerar Imagem com IA
               </button>
-              <button className="w-full py-2 border border-border rounded text-sm hover:bg-surface transition-colors">
+              <input 
+                type="file" 
+                accept="image/*" 
+                ref={loreImageInputRef} 
+                className="hidden" 
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setLoreImageFile(e.target.files[0]);
+                    setGeneratedImage(null); // Limpa a gerada se fizer upload manual
+                  }
+                }} 
+              />
+              <button 
+                onClick={() => loreImageInputRef.current?.click()}
+                className="w-full py-2 border border-border rounded text-sm hover:bg-surface transition-colors"
+              >
                 Fazer Upload Manual
               </button>
             </div>
