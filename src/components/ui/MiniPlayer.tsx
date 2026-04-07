@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Volume2, Sparkles, Loader2 } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Volume2, Sparkles, Loader2, AlignLeft } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { GoogleGenAI } from '@google/genai';
 
 export function MiniPlayer() {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showLyrics, setShowLyrics] = useState(false);
   const { currentTrack, isPlaying, setIsPlaying, playNext, playPrevious, volume } = useStore();
   const audioRef = useRef<HTMLAudioElement>(null);
   const [progress, setProgress] = useState(0);
@@ -16,8 +17,9 @@ export function MiniPlayer() {
   const [isExplaining, setIsExplaining] = useState(false);
 
   useEffect(() => {
-    // Reset explanation when track changes
+    // Reset explanation and lyrics view when track changes
     setLyricsExplanation(null);
+    setShowLyrics(false);
   }, [currentTrack?.id]);
 
   useEffect(() => {
@@ -161,72 +163,102 @@ export function MiniPlayer() {
             }}
           />
 
-          <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-6 max-w-md mx-auto w-full">
+          <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-6 max-w-md mx-auto w-full h-full">
+            {currentTrack.lyrics && (
+              <button 
+                onClick={() => setShowLyrics(!showLyrics)}
+                className={cn(
+                  "absolute top-6 left-6 transition-colors flex items-center gap-2 text-sm font-medium z-50",
+                  showLyrics ? "text-primary" : "text-text-mid hover:text-text-high"
+                )}
+              >
+                <AlignLeft size={20} />
+                <span className="hidden sm:inline">Letra</span>
+              </button>
+            )}
+
             <button 
               onClick={() => setIsExpanded(false)}
-              className="absolute top-6 right-6 text-text-mid hover:text-text-high"
+              className="absolute top-6 right-6 text-text-mid hover:text-text-high z-50"
             >
               <span className="text-2xl">↓</span>
             </button>
 
-            <motion.img 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              src={currentTrack.coverUrl} 
-              alt="Cover" 
-              className="w-64 h-64 sm:w-80 sm:h-80 rounded-xl object-cover shadow-[0_40px_120px_rgba(0,0,0,0.8),0_0_60px_var(--glow-purple)] mb-12"
-              referrerPolicy="no-referrer"
-            />
+            <AnimatePresence mode="wait">
+              {!showLyrics ? (
+                <motion.div 
+                  key="cover"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="flex flex-col items-center w-full mt-12"
+                >
+                  <img 
+                    src={currentTrack.coverUrl} 
+                    alt="Cover" 
+                    className="w-64 h-64 sm:w-80 sm:h-80 rounded-xl object-cover shadow-[0_40px_120px_rgba(0,0,0,0.8),0_0_60px_var(--glow-purple)] mb-12"
+                    referrerPolicy="no-referrer"
+                  />
 
-            <div className="w-full text-center mb-8">
-              <h2 className="text-3xl font-display text-text-high mb-2">{currentTrack.title}</h2>
-              <p className="text-lg text-text-mid mb-2">{currentTrack.artist}</p>
-              {currentTrack.vibe && (
-                <span className="inline-block px-3 py-1 rounded-full bg-surface border border-border text-xs text-text-mid">
-                  {currentTrack.vibe}
-                </span>
+                  <div className="w-full text-center mb-8">
+                    <h2 className="text-3xl font-display text-text-high mb-2">{currentTrack.title}</h2>
+                    <p className="text-lg text-text-mid mb-2">{currentTrack.artist}</p>
+                    {currentTrack.vibe && (
+                      <span className="inline-block px-3 py-1 rounded-full bg-surface border border-border text-xs text-text-mid">
+                        {currentTrack.vibe}
+                      </span>
+                    )}
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div 
+                  key="lyrics"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="flex flex-col items-center w-full flex-1 min-h-0 mt-16 mb-8"
+                >
+                  <div className="w-full text-center mb-6 shrink-0">
+                    <h2 className="text-2xl font-display text-text-high">{currentTrack.title}</h2>
+                  </div>
+                  
+                  <div className="w-full flex-1 overflow-y-auto scrollbar-hide text-center px-2 pb-8">
+                    <p className="text-text-high text-lg leading-relaxed whitespace-pre-line font-medium mb-12">
+                      {currentTrack.lyrics}
+                    </p>
+                    
+                    {!lyricsExplanation && (
+                      <button
+                        onClick={handleExplainLyrics}
+                        disabled={isExplaining}
+                        className="mx-auto flex items-center gap-2 px-6 py-3 bg-surface border border-primary/30 text-primary rounded-full hover:bg-primary/10 transition-colors text-sm font-medium mb-8"
+                      >
+                        {isExplaining ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                        Decifrar Letra
+                      </button>
+                    )}
+
+                    <AnimatePresence>
+                      {lyricsExplanation && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          className="w-full bg-primary/5 border border-primary/20 rounded-xl p-6 text-left mb-8"
+                        >
+                          <div className="flex items-center gap-2 text-primary mb-4">
+                            <Sparkles size={18} />
+                            <h4 className="font-display text-lg">Visão do Arquivista</h4>
+                          </div>
+                          <p className="text-text-mid text-sm leading-relaxed italic whitespace-pre-line">
+                            {lyricsExplanation}
+                          </p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </motion.div>
               )}
-            </div>
-
-            {currentTrack.lyrics && (
-              <div className="w-full mb-8 flex flex-col items-center">
-                <div className="w-full max-h-32 overflow-y-auto mb-4 text-center scrollbar-hide">
-                  <p className="text-text-low text-sm whitespace-pre-line italic">
-                    {currentTrack.lyrics}
-                  </p>
-                </div>
-                
-                {!lyricsExplanation && (
-                  <button
-                    onClick={handleExplainLyrics}
-                    disabled={isExplaining}
-                    className="flex items-center gap-2 px-4 py-2 bg-surface border border-primary/30 text-primary rounded-full hover:bg-primary/10 transition-colors text-xs font-medium"
-                  >
-                    {isExplaining ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                    Decifrar Letra
-                  </button>
-                )}
-
-                <AnimatePresence>
-                  {lyricsExplanation && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      className="w-full bg-primary/5 border border-primary/20 rounded-lg p-4 mt-2 text-left max-h-48 overflow-y-auto scrollbar-hide"
-                    >
-                      <div className="flex items-center gap-2 text-primary mb-2">
-                        <Sparkles size={14} />
-                        <h4 className="font-display text-sm">Visão do Arquivista</h4>
-                      </div>
-                      <p className="text-text-mid text-xs leading-relaxed italic whitespace-pre-line">
-                        {lyricsExplanation}
-                      </p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            )}
+            </AnimatePresence>
 
             {/* Progress */}
             <div className="w-full mb-8 group cursor-pointer" onClick={handleSeek}>
