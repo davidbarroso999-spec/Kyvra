@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion } from 'motion/react';
-import { Upload, Lock, X, Plus, Sparkles } from 'lucide-react';
+import { Upload, Lock, X, Plus, Sparkles, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { GoogleGenAI } from '@google/genai';
+import { supabase } from '@/lib/supabase';
 
 export function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -10,12 +11,26 @@ export function Admin() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   
-  const [albumTracks, setAlbumTracks] = useState([{ id: 1, title: '', file: null }]);
+  const [albumTracks, setAlbumTracks] = useState<{ id: number; title: string; file: File | null }[]>([{ id: 1, title: '', file: null }]);
+  const [albumTitle, setAlbumTitle] = useState('');
+  const [albumYear, setAlbumYear] = useState('');
+  const [albumDesc, setAlbumDesc] = useState('');
+  const [albumCover, setAlbumCover] = useState<File | null>(null);
+  const [isPublishingAlbum, setIsPublishingAlbum] = useState(false);
+  const [albumSuccess, setAlbumSuccess] = useState('');
 
+  const [loreChapter, setLoreChapter] = useState('');
+  const [loreTimeline, setLoreTimeline] = useState('');
   const [loreTitle, setLoreTitle] = useState('');
   const [loreContent, setLoreContent] = useState('');
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [isPublishingLore, setIsPublishingLore] = useState(false);
+  const [loreSuccess, setLoreSuccess] = useState('');
+
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
+  const [activeTrackId, setActiveTrackId] = useState<number | null>(null);
 
   const handleGenerateImage = async () => {
     if (!loreContent) {
@@ -60,6 +75,148 @@ export function Admin() {
       setError('Falha ao gerar a imagem. Tente novamente.');
     } finally {
       setIsGeneratingImage(false);
+    }
+  };
+
+  const handlePublishLore = async () => {
+    if (!loreTitle || !loreContent) {
+      setError('Título e conteúdo são obrigatórios.');
+      return;
+    }
+
+    setIsPublishingLore(true);
+    setError('');
+    setLoreSuccess('');
+
+    try {
+      let imageUrl = null;
+
+      // Se houver uma imagem gerada (base64), fazemos o upload para o bucket
+      if (generatedImage) {
+        const res = await fetch(generatedImage);
+        const blob = await res.blob();
+        const fileName = `lore_${Date.now()}.png`;
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('kyvra_images')
+          .upload(fileName, blob);
+
+        if (uploadError) throw uploadError;
+
+        const { data: publicUrlData } = supabase.storage
+          .from('kyvra_images')
+          .getPublicUrl(fileName);
+          
+        imageUrl = publicUrlData.publicUrl;
+      }
+
+      // Inserir no banco de dados
+      const { error: dbError } = await supabase.from('lore_chapters').insert({
+        chapter_number: loreChapter,
+        title: loreTitle,
+        timeline_date: loreTimeline,
+        content: loreContent,
+        image_url: imageUrl
+      });
+
+      if (dbError) throw dbError;
+
+      setLoreSuccess('Capítulo registrado no cosmos com sucesso!');
+      setLoreTitle('');
+      setLoreContent('');
+      setLoreChapter('');
+      setLoreTimeline('');
+      setGeneratedImage(null);
+      
+      setTimeout(() => setLoreSuccess(''), 5000);
+    } catch (err: any) {
+      console.error('Erro ao publicar lore:', err);
+      setError('Falha ao registrar capítulo: ' + err.message);
+    } finally {
+      setIsPublishingLore(false);
+    }
+  };
+
+  const handlePublishAlbum = async () => {
+    if (!albumTitle || !albumCover) {
+      setError('Título do álbum e capa são obrigatórios.');
+      return;
+    }
+
+    const validTracks = albumTracks.filter(t => t.title && t.file);
+    if (validTracks.length === 0) {
+      setError('Adicione pelo menos uma faixa com título e arquivo de áudio.');
+      return;
+    }
+
+    setIsPublishingAlbum(true);
+    setError('');
+    setAlbumSuccess('');
+
+    try {
+      // 1. Upload da Capa
+      const coverExt = albumCover.name.split('.').pop();
+      const coverFileName = `album_${Date.now()}.${coverExt}`;
+      
+      const { error: coverError } = await supabase.storage
+        .from('kyvra_images')
+        .upload(coverFileName, albumCover);
+        
+      if (coverError) throw coverError;
+
+      const { data: coverUrlData } = supabase.storage
+        .from('kyvra_images')
+        .getPublicUrl(coverFileName);
+
+      // 2. Inserir Álbum no BD
+      const { data: albumData, error: albumDbError } = await supabase.from('albums').insert({
+        title: albumTitle,
+        release_year: albumYear,
+        description: albumDesc,
+        cover_url: coverUrlData.publicUrl
+      }).select().single();
+
+      if (albumDbError) throw albumDbError;
+
+      // 3. Upload das Faixas e Inserção no BD
+      for (let i = 0; i < validTracks.length; i++) {
+        const track = validTracks[i];
+        const fileExt = track.file!.name.split('.').pop();
+        const audioFileName = `track_${Date.now()}_${i}.${fileExt}`;
+
+        const { error: audioError } = await supabase.storage
+          .from('kyvra-audio')
+          .upload(audioFileName, track.file!);
+
+        if (audioError) throw audioError;
+
+        const { data: audioUrlData } = supabase.storage
+          .from('kyvra-audio')
+          .getPublicUrl(audioFileName);
+
+        const { error: trackDbError } = await supabase.from('tracks').insert({
+          album_id: albumData.id,
+          title: track.title,
+          audio_url: audioUrlData.publicUrl,
+          track_number: i + 1
+        });
+
+        if (trackDbError) throw trackDbError;
+      }
+
+      setAlbumSuccess('Álbum publicado com sucesso!');
+      setAlbumTitle('');
+      setAlbumYear('');
+      setAlbumDesc('');
+      setAlbumCover(null);
+      setAlbumTracks([{ id: Date.now(), title: '', file: null }]);
+      
+      setTimeout(() => setAlbumSuccess(''), 5000);
+    } catch (err: any) {
+      console.error('Erro ao publicar álbum:', err);
+      setError('Falha ao publicar álbum: ' + err.message);
+    } finally {
+      setIsPublishingAlbum(false);
     }
   };
 
@@ -176,16 +333,16 @@ export function Admin() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm text-text-mid mb-2">Título do Álbum</label>
-                    <input type="text" className="w-full bg-void border border-border rounded p-3 focus:border-primary outline-none transition-colors" />
+                    <input type="text" value={albumTitle} onChange={e => setAlbumTitle(e.target.value)} className="w-full bg-void border border-border rounded p-3 focus:border-primary outline-none transition-colors" />
                   </div>
                   <div>
                     <label className="block text-sm text-text-mid mb-2">Ano de Lançamento</label>
-                    <input type="text" placeholder="Ex: 2024" className="w-full bg-void border border-border rounded p-3 focus:border-primary outline-none transition-colors" />
+                    <input type="text" value={albumYear} onChange={e => setAlbumYear(e.target.value)} placeholder="Ex: 2024" className="w-full bg-void border border-border rounded p-3 focus:border-primary outline-none transition-colors" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm text-text-mid mb-2">Descrição / Conceito</label>
-                  <textarea rows={3} className="w-full bg-void border border-border rounded p-3 focus:border-primary outline-none transition-colors resize-y" />
+                  <textarea rows={3} value={albumDesc} onChange={e => setAlbumDesc(e.target.value)} className="w-full bg-void border border-border rounded p-3 focus:border-primary outline-none transition-colors resize-y" />
                 </div>
               </div>
             </div>
@@ -212,11 +369,26 @@ export function Admin() {
                   <div key={track.id} className="flex flex-col md:flex-row gap-4 items-start md:items-center bg-void/50 p-4 rounded border border-border">
                     <span className="font-mono text-text-low w-6">{index + 1}</span>
                     <div className="flex-1 w-full">
-                      <input type="text" placeholder="Título da Faixa" className="w-full bg-void border border-border rounded p-2 focus:border-primary outline-none transition-colors text-sm" />
+                      <input 
+                        type="text" 
+                        value={track.title}
+                        onChange={e => setAlbumTracks(albumTracks.map(t => t.id === track.id ? { ...t, title: e.target.value } : t))}
+                        placeholder="Título da Faixa" 
+                        className="w-full bg-void border border-border rounded p-2 focus:border-primary outline-none transition-colors text-sm" 
+                      />
                     </div>
                     <div className="flex-1 w-full">
-                      <div className="border border-border rounded p-2 text-sm text-text-low flex items-center justify-center cursor-pointer hover:border-primary hover:text-primary transition-colors">
-                        Selecionar Áudio
+                      <div 
+                        onClick={() => {
+                          setActiveTrackId(track.id);
+                          audioInputRef.current?.click();
+                        }}
+                        className={cn(
+                          "border rounded p-2 text-sm flex items-center justify-center cursor-pointer transition-colors",
+                          track.file ? "border-primary text-primary" : "border-border text-text-low hover:border-primary hover:text-primary"
+                        )}
+                      >
+                        {track.file ? track.file.name : 'Selecionar Áudio'}
                       </div>
                     </div>
                     <button onClick={() => removeTrack(track.id)} className="text-text-low hover:text-red-400 transition-colors p-2">
@@ -225,11 +397,31 @@ export function Admin() {
                   </div>
                 ))}
               </div>
+              <input 
+                type="file" 
+                accept="audio/*" 
+                ref={audioInputRef} 
+                className="hidden" 
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0] && activeTrackId) {
+                    const file = e.target.files[0];
+                    setAlbumTracks(albumTracks.map(t => t.id === activeTrackId ? { ...t, file, title: t.title || file.name.replace(/\.[^/.]+$/, "") } : t));
+                  }
+                }} 
+              />
             </div>
 
+            {error && <div className="text-red-400 text-sm text-right">{error}</div>}
+            {albumSuccess && <div className="text-primary text-sm text-right flex items-center justify-end gap-2"><CheckCircle2 size={16} /> {albumSuccess}</div>}
+
             <div className="flex justify-end">
-              <button className="px-8 py-3 bg-primary text-void font-medium rounded hover:bg-primary/90 transition-colors">
-                Publicar Álbum
+              <button 
+                onClick={handlePublishAlbum}
+                disabled={isPublishingAlbum}
+                className="px-8 py-3 bg-primary text-void font-medium rounded hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {isPublishingAlbum ? <div className="w-4 h-4 border-2 border-void border-t-transparent rounded-full animate-spin" /> : null}
+                {isPublishingAlbum ? 'Publicando...' : 'Publicar Álbum'}
               </button>
             </div>
           </div>
@@ -238,11 +430,31 @@ export function Admin() {
           <div className="space-y-8">
             <div className="glass p-6 rounded-xl h-fit">
               <h2 className="text-xl mb-6">Capa do Álbum</h2>
-              <div className="aspect-square w-full bg-void border border-border rounded-lg flex flex-col items-center justify-center text-text-low mb-4 p-4 text-center">
-                <span className="mb-2">Sem imagem</span>
-                <span className="text-xs opacity-70">(Capa uniforme para todas as faixas)</span>
+              <div className="aspect-square w-full bg-void border border-border rounded-lg flex flex-col items-center justify-center text-text-low mb-4 p-4 text-center overflow-hidden relative">
+                {albumCover ? (
+                  <img src={URL.createObjectURL(albumCover)} alt="Capa" className="absolute inset-0 w-full h-full object-cover" />
+                ) : (
+                  <>
+                    <span className="mb-2">Sem imagem</span>
+                    <span className="text-xs opacity-70">(Capa uniforme para todas as faixas)</span>
+                  </>
+                )}
               </div>
-              <button className="w-full py-2 border border-border rounded text-sm hover:bg-surface transition-colors">
+              <input 
+                type="file" 
+                accept="image/*" 
+                ref={coverInputRef} 
+                className="hidden" 
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setAlbumCover(e.target.files[0]);
+                  }
+                }} 
+              />
+              <button 
+                onClick={() => coverInputRef.current?.click()}
+                className="w-full py-2 border border-border rounded text-sm hover:bg-surface transition-colors"
+              >
                 Fazer Upload da Capa
               </button>
             </div>
@@ -257,7 +469,7 @@ export function Admin() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm text-text-mid mb-2">Número do Capítulo</label>
-                  <input type="text" placeholder="Ex: I, II, 01..." className="w-full bg-void border border-border rounded p-3 focus:border-primary outline-none transition-colors" />
+                  <input type="text" value={loreChapter} onChange={e => setLoreChapter(e.target.value)} placeholder="Ex: I, II, 01..." className="w-full bg-void border border-border rounded p-3 focus:border-primary outline-none transition-colors" />
                 </div>
                 <div>
                   <label className="block text-sm text-text-mid mb-2">Título</label>
@@ -273,7 +485,7 @@ export function Admin() {
 
               <div>
                 <label className="block text-sm text-text-mid mb-2">Data na Linha do Tempo</label>
-                <input type="text" placeholder="Ex: O início do crepúsculo - Era da Lua" className="w-full bg-void border border-border rounded p-3 focus:border-primary outline-none transition-colors" />
+                <input type="text" value={loreTimeline} onChange={e => setLoreTimeline(e.target.value)} placeholder="Ex: O início do crepúsculo - Era da Lua" className="w-full bg-void border border-border rounded p-3 focus:border-primary outline-none transition-colors" />
               </div>
               
               <div>
@@ -288,9 +500,17 @@ export function Admin() {
               </div>
             </div>
             
+            {error && <div className="text-red-400 text-sm text-right">{error}</div>}
+            {loreSuccess && <div className="text-primary text-sm text-right flex items-center justify-end gap-2"><CheckCircle2 size={16} /> {loreSuccess}</div>}
+
             <div className="mt-8 flex justify-end">
-              <button className="px-6 py-2 bg-primary text-void font-medium rounded hover:bg-primary/90 transition-colors">
-                Registrar no Cosmos
+              <button 
+                onClick={handlePublishLore}
+                disabled={isPublishingLore}
+                className="px-6 py-2 bg-primary text-void font-medium rounded hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {isPublishingLore ? <div className="w-4 h-4 border-2 border-void border-t-transparent rounded-full animate-spin" /> : null}
+                {isPublishingLore ? 'Registrando...' : 'Registrar no Cosmos'}
               </button>
             </div>
           </div>
