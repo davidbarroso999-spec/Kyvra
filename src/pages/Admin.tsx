@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Upload, Lock, X, Plus, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Upload, Lock, X, Plus, Sparkles, CheckCircle2, Edit3, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { GoogleGenAI } from '@google/genai';
 import { supabase } from '@/lib/supabase';
@@ -8,7 +8,7 @@ import { getAudioMetadata } from '@/lib/audioMetadata';
 
 export function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [activeTab, setActiveTab] = useState<'musicas' | 'lore'>('musicas');
+  const [activeTab, setActiveTab] = useState<'musicas' | 'lore' | 'editar_letras'>('musicas');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   
@@ -35,6 +35,56 @@ export function Admin() {
   const loreImageInputRef = useRef<HTMLInputElement>(null);
   const [activeTrackId, setActiveTrackId] = useState<number | null>(null);
   const [loreImageFile, setLoreImageFile] = useState<File | null>(null);
+
+  // Edit Lyrics State
+  const [existingTracks, setExistingTracks] = useState<any[]>([]);
+  const [editingTrackId, setEditingTrackId] = useState<number | null>(null);
+  const [editingLyrics, setEditingLyrics] = useState('');
+  const [isSavingLyrics, setIsSavingLyrics] = useState(false);
+  const [lyricsSuccess, setLyricsSuccess] = useState('');
+
+  useEffect(() => {
+    if (isAuthenticated && activeTab === 'editar_letras') {
+      fetchExistingTracks();
+    }
+  }, [isAuthenticated, activeTab]);
+
+  const fetchExistingTracks = async () => {
+    const { data, error } = await supabase
+      .from('tracks')
+      .select('id, title, artist, lyrics')
+      .order('created_at', { ascending: false });
+    
+    if (!error && data) {
+      setExistingTracks(data);
+    }
+  };
+
+  const handleSaveLyrics = async (trackId: number) => {
+    setIsSavingLyrics(true);
+    setLyricsSuccess('');
+    setError('');
+
+    try {
+      const { error: updateError } = await supabase
+        .from('tracks')
+        .update({ lyrics: editingLyrics })
+        .eq('id', trackId);
+
+      if (updateError) throw updateError;
+
+      setLyricsSuccess('Letra atualizada com sucesso!');
+      setExistingTracks(existingTracks.map(t => t.id === trackId ? { ...t, lyrics: editingLyrics } : t));
+      setEditingTrackId(null);
+      
+      setTimeout(() => setLyricsSuccess(''), 3000);
+    } catch (err: any) {
+      console.error('Erro ao salvar letra:', err);
+      setError('Falha ao salvar letra: ' + err.message);
+    } finally {
+      setIsSavingLyrics(false);
+    }
+  };
 
   const handleGenerateImage = async () => {
     if (!loreContent) {
@@ -312,18 +362,24 @@ export function Admin() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-8 border-b border-border mb-12 relative">
+      <div className="flex gap-8 border-b border-border mb-12 relative overflow-x-auto scrollbar-hide">
         <button 
           onClick={() => setActiveTab('musicas')}
-          className={cn("pb-4 font-medium transition-colors", activeTab === 'musicas' ? "text-primary" : "text-text-mid")}
+          className={cn("pb-4 font-medium transition-colors whitespace-nowrap", activeTab === 'musicas' ? "text-primary" : "text-text-mid")}
         >
           Músicas & Álbuns
         </button>
         <button 
           onClick={() => setActiveTab('lore')}
-          className={cn("pb-4 font-medium transition-colors", activeTab === 'lore' ? "text-primary" : "text-text-mid")}
+          className={cn("pb-4 font-medium transition-colors whitespace-nowrap", activeTab === 'lore' ? "text-primary" : "text-text-mid")}
         >
           Cosmogonia (Lore)
+        </button>
+        <button 
+          onClick={() => setActiveTab('editar_letras')}
+          className={cn("pb-4 font-medium transition-colors whitespace-nowrap", activeTab === 'editar_letras' ? "text-primary" : "text-text-mid")}
+        >
+          Editar Letras
         </button>
         
         {/* Animated Indicator */}
@@ -331,8 +387,8 @@ export function Admin() {
           className="absolute bottom-0 h-[2px] bg-primary"
           initial={false}
           animate={{ 
-            left: activeTab === 'musicas' ? 0 : '140px',
-            width: activeTab === 'musicas' ? '130px' : '145px'
+            left: activeTab === 'musicas' ? 0 : activeTab === 'lore' ? '155px' : '315px',
+            width: activeTab === 'musicas' ? '135px' : activeTab === 'lore' ? '145px' : '100px'
           }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
         />
@@ -520,7 +576,7 @@ export function Admin() {
             </div>
           </div>
         </div>
-      ) : (
+      ) : activeTab === 'lore' ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="md:col-span-2 glass p-6 rounded-xl">
             <h2 className="text-xl mb-6">Adicionar Capítulo da Cosmogonia</h2>
@@ -619,6 +675,79 @@ export function Admin() {
                 Fazer Upload Manual
               </button>
             </div>
+          </div>
+        </div>
+      ) : (
+        <div className="glass p-6 rounded-xl">
+          <h2 className="text-xl mb-6">Editar Letras das Músicas</h2>
+          <p className="text-text-mid text-sm mb-8">
+            Selecione uma música já enviada para adicionar ou modificar sua letra. A Inteligência Artificial usará essa letra para gerar as explicações.
+          </p>
+
+          {error && <div className="text-red-400 text-sm mb-4">{error}</div>}
+          {lyricsSuccess && <div className="text-primary text-sm mb-4 flex items-center gap-2"><CheckCircle2 size={16} /> {lyricsSuccess}</div>}
+
+          <div className="space-y-4">
+            {existingTracks.length === 0 ? (
+              <div className="text-center text-text-low py-8">Nenhuma música encontrada no arquivo.</div>
+            ) : (
+              existingTracks.map(track => (
+                <div key={track.id} className="bg-void/50 border border-border rounded-lg overflow-hidden">
+                  <div 
+                    className="p-4 flex items-center justify-between cursor-pointer hover:bg-surface transition-colors"
+                    onClick={() => {
+                      if (editingTrackId === track.id) {
+                        setEditingTrackId(null);
+                      } else {
+                        setEditingTrackId(track.id);
+                        setEditingLyrics(track.lyrics || '');
+                      }
+                    }}
+                  >
+                    <div>
+                      <h3 className="font-medium text-text-high">{track.title}</h3>
+                      <p className="text-xs text-text-low">{track.artist || 'Artista Desconhecido'}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {track.lyrics ? (
+                        <span className="text-xs text-primary bg-primary/10 px-2 py-1 rounded">Com Letra</span>
+                      ) : (
+                        <span className="text-xs text-text-low bg-surface px-2 py-1 rounded">Sem Letra</span>
+                      )}
+                      <Edit3 size={16} className={editingTrackId === track.id ? "text-primary" : "text-text-mid"} />
+                    </div>
+                  </div>
+
+                  {editingTrackId === track.id && (
+                    <div className="p-4 border-t border-border bg-surface/30">
+                      <textarea
+                        rows={10}
+                        value={editingLyrics}
+                        onChange={(e) => setEditingLyrics(e.target.value)}
+                        placeholder="Cole ou digite a letra da música aqui..."
+                        className="w-full bg-void border border-border rounded p-3 focus:border-primary outline-none transition-colors resize-y mb-4 font-sans text-sm"
+                      />
+                      <div className="flex justify-end gap-3">
+                        <button
+                          onClick={() => setEditingTrackId(null)}
+                          className="px-4 py-2 text-sm text-text-mid hover:text-text-high transition-colors"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          onClick={() => handleSaveLyrics(track.id)}
+                          disabled={isSavingLyrics}
+                          className="px-6 py-2 bg-primary text-void font-medium rounded hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2 text-sm"
+                        >
+                          {isSavingLyrics ? <div className="w-4 h-4 border-2 border-void border-t-transparent rounded-full animate-spin" /> : <Save size={16} />}
+                          {isSavingLyrics ? 'Salvando...' : 'Salvar Letra'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}
