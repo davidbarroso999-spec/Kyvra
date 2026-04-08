@@ -121,7 +121,15 @@ export function MiniPlayer() {
     setIsExplaining(true);
     try {
       // @ts-ignore
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+      
+      if (!apiKey) {
+        setLyricsExplanation("A API Key do Gemini não foi encontrada. Por favor, adicione a secret VITE_GEMINI_API_KEY no AI Studio ou no Vercel.");
+        setIsExplaining(false);
+        return;
+      }
+
+      const ai = new GoogleGenAI({ apiKey });
       
       const prompt = `Você é um crítico musical e poeta místico. Analise a seguinte letra da música "${currentTrack.title}" do artista "${currentTrack.artist}":
       

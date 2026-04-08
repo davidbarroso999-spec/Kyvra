@@ -97,7 +97,15 @@ export function Admin() {
     
     try {
       // @ts-ignore
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+
+      if (!apiKey) {
+        setError("A API Key do Gemini não foi encontrada. Por favor, adicione a secret VITE_GEMINI_API_KEY no AI Studio ou no Vercel.");
+        setIsGeneratingImage(false);
+        return;
+      }
+
+      const ai = new GoogleGenAI({ apiKey });
       
       const prompt = `Create an illustration for a story chapter titled "${loreTitle}". 
       Story content: "${loreContent}". 
