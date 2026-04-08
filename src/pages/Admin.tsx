@@ -120,7 +120,7 @@ export function Admin() {
           "${trackData.lyrics}"`;
 
           const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
+            model: 'gemini-3.1-flash-lite-preview',
             contents: prompt
           });
 
@@ -411,7 +411,7 @@ export function Admin() {
           "${allLyrics}"`;
 
           const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
+            model: 'gemini-3.1-flash-lite-preview',
             contents: prompt
           });
 
@@ -500,7 +500,7 @@ export function Admin() {
           "${allLyrics}"`;
 
           const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
+            model: 'gemini-3.1-flash-lite-preview',
             contents: prompt
           });
 

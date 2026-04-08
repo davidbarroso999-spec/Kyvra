@@ -57,8 +57,9 @@ export const useStore = create<AppState>()(
         if (!currentTrack || queue.length === 0) return;
         
         const currentIndex = queue.findIndex(t => t.id === currentTrack.id);
-        if (currentIndex !== -1 && currentIndex < queue.length - 1) {
-          set({ currentTrack: queue[currentIndex + 1], isPlaying: true });
+        if (currentIndex !== -1) {
+          const nextIndex = (currentIndex + 1) % queue.length;
+          set({ currentTrack: queue[nextIndex], isPlaying: true });
         }
       },
       
@@ -67,8 +68,9 @@ export const useStore = create<AppState>()(
         if (!currentTrack || queue.length === 0) return;
         
         const currentIndex = queue.findIndex(t => t.id === currentTrack.id);
-        if (currentIndex > 0) {
-          set({ currentTrack: queue[currentIndex - 1], isPlaying: true });
+        if (currentIndex !== -1) {
+          const prevIndex = currentIndex > 0 ? currentIndex - 1 : queue.length - 1;
+          set({ currentTrack: queue[prevIndex], isPlaying: true });
         }
       }
     }),

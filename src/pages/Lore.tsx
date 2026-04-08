@@ -69,7 +69,7 @@ export function Lore() {
          - Use no máximo 2 parágrafos curtos.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-3.1-flash-lite-preview',
         contents: prompt
       });
 
