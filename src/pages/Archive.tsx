@@ -97,11 +97,14 @@ export function Archive() {
         <input
           ref={searchInputRef}
           type="text"
-          placeholder="Buscar no arquivo... ⌘K"
+          placeholder="Buscar no arquivo..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full bg-surface border border-border rounded-lg py-4 pl-12 pr-4 text-text-high placeholder:text-text-low focus:outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--glow-purple)] transition-all font-sans"
         />
+        <div className="hidden md:flex absolute inset-y-0 right-4 items-center pointer-events-none">
+          <span className="text-[10px] font-mono text-text-low bg-void/50 px-1.5 py-0.5 rounded border border-border">⌘K</span>
+        </div>
       </motion.div>
 
       {/* Filters */}

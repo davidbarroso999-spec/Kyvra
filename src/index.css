@@ -5,6 +5,7 @@
   --font-sans: "DM Sans", sans-serif;
   --font-sc: "Cormorant SC", serif;
   --font-mono: "JetBrains Mono", monospace;
+  --breakpoint-xs: 480px;
 
   --color-void: var(--void);
   --color-deep: var(--deep);

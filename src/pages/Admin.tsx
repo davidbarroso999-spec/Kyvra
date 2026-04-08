@@ -18,6 +18,7 @@ export function Admin() {
   const [albumDesc, setAlbumDesc] = useState('');
   const [albumCover, setAlbumCover] = useState<File | null>(null);
   const [isPublishingAlbum, setIsPublishingAlbum] = useState(false);
+  const [isGeneratingSynopses, setIsGeneratingSynopses] = useState(false);
   const [albumSuccess, setAlbumSuccess] = useState('');
 
   const [loreChapter, setLoreChapter] = useState('');
@@ -95,6 +96,59 @@ export function Admin() {
             content: featuredTrackId,
             chapter_number: -1
           });
+      }
+
+      // Generate synopsis for the featured track
+      const { data: trackData } = await supabase
+        .from('tracks')
+        .select('title, artist, lyrics')
+        .eq('id', featuredTrackId)
+        .single();
+
+      if (trackData && trackData.lyrics) {
+        const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env.VITE_GEMINI_API_KEY;
+        if (apiKey) {
+          const ai = new GoogleGenAI({ apiKey });
+          const prompt = `Faça uma sinopse curta (máximo 2 parágrafos) sobre a música "${trackData.title}" do artista "${trackData.artist || 'Kyvra'}".
+          Analise a letra abaixo e explique sobre o que ela se trata e seus sentimentos.
+          Relacione com a estética "Dark Romance Gótico", focando na linha entre o amor e a ruína, a dor, a queda ou a busca por perfeição (narcisismo).
+          REGRAS CRÍTICAS:
+          - NÃO use asteriscos (*) ou (**) em hipótese alguma.
+          - NÃO use termos rebuscados ou difíceis.
+          
+          Letra:
+          "${trackData.lyrics}"`;
+
+          const response = await ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: prompt
+          });
+
+          if (response.text) {
+            const cleanText = response.text.replace(/\*\*/g, '').replace(/\*/g, '').trim();
+            
+            const { data: existingSynopsis } = await supabase
+              .from('lore_chapters')
+              .select('id')
+              .eq('title', '__FEATURED_TRACK_SYNOPSIS__')
+              .single();
+
+            if (existingSynopsis) {
+              await supabase
+                .from('lore_chapters')
+                .update({ content: cleanText })
+                .eq('id', existingSynopsis.id);
+            } else {
+              await supabase
+                .from('lore_chapters')
+                .insert({
+                  title: '__FEATURED_TRACK_SYNOPSIS__',
+                  content: cleanText,
+                  chapter_number: -2
+                });
+            }
+          }
+        }
       }
 
       setFeaturedSuccess('Música de destaque atualizada com sucesso!');
@@ -307,8 +361,12 @@ export function Admin() {
       if (albumDbError) throw albumDbError;
 
       // 3. Upload das Faixas e Inserção no BD
+      let allLyrics = '';
       for (let i = 0; i < validTracks.length; i++) {
         const track = validTracks[i];
+        if (track.lyrics) {
+          allLyrics += `\n\nFaixa ${i + 1} - ${track.title}:\n${track.lyrics}`;
+        }
         const fileExt = track.file!.name.split('.').pop();
         const audioFileName = `track_${Date.now()}_${i}.${fileExt}`;
 
@@ -336,6 +394,40 @@ export function Admin() {
         if (trackDbError) throw trackDbError;
       }
 
+      // 4. Generate Album Synopsis
+      if (allLyrics) {
+        const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env.VITE_GEMINI_API_KEY;
+        if (apiKey) {
+          const ai = new GoogleGenAI({ apiKey });
+          const prompt = `Faça uma sinopse curta (máximo 2 parágrafos) sobre o álbum "${albumTitle}".
+          Analise as letras das músicas abaixo, levando em consideração a ordem em que aparecem (como uma jornada).
+          Crie uma "mini lore" explicando a jornada deste álbum, por exemplo: "O início da jornada, onde Kyvra percebe tal coisa...".
+          Relacione com a estética "Dark Romance Gótico", focando na linha entre o amor e a ruína, a dor, a queda ou a busca por perfeição (narcisismo).
+          REGRAS CRÍTICAS:
+          - NÃO use asteriscos (*) ou (**) em hipótese alguma.
+          - NÃO use termos rebuscados ou difíceis.
+          
+          Letras do álbum:
+          "${allLyrics}"`;
+
+          const response = await ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: prompt
+          });
+
+          if (response.text) {
+            const cleanText = response.text.replace(/\*\*/g, '').replace(/\*/g, '').trim();
+            
+            // Append synopsis to album description
+            const newDesc = albumDesc ? `${albumDesc}\n\n${cleanText}` : cleanText;
+            await supabase
+              .from('albums')
+              .update({ description: newDesc })
+              .eq('id', albumData.id);
+          }
+        }
+      }
+
       setAlbumSuccess('Álbum publicado com sucesso!');
       setAlbumTitle('');
       setAlbumYear('');
@@ -349,6 +441,90 @@ export function Admin() {
       setError('Falha ao publicar álbum: ' + err.message);
     } finally {
       setIsPublishingAlbum(false);
+    }
+  };
+
+  const handleGenerateMissingAlbumSynopses = async () => {
+    setIsGeneratingSynopses(true);
+    setError('');
+    setAlbumSuccess('');
+
+    try {
+      const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env.VITE_GEMINI_API_KEY;
+      if (!apiKey) {
+        setError("API Key não configurada.");
+        return;
+      }
+
+      const ai = new GoogleGenAI({ apiKey });
+
+      // Fetch all albums
+      const { data: albums, error: albumsError } = await supabase
+        .from('albums')
+        .select('id, title, description');
+
+      if (albumsError) throw albumsError;
+
+      let generatedCount = 0;
+
+      for (const album of albums) {
+        // Skip if it already has a description (assuming it's a synopsis)
+        if (album.description && album.description.length > 50) continue;
+
+        // Fetch tracks for this album
+        const { data: tracks } = await supabase
+          .from('tracks')
+          .select('title, lyrics, track_number')
+          .eq('album_id', album.id)
+          .order('track_number', { ascending: true });
+
+        if (!tracks || tracks.length === 0) continue;
+
+        let allLyrics = '';
+        for (const track of tracks) {
+          if (track.lyrics) {
+            allLyrics += `\n\nFaixa ${track.track_number} - ${track.title}:\n${track.lyrics}`;
+          }
+        }
+
+        if (allLyrics) {
+          const prompt = `Faça uma sinopse curta (máximo 2 parágrafos) sobre o álbum "${album.title}".
+          Analise as letras das músicas abaixo, levando em consideração a ordem em que aparecem (como uma jornada).
+          Crie uma "mini lore" explicando a jornada deste álbum, por exemplo: "O início da jornada, onde Kyvra percebe tal coisa...".
+          Relacione com a estética "Dark Romance Gótico", focando na linha entre o amor e a ruína, a dor, a queda ou a busca por perfeição (narcisismo).
+          REGRAS CRÍTICAS:
+          - NÃO use asteriscos (*) ou (**) em hipótese alguma.
+          - NÃO use termos rebuscados ou difíceis.
+          
+          Letras do álbum:
+          "${allLyrics}"`;
+
+          const response = await ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: prompt
+          });
+
+          if (response.text) {
+            const cleanText = response.text.replace(/\*\*/g, '').replace(/\*/g, '').trim();
+            
+            const newDesc = album.description ? `${album.description}\n\n${cleanText}` : cleanText;
+            await supabase
+              .from('albums')
+              .update({ description: newDesc })
+              .eq('id', album.id);
+            
+            generatedCount++;
+          }
+        }
+      }
+
+      setAlbumSuccess(`Sinopses geradas para ${generatedCount} álbum(ns).`);
+      setTimeout(() => setAlbumSuccess(''), 5000);
+    } catch (err: any) {
+      console.error('Erro ao gerar sinopses:', err);
+      setError('Falha ao gerar sinopses: ' + err.message);
+    } finally {
+      setIsGeneratingSynopses(false);
     }
   };
 
@@ -428,28 +604,28 @@ export function Admin() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-8 border-b border-border mb-12 relative overflow-x-auto scrollbar-hide">
+      <div className="flex gap-4 sm:gap-8 border-b border-border mb-8 sm:mb-12 relative overflow-x-auto scrollbar-hide">
         <button 
           onClick={() => setActiveTab('musicas')}
-          className={cn("pb-4 font-medium transition-colors whitespace-nowrap", activeTab === 'musicas' ? "text-primary" : "text-text-mid")}
+          className={cn("pb-4 font-medium transition-colors whitespace-nowrap text-sm sm:text-base", activeTab === 'musicas' ? "text-primary" : "text-text-mid")}
         >
           Músicas & Álbuns
         </button>
         <button 
           onClick={() => setActiveTab('lore')}
-          className={cn("pb-4 font-medium transition-colors whitespace-nowrap", activeTab === 'lore' ? "text-primary" : "text-text-mid")}
+          className={cn("pb-4 font-medium transition-colors whitespace-nowrap text-sm sm:text-base", activeTab === 'lore' ? "text-primary" : "text-text-mid")}
         >
           Cosmogonia (Lore)
         </button>
         <button 
           onClick={() => setActiveTab('editar_letras')}
-          className={cn("pb-4 font-medium transition-colors whitespace-nowrap", activeTab === 'editar_letras' ? "text-primary" : "text-text-mid")}
+          className={cn("pb-4 font-medium transition-colors whitespace-nowrap text-sm sm:text-base", activeTab === 'editar_letras' ? "text-primary" : "text-text-mid")}
         >
           Editar Letras
         </button>
         <button 
           onClick={() => setActiveTab('destaque')}
-          className={cn("pb-4 font-medium transition-colors whitespace-nowrap", activeTab === 'destaque' ? "text-primary" : "text-text-mid")}
+          className={cn("pb-4 font-medium transition-colors whitespace-nowrap text-sm sm:text-base", activeTab === 'destaque' ? "text-primary" : "text-text-mid")}
         >
           Destaque (Home)
         </button>
@@ -468,8 +644,8 @@ export function Admin() {
 
       {/* Content */}
       {activeTab === 'musicas' ? (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-8">
+        <div className="flex flex-col lg:grid lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-8 order-2 lg:order-1">
             {/* Album Info */}
             <div className="glass p-6 rounded-xl">
               <h2 className="text-xl mb-6">Informações do Álbum / EP</h2>
@@ -602,11 +778,19 @@ export function Admin() {
             {error && <div className="text-red-400 text-sm text-right">{error}</div>}
             {albumSuccess && <div className="text-primary text-sm text-right flex items-center justify-end gap-2"><CheckCircle2 size={16} /> {albumSuccess}</div>}
 
-            <div className="flex justify-end">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-8">
+              <button 
+                onClick={handleGenerateMissingAlbumSynopses}
+                disabled={isGeneratingSynopses}
+                className="w-full sm:w-auto px-6 py-3 border border-primary/30 text-primary rounded hover:bg-primary/10 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isGeneratingSynopses ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Sparkles size={20} />}
+                {isGeneratingSynopses ? 'Gerando...' : 'Gerar Sinopses Pendentes'}
+              </button>
               <button 
                 onClick={handlePublishAlbum}
                 disabled={isPublishingAlbum}
-                className="px-8 py-3 bg-primary text-void font-medium rounded hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+                className="w-full sm:w-auto px-8 py-3 bg-primary text-void font-medium rounded hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {isPublishingAlbum ? <div className="w-4 h-4 border-2 border-void border-t-transparent rounded-full animate-spin" /> : null}
                 {isPublishingAlbum ? 'Publicando...' : 'Publicar Álbum'}
@@ -615,7 +799,7 @@ export function Admin() {
           </div>
 
           {/* Right Column: Cover */}
-          <div className="space-y-8">
+          <div className="space-y-8 order-1 lg:order-2">
             <div className="glass p-6 rounded-xl h-fit">
               <h2 className="text-xl mb-6">Capa do Álbum</h2>
               <div className="aspect-square w-full bg-void border border-border rounded-lg flex flex-col items-center justify-center text-text-low mb-4 p-4 text-center overflow-hidden relative">

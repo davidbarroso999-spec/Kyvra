@@ -53,17 +53,20 @@ export function Lore() {
 
       const ai = new GoogleGenAI({ apiKey });
       
-      const prompt = `Você é um especialista em Dark Romance Gótico e literatura clássica decifrando crônicas antigas. 
-      Analise o seguinte capítulo (ou trecho) da cosmogonia de Kyvra:
-      Título: "${chapter.title}"
-      Conteúdo: "${textToAnalyze}"
+      const prompt = `Imagine que você está contando esta história para alguém que não conhece nada sobre este mundo. Use uma linguagem simples, direta e fácil de entender, sem palavras complicadas.
+
+      Analise este trecho da história "${chapter.title}":
       
-      Sua missão é:
-      1. Explicar o significado de forma simples e acessível para qualquer pessoa, sem usar palavras excessivamente difíceis.
-      2. Relacionar o conteúdo com a estética do Dark Romance Gótico, focando na linha tênue entre o amor e a ruína, momentos de queda, dor, sensualidade, narcisismo e percepção.
-      3. Se houver semelhança ou pertinência, relacione trechos específicos a livros, obras de arte ou poemas famosos (ex: Edgar Allan Poe, Lord Byron, Emily Brontë, etc).
-      4. IMPORTANTE: NÃO use asteriscos (**) para negrito ou qualquer outra formatação de markdown. Use apenas texto puro e quebras de linha.
-      5. Mantenha um tom envolvente e profundo, mas compreensível. Máximo de 2 parágrafos.`;
+      "${textToAnalyze}"
+      
+      Sua missão:
+      1. Explique o que está acontecendo aqui de forma clara.
+      2. Relacione com a estética "Dark Romance Gótico", focando na linha entre o amor e a ruína, a dor, a queda ou a busca por perfeição (narcisismo).
+      3. Compare este momento com alguma obra histórica real (livro, quadro, filme ou evento histórico) que passe uma sensação parecida.
+      4. REGRAS CRÍTICAS: 
+         - NÃO use asteriscos (*) ou (**) em hipótese alguma.
+         - NÃO use termos rebuscados ou difíceis.
+         - Use no máximo 2 parágrafos curtos.`;
 
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',

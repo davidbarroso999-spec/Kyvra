@@ -8,6 +8,7 @@ import { Play } from 'lucide-react';
 
 export function Home() {
   const [featuredTrack, setFeaturedTrack] = useState<any>(null);
+  const [featuredSynopsis, setFeaturedSynopsis] = useState<string>('');
   const { setCurrentTrack, setIsPlaying, setQueue } = useStore();
 
   useEffect(() => {
@@ -46,6 +47,17 @@ export function Home() {
             lyrics: track.lyrics
           });
         }
+
+        // 3. Fetch synopsis
+        const { data: synopsisData } = await supabase
+          .from('lore_chapters')
+          .select('content')
+          .eq('title', '__FEATURED_TRACK_SYNOPSIS__')
+          .single();
+        
+        if (synopsisData && synopsisData.content) {
+          setFeaturedSynopsis(synopsisData.content);
+        }
       }
     }
     fetchFeatured();
@@ -68,7 +80,7 @@ export function Home() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-            className="text-[80px] md:text-[120px] leading-[0.95] tracking-[-0.02em] text-gradient mb-6"
+            className="text-6xl sm:text-7xl md:text-[120px] leading-[0.95] tracking-[-0.02em] text-gradient mb-6"
           >
             KYVRA
           </motion.h1>
@@ -77,7 +89,7 @@ export function Home() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 1, delay: 0.4 }}
-            className="font-sc text-lg md:text-xl tracking-[0.2em] text-text-high mb-8"
+            className="font-sc text-sm sm:text-base md:text-xl tracking-[0.2em] text-text-high mb-8 px-4"
           >
             FRAGMENTOS DE UM UNIVERSO SOMBRIO
           </motion.p>
@@ -86,7 +98,7 @@ export function Home() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.6 }}
-            className="font-sans font-light text-text-mid text-base md:text-lg max-w-[320px] leading-[1.75] mb-12"
+            className="font-sans font-light text-text-mid text-sm sm:text-base md:text-lg max-w-[280px] sm:max-w-[320px] leading-[1.75] mb-12 px-4"
           >
             Uma jornada sonora através de camadas esquecidas do tempo e do espaço.
           </motion.p>
@@ -95,27 +107,13 @@ export function Home() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.8 }}
-            className="flex flex-col sm:flex-row items-center gap-6"
+            className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 w-full px-6"
           >
-            <Link to="/arquivo" className="px-8 py-4 bg-primary text-void font-sans font-medium rounded-[4px] shadow-[0_0_40px_var(--glow-purple)] hover:scale-105 transition-transform duration-300">
+            <Link to="/arquivo" className="w-full sm:w-auto px-8 py-4 bg-primary text-void font-sans font-medium rounded-[4px] shadow-[0_0_40px_var(--glow-purple)] hover:scale-105 transition-transform duration-300 text-center">
               Explorar o Arquivo
             </Link>
-            
-            {featuredTrack ? (
-              <button 
-                onClick={handlePlayFeatured}
-                className="px-8 py-4 border border-border text-text-high font-sans font-medium rounded-[4px] hover:bg-overlay transition-colors duration-300 flex items-center gap-2 group"
-              >
-                <Play size={16} className="text-primary group-hover:scale-110 transition-transform" />
-                Ouvir Lançamento
-              </button>
-            ) : (
-              <Link to="/arquivo" className="px-8 py-4 border border-border text-text-high font-sans font-medium rounded-[4px] hover:bg-overlay transition-colors duration-300">
-                Último Lançamento
-              </Link>
-            )}
 
-            <Link to="/cosmogonia" className="flex items-center gap-2 text-text-mid hover:text-primary transition-colors font-sans font-medium group">
+            <Link to="/cosmogonia" className="flex items-center gap-2 text-text-mid hover:text-primary transition-colors font-sans font-medium group mt-4 sm:mt-0">
               A Cosmogonia 
               <span className="group-hover:translate-x-1 transition-transform">→</span>
             </Link>
@@ -133,17 +131,70 @@ export function Home() {
         </motion.div>
       </section>
 
+      {/* Featured Track Card Section */}
+      {featuredTrack && (
+        <section className="py-24 px-6 relative flex items-center justify-center overflow-hidden bg-deep">
+          <div className="max-w-5xl mx-auto relative z-10 w-full">
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="glass p-8 md:p-12 rounded-2xl flex flex-col md:flex-row gap-8 md:gap-12 items-center"
+            >
+              <div className="w-full md:w-1/3 shrink-0 relative group">
+                <img 
+                  src={featuredTrack.coverUrl} 
+                  alt={featuredTrack.title} 
+                  className="w-full aspect-square object-cover rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
+                  referrerPolicy="no-referrer"
+                />
+                <button 
+                  onClick={handlePlayFeatured}
+                  className="absolute inset-0 bg-void/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center rounded-xl"
+                >
+                  <div className="w-16 h-16 bg-primary text-void rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-[0_0_30px_var(--glow-purple)]">
+                    <Play size={24} className="ml-1" />
+                  </div>
+                </button>
+              </div>
+              
+              <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left">
+                <span className="font-sc text-xs tracking-[0.3em] text-primary mb-4 block">DESTAQUE DO ARQUIVO</span>
+                <h2 className="text-4xl md:text-5xl font-display text-text-high mb-2">{featuredTrack.title}</h2>
+                <p className="text-text-mid font-mono text-sm mb-6">{featuredTrack.artist} • {featuredTrack.albumTitle}</p>
+                
+                {featuredSynopsis && (
+                  <div className="prose prose-invert max-w-none">
+                    <p className="text-text-mid text-sm md:text-base leading-relaxed italic border-l-2 border-primary/30 pl-4 py-2">
+                      {featuredSynopsis}
+                    </p>
+                  </div>
+                )}
+                
+                <button 
+                  onClick={handlePlayFeatured}
+                  className="mt-8 px-8 py-3 border border-border text-text-high font-sans font-medium rounded-[4px] hover:bg-overlay transition-colors duration-300 flex items-center gap-2 group"
+                >
+                  <Play size={16} className="text-primary group-hover:scale-110 transition-transform" />
+                  Ouvir Agora
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+      )}
+
       {/* Citação Poética */}
-      <section className="py-32 px-6 relative flex items-center justify-center overflow-hidden">
+      <section className="py-24 md:py-32 px-6 relative flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,var(--glow-purple)_0%,transparent_50%)] opacity-30" />
-        <div className="flex items-center gap-8 max-w-5xl mx-auto relative z-10">
-          <div className="hidden md:block w-20 h-[1px] bg-primary/30" />
-          <blockquote className="text-center">
-            <p className="font-display italic text-3xl md:text-4xl text-text-high leading-relaxed">
+        <div className="flex items-center gap-4 md:gap-8 max-w-5xl mx-auto relative z-10">
+          <div className="hidden lg:block w-20 h-[1px] bg-primary/30" />
+          <blockquote className="text-center px-4">
+            <p className="font-display italic text-2xl sm:text-3xl md:text-4xl text-text-high leading-relaxed">
               "Em cada fragmento, uma história. Em cada nota, um suspiro da alma perdida nas névoas do tempo."
             </p>
           </blockquote>
-          <div className="hidden md:block w-20 h-[1px] bg-primary/30" />
+          <div className="hidden lg:block w-20 h-[1px] bg-primary/30" />
         </div>
       </section>
     </div>

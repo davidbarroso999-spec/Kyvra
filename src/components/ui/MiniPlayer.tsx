@@ -142,16 +142,20 @@ export function MiniPlayer() {
 
       const ai = new GoogleGenAI({ apiKey });
       
-      const prompt = `Você é um especialista em Dark Romance Gótico e literatura clássica. Analise a seguinte letra (ou trecho) da música "${currentTrack.title}" do artista "${currentTrack.artist}":
+      const prompt = `Imagine que você está explicando o significado desta letra para alguém que nunca ouviu falar desta banda ou deste universo. Seja direto, use palavras simples e evite termos difíceis ou muito "místicos".
+
+      Analise este trecho da música "${currentTrack.title}" do artista "${currentTrack.artist}":
       
       "${textToAnalyze}"
       
-      Sua missão é:
-      1. Explicar o significado de forma simples e acessível para qualquer pessoa, sem usar palavras excessivamente difíceis.
-      2. Relacionar o conteúdo com a estética do Dark Romance Gótico, focando na linha tênue entre o amor e a ruína, momentos de queda, dor, sensualidade, narcisismo e percepção.
-      3. Se houver semelhança ou pertinência, relacione trechos específicos a livros, obras de arte ou poemas famosos (ex: Edgar Allan Poe, Lord Byron, Emily Brontë, etc).
-      4. IMPORTANTE: NÃO use asteriscos (**) para negrito ou qualquer outra formatação de markdown. Use apenas texto puro e quebras de linha.
-      5. Mantenha um tom envolvente e profundo, mas compreensível. Máximo de 2 parágrafos.`;
+      Sua missão:
+      1. Explique o que está acontecendo aqui de um jeito que qualquer pessoa entenda.
+      2. Conecte com o tema "Dark Romance Gótico" — fale sobre como o amor pode levar à destruição, a dor da perda, o desejo intenso ou a obsessão (narcisismo).
+      3. Faça uma comparação com alguma obra histórica famosa (pode ser um livro, filme, pintura ou fato histórico) que combine com esse sentimento.
+      4. REGRAS CRÍTICAS: 
+         - NÃO use asteriscos (*) ou (**) em hipótese alguma.
+         - NÃO use palavras rebuscadas ou difíceis.
+         - Use no máximo 2 parágrafos curtos.`;
 
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
@@ -200,7 +204,7 @@ export function MiniPlayer() {
         initial={{ y: 100, opacity: 0 }}
         animate={{ y: isExpanded ? 100 : 0, opacity: isExpanded ? 0 : 1 }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className="fixed bottom-6 right-6 z-[1000] glass rounded-xl p-3 flex items-center gap-4 w-[320px] shadow-2xl cursor-pointer"
+        className="fixed bottom-4 right-4 left-4 sm:left-auto sm:bottom-6 sm:right-6 z-[1000] glass rounded-xl p-3 flex items-center gap-4 w-auto sm:w-[320px] shadow-2xl cursor-pointer"
         onClick={() => setIsExpanded(true)}
       >
         <img src={currentTrack.coverUrl} alt="Cover" className="w-12 h-12 rounded object-cover" referrerPolicy="no-referrer" />
@@ -253,18 +257,18 @@ export function MiniPlayer() {
               <button 
                 onClick={() => setShowLyrics(!showLyrics)}
                 className={cn(
-                  "absolute top-6 left-6 transition-colors flex items-center gap-2 text-sm font-medium z-50",
+                  "absolute top-6 left-6 transition-colors flex items-center gap-2 text-sm font-medium z-50 p-2",
                   showLyrics ? "text-primary" : "text-text-mid hover:text-text-high"
                 )}
               >
                 <AlignLeft size={20} />
-                <span className="hidden sm:inline">Letra</span>
+                <span className="hidden xs:inline">Letra</span>
               </button>
             )}
 
             <button 
               onClick={() => setIsExpanded(false)}
-              className="absolute top-6 right-6 text-text-mid hover:text-text-high z-50"
+              className="absolute top-6 right-6 text-text-mid hover:text-text-high z-50 p-2"
             >
               <span className="text-2xl">↓</span>
             </button>
@@ -281,7 +285,7 @@ export function MiniPlayer() {
                   <img 
                     src={currentTrack.coverUrl} 
                     alt="Cover" 
-                    className="w-64 h-64 sm:w-80 sm:h-80 rounded-xl object-cover shadow-[0_40px_120px_rgba(0,0,0,0.8),0_0_60px_var(--glow-purple)] mb-12"
+                    className="w-56 h-56 xs:w-64 xs:h-64 sm:w-80 sm:h-80 rounded-xl object-cover shadow-[0_40px_120px_rgba(0,0,0,0.8),0_0_60px_var(--glow-purple)] mb-8 sm:mb-12"
                     referrerPolicy="no-referrer"
                   />
 
@@ -398,22 +402,22 @@ export function MiniPlayer() {
             </div>
 
             {/* Controls */}
-            <div className="flex items-center justify-between w-full mb-8">
-              <button className="text-text-mid hover:text-primary transition-colors"><Shuffle size={20} /></button>
-              <button onClick={playPrevious} className="text-text-high hover:text-primary transition-colors"><SkipBack size={32} /></button>
+            <div className="flex items-center justify-between w-full mb-8 px-4">
+              <button className="text-text-mid hover:text-primary transition-colors p-2"><Shuffle size={20} /></button>
+              <button onClick={playPrevious} className="text-text-high hover:text-primary transition-colors p-2"><SkipBack size={32} /></button>
               <button 
                 onClick={() => setIsPlaying(!isPlaying)}
                 className="w-16 h-16 flex items-center justify-center bg-primary text-void rounded-full hover:scale-105 transition-transform shadow-[0_0_30px_var(--glow-purple)]"
               >
                 {isPlaying ? <Pause size={28} /> : <Play size={28} className="ml-1" />}
               </button>
-              <button onClick={playNext} className="text-text-high hover:text-primary transition-colors"><SkipForward size={32} /></button>
-              <button className="text-text-mid hover:text-primary transition-colors"><Repeat size={20} /></button>
+              <button onClick={playNext} className="text-text-high hover:text-primary transition-colors p-2"><SkipForward size={32} /></button>
+              <button className="text-text-mid hover:text-primary transition-colors p-2"><Repeat size={20} /></button>
             </div>
 
-            {/* Volume */}
+            {/* Volume - Hidden on mobile for better UX (use hardware buttons) */}
             <div 
-              className="flex items-center gap-3 w-full max-w-[200px] text-text-mid group/volume"
+              className="hidden sm:flex items-center gap-3 w-full max-w-[200px] text-text-mid group/volume"
               onMouseEnter={() => setIsHoveringVolume(true)}
               onMouseLeave={() => setIsHoveringVolume(false)}
             >

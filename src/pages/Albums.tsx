@@ -23,6 +23,7 @@ export function Albums() {
           title: a.title,
           year: a.release_year,
           coverUrl: a.cover_url,
+          description: a.description,
           tracks: a.tracks[0].count
         })));
       }
@@ -74,7 +75,12 @@ export function Albums() {
                   </div>
                 </div>
                 <h3 className="text-2xl font-display text-text-high group-hover:text-primary transition-colors">{album.title}</h3>
-                <p className="text-text-low font-mono text-sm mt-1">{album.year}</p>
+                <p className="text-text-low font-mono text-sm mt-1 mb-3">{album.year}</p>
+                {album.description && (
+                  <p className="text-text-mid text-sm leading-relaxed italic line-clamp-3 border-l-2 border-primary/30 pl-3">
+                    {album.description}
+                  </p>
+                )}
               </Link>
             </motion.div>
           ))}
