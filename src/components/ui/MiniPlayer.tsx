@@ -130,7 +130,7 @@ export function MiniPlayer() {
       Decifre os versos, explique os sentimentos transmitidos pela música e relacione trechos específicos com emoções e conceitos profundos (ex: "esta música transmite o sentimento X por causa do verso Y que diz Z, relacionando-se a W"). Mantenha um tom acadêmico, poético e levemente gótico/melancólico. Seja conciso (máximo de 2 parágrafos).`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3-flash-preview',
         contents: prompt
       });
 

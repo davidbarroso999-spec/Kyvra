@@ -42,7 +42,7 @@ export function Lore() {
       Forneça uma interpretação profunda e poética deste capítulo. Explique os significados ocultos, as metáforas e os sentimentos transmitidos. Relacione os eventos descritos com temas de tempo, memória, escuridão e renascimento. Mantenha um tom gótico, surreal e acadêmico-místico. Seja conciso (máximo de 2 parágrafos).`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3-flash-preview',
         contents: prompt
       });
 
