@@ -8,7 +8,7 @@ import { getAudioMetadata } from '@/lib/audioMetadata';
 
 export function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [activeTab, setActiveTab] = useState<'musicas' | 'lore' | 'editar_letras'>('musicas');
+  const [activeTab, setActiveTab] = useState<'musicas' | 'lore' | 'editar_letras' | 'destaque'>('musicas');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   
@@ -43,11 +43,69 @@ export function Admin() {
   const [isSavingLyrics, setIsSavingLyrics] = useState(false);
   const [lyricsSuccess, setLyricsSuccess] = useState('');
 
+  // Destaque State
+  const [featuredTrackId, setFeaturedTrackId] = useState<string>('');
+  const [isSavingFeatured, setIsSavingFeatured] = useState(false);
+  const [featuredSuccess, setFeaturedSuccess] = useState('');
+
   useEffect(() => {
-    if (isAuthenticated && activeTab === 'editar_letras') {
+    if (isAuthenticated && (activeTab === 'editar_letras' || activeTab === 'destaque')) {
       fetchExistingTracks();
     }
+    if (isAuthenticated && activeTab === 'destaque') {
+      fetchFeaturedTrack();
+    }
   }, [isAuthenticated, activeTab]);
+
+  const fetchFeaturedTrack = async () => {
+    const { data } = await supabase
+      .from('lore_chapters')
+      .select('id, content')
+      .eq('title', '__FEATURED_TRACK__')
+      .single();
+    
+    if (data) {
+      setFeaturedTrackId(data.content);
+    }
+  };
+
+  const handleSaveFeatured = async () => {
+    if (!featuredTrackId) return;
+    setIsSavingFeatured(true);
+    setFeaturedSuccess('');
+    setError('');
+
+    try {
+      const { data: existing } = await supabase
+        .from('lore_chapters')
+        .select('id')
+        .eq('title', '__FEATURED_TRACK__')
+        .single();
+
+      if (existing) {
+        await supabase
+          .from('lore_chapters')
+          .update({ content: featuredTrackId })
+          .eq('id', existing.id);
+      } else {
+        await supabase
+          .from('lore_chapters')
+          .insert({
+            title: '__FEATURED_TRACK__',
+            content: featuredTrackId,
+            chapter_number: -1
+          });
+      }
+
+      setFeaturedSuccess('Música de destaque atualizada com sucesso!');
+      setTimeout(() => setFeaturedSuccess(''), 3000);
+    } catch (err: any) {
+      console.error('Erro ao salvar destaque:', err);
+      setError('Falha ao salvar destaque: ' + err.message);
+    } finally {
+      setIsSavingFeatured(false);
+    }
+  };
 
   const fetchExistingTracks = async () => {
     const { data, error } = await supabase
@@ -389,14 +447,20 @@ export function Admin() {
         >
           Editar Letras
         </button>
+        <button 
+          onClick={() => setActiveTab('destaque')}
+          className={cn("pb-4 font-medium transition-colors whitespace-nowrap", activeTab === 'destaque' ? "text-primary" : "text-text-mid")}
+        >
+          Destaque (Home)
+        </button>
         
         {/* Animated Indicator */}
         <motion.div 
           className="absolute bottom-0 h-[2px] bg-primary"
           initial={false}
           animate={{ 
-            left: activeTab === 'musicas' ? 0 : activeTab === 'lore' ? '155px' : '315px',
-            width: activeTab === 'musicas' ? '135px' : activeTab === 'lore' ? '145px' : '100px'
+            left: activeTab === 'musicas' ? 0 : activeTab === 'lore' ? '155px' : activeTab === 'editar_letras' ? '315px' : '435px',
+            width: activeTab === 'musicas' ? '135px' : activeTab === 'lore' ? '145px' : activeTab === 'editar_letras' ? '100px' : '130px'
           }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
         />
@@ -685,7 +749,7 @@ export function Admin() {
             </div>
           </div>
         </div>
-      ) : (
+      ) : activeTab === 'editar_letras' ? (
         <div className="glass p-6 rounded-xl">
           <h2 className="text-xl mb-6">Editar Letras das Músicas</h2>
           <p className="text-text-mid text-sm mb-8">
@@ -758,7 +822,44 @@ export function Admin() {
             )}
           </div>
         </div>
-      )}
+      ) : activeTab === 'destaque' ? (
+        <div className="glass p-6 rounded-xl">
+          <h2 className="text-xl mb-6">Música em Destaque (Home)</h2>
+          <p className="text-text-mid text-sm mb-8">
+            Selecione a música que será exibida com destaque na página inicial como "Último Lançamento".
+          </p>
+
+          {error && <div className="text-red-400 text-sm mb-4">{error}</div>}
+          {featuredSuccess && <div className="text-primary text-sm mb-4 flex items-center gap-2"><CheckCircle2 size={16} /> {featuredSuccess}</div>}
+
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm text-text-mid mb-2">Selecione a Música</label>
+              <select
+                value={featuredTrackId}
+                onChange={(e) => setFeaturedTrackId(e.target.value)}
+                className="w-full bg-void border border-border rounded p-3 focus:border-primary outline-none transition-colors"
+              >
+                <option value="">-- Nenhuma música selecionada --</option>
+                {existingTracks.map(track => (
+                  <option key={track.id} value={track.id.toString()}>
+                    {track.title} {track.artist ? `- ${track.artist}` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              onClick={handleSaveFeatured}
+              disabled={isSavingFeatured || !featuredTrackId}
+              className="w-full bg-primary text-void font-medium py-3 rounded hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isSavingFeatured ? <div className="w-5 h-5 border-2 border-void border-t-transparent rounded-full animate-spin" /> : <Save size={18} />}
+              {isSavingFeatured ? 'Salvando...' : 'Salvar Destaque'}
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

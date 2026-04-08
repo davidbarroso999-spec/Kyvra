@@ -18,7 +18,7 @@ export function Lore() {
         .order('chapter_number', { ascending: true });
 
       if (!error && data) {
-        setChapters(data);
+        setChapters(data.filter(c => c.chapter_number >= 0));
       }
       setLoading(false);
     }

@@ -138,7 +138,8 @@ export function Archive() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 + index * 0.05 }}
-              className="group flex items-center gap-4 py-4 px-2 hover:bg-primary/5 rounded-lg transition-colors border-b border-border/50 last:border-0"
+              onClick={() => handlePlay(track)}
+              className="group flex items-center gap-4 py-4 px-2 hover:bg-primary/5 rounded-lg transition-colors border-b border-border/50 last:border-0 cursor-pointer"
             >
               <div className="w-8 flex justify-center text-text-low font-mono text-sm">
                 {isCurrentTrack && isPlaying ? (
@@ -151,7 +152,6 @@ export function Archive() {
                   <span className="group-hover:hidden">{String(index + 1).padStart(2, '0')}</span>
                 )}
                 <button 
-                  onClick={() => handlePlay(track)}
                   className={cn(
                     "hidden group-hover:flex items-center justify-center text-primary",
                     isCurrentTrack && isPlaying ? "flex" : ""

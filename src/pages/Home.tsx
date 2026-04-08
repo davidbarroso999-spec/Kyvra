@@ -1,8 +1,64 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
+import { supabase } from '@/lib/supabase';
+import { useStore } from '@/store/useStore';
+import { Play } from 'lucide-react';
 
 export function Home() {
+  const [featuredTrack, setFeaturedTrack] = useState<any>(null);
+  const { setCurrentTrack, setIsPlaying, setQueue } = useStore();
+
+  useEffect(() => {
+    async function fetchFeatured() {
+      // 1. Get featured track ID
+      const { data: settings } = await supabase
+        .from('lore_chapters')
+        .select('content')
+        .eq('title', '__FEATURED_TRACK__')
+        .single();
+      
+      if (settings && settings.content) {
+        // 2. Fetch track details
+        const { data: track } = await supabase
+          .from('tracks')
+          .select(`
+            *,
+            albums (
+              title,
+              cover_url
+            )
+          `)
+          .eq('id', settings.content)
+          .single();
+          
+        if (track) {
+          setFeaturedTrack({
+            id: track.id,
+            title: track.title,
+            artist: track.artist || 'Kyvra',
+            vibe: track.vibe || 'Introspectivo',
+            duration: track.duration || '0:00',
+            coverUrl: track.albums?.cover_url || '',
+            audioUrl: track.audio_url,
+            albumTitle: track.albums?.title || '',
+            lyrics: track.lyrics
+          });
+        }
+      }
+    }
+    fetchFeatured();
+  }, []);
+
+  const handlePlayFeatured = () => {
+    if (featuredTrack) {
+      setQueue([featuredTrack]);
+      setCurrentTrack(featuredTrack);
+      setIsPlaying(true);
+    }
+  };
+
   return (
     <div className="w-full">
       {/* Hero Section */}
@@ -44,9 +100,21 @@ export function Home() {
             <Link to="/arquivo" className="px-8 py-4 bg-primary text-void font-sans font-medium rounded-[4px] shadow-[0_0_40px_var(--glow-purple)] hover:scale-105 transition-transform duration-300">
               Explorar o Arquivo
             </Link>
-            <Link to="/reliquias" className="px-8 py-4 border border-border text-text-high font-sans font-medium rounded-[4px] hover:bg-overlay transition-colors duration-300">
-              Último Lançamento
-            </Link>
+            
+            {featuredTrack ? (
+              <button 
+                onClick={handlePlayFeatured}
+                className="px-8 py-4 border border-border text-text-high font-sans font-medium rounded-[4px] hover:bg-overlay transition-colors duration-300 flex items-center gap-2 group"
+              >
+                <Play size={16} className="text-primary group-hover:scale-110 transition-transform" />
+                Ouvir Lançamento
+              </button>
+            ) : (
+              <Link to="/arquivo" className="px-8 py-4 border border-border text-text-high font-sans font-medium rounded-[4px] hover:bg-overlay transition-colors duration-300">
+                Último Lançamento
+              </Link>
+            )}
+
             <Link to="/cosmogonia" className="flex items-center gap-2 text-text-mid hover:text-primary transition-colors font-sans font-medium group">
               A Cosmogonia 
               <span className="group-hover:translate-x-1 transition-transform">→</span>
