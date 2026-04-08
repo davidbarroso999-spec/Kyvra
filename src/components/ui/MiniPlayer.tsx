@@ -14,7 +14,9 @@ export function MiniPlayer() {
   const [currentTime, setCurrentTime] = useState('0:00');
   
   const [lyricsExplanation, setLyricsExplanation] = useState<string | null>(null);
+  const [stanzaExplanations, setStanzaExplanations] = useState<Record<number, string>>({});
   const [isExplaining, setIsExplaining] = useState(false);
+  const [explainingIndex, setExplainingIndex] = useState<number | null>(null); // null for full, number for stanza
 
   // Volume states
   const [isHoveringVolume, setIsHoveringVolume] = useState(false);
@@ -25,6 +27,7 @@ export function MiniPlayer() {
   useEffect(() => {
     // Reset explanation and lyrics view when track changes
     setLyricsExplanation(null);
+    setStanzaExplanations({});
     setShowLyrics(false);
   }, [currentTrack?.id]);
 
@@ -115,27 +118,40 @@ export function MiniPlayer() {
     }
   };
 
-  const handleExplainLyrics = async () => {
-    if (!currentTrack?.lyrics) return;
+  const handleExplainLyrics = async (text?: string, index?: number) => {
+    const textToAnalyze = text || currentTrack?.lyrics;
+    if (!textToAnalyze) return;
     
     setIsExplaining(true);
+    setExplainingIndex(index !== undefined ? index : null);
+    
     try {
-      // @ts-ignore
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+      // Use process.env.GEMINI_API_KEY as per platform guidelines
+      const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env.VITE_GEMINI_API_KEY;
       
       if (!apiKey) {
-        setLyricsExplanation("A API Key do Gemini não foi encontrada. Por favor, adicione a secret VITE_GEMINI_API_KEY no AI Studio ou no Vercel.");
+        const errorMsg = "A chave de acesso (API Key) não foi configurada. Verifique as configurações do sistema.";
+        if (index !== undefined) {
+          setStanzaExplanations(prev => ({ ...prev, [index]: errorMsg }));
+        } else {
+          setLyricsExplanation(errorMsg);
+        }
         setIsExplaining(false);
         return;
       }
 
       const ai = new GoogleGenAI({ apiKey });
       
-      const prompt = `Você é um crítico musical e poeta místico. Analise a seguinte letra da música "${currentTrack.title}" do artista "${currentTrack.artist}":
+      const prompt = `Você é um especialista em Dark Romance Gótico e literatura clássica. Analise a seguinte letra (ou trecho) da música "${currentTrack.title}" do artista "${currentTrack.artist}":
       
-      "${currentTrack.lyrics}"
+      "${textToAnalyze}"
       
-      Decifre os versos, explique os sentimentos transmitidos pela música e relacione trechos específicos com emoções e conceitos profundos (ex: "esta música transmite o sentimento X por causa do verso Y que diz Z, relacionando-se a W"). Mantenha um tom acadêmico, poético e levemente gótico/melancólico. Seja conciso (máximo de 2 parágrafos).`;
+      Sua missão é:
+      1. Explicar o significado de forma simples e acessível para qualquer pessoa, sem usar palavras excessivamente difíceis.
+      2. Relacionar o conteúdo com a estética do Dark Romance Gótico, focando na linha tênue entre o amor e a ruína, momentos de queda, dor, sensualidade, narcisismo e percepção.
+      3. Se houver semelhança ou pertinência, relacione trechos específicos a livros, obras de arte ou poemas famosos (ex: Edgar Allan Poe, Lord Byron, Emily Brontë, etc).
+      4. IMPORTANTE: NÃO use asteriscos (**) para negrito ou qualquer outra formatação de markdown. Use apenas texto puro e quebras de linha.
+      5. Mantenha um tom envolvente e profundo, mas compreensível. Máximo de 2 parágrafos.`;
 
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
@@ -143,13 +159,26 @@ export function MiniPlayer() {
       });
 
       if (response.text) {
-        setLyricsExplanation(response.text);
+        const cleanText = response.text.replace(/\*\*/g, '').replace(/\*/g, '').trim();
+        if (index !== undefined) {
+          setStanzaExplanations(prev => ({ ...prev, [index]: cleanText }));
+        } else {
+          setLyricsExplanation(cleanText);
+        }
+      } else {
+        throw new Error("Resposta vazia da IA");
       }
     } catch (err) {
       console.error("Erro ao gerar explicação da letra:", err);
-      setLyricsExplanation("As vozes do passado estão inaudíveis no momento. Tente novamente mais tarde.");
+      const errorMsg = "As vozes do passado estão inaudíveis no momento. Tente novamente mais tarde.";
+      if (index !== undefined) {
+        setStanzaExplanations(prev => ({ ...prev, [index]: errorMsg }));
+      } else {
+        setLyricsExplanation(errorMsg);
+      }
     } finally {
       setIsExplaining(false);
+      setExplainingIndex(null);
     }
   };
 
@@ -279,18 +308,55 @@ export function MiniPlayer() {
                   </div>
                   
                   <div className="w-full flex-1 overflow-y-auto scrollbar-hide text-center px-2 pb-8">
-                    <p className="text-text-high text-lg leading-relaxed whitespace-pre-line font-medium mb-12">
-                      {currentTrack.lyrics}
-                    </p>
+                    <div className="space-y-12 mb-12">
+                      {currentTrack.lyrics.split('\n\n').map((stanza, sIdx) => (
+                        <div key={sIdx} className="group relative">
+                          <p className="text-text-high text-lg leading-relaxed whitespace-pre-line font-medium">
+                            {stanza}
+                          </p>
+                          
+                          <div className="mt-4 flex flex-col items-center gap-4">
+                            {!stanzaExplanations[sIdx] && (
+                              <button 
+                                onClick={() => handleExplainLyrics(stanza, sIdx)}
+                                disabled={isExplaining}
+                                className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 mx-auto text-[10px] uppercase tracking-[0.2em] text-primary/60 hover:text-primary disabled:opacity-50"
+                              >
+                                {isExplaining && explainingIndex === sIdx ? (
+                                  <Loader2 size={10} className="animate-spin" />
+                                ) : (
+                                  <Sparkles size={10} />
+                                )}
+                                Decifrar Estrofe
+                              </button>
+                            )}
+
+                            <AnimatePresence>
+                              {stanzaExplanations[sIdx] && (
+                                <motion.div
+                                  initial={{ opacity: 0, y: 10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  className="w-full bg-primary/5 border border-primary/10 rounded-lg p-4 text-left"
+                                >
+                                  <p className="text-text-mid text-xs leading-relaxed italic">
+                                    {stanzaExplanations[sIdx]}
+                                  </p>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                     
                     {!lyricsExplanation && (
                       <button
-                        onClick={handleExplainLyrics}
+                        onClick={() => handleExplainLyrics()}
                         disabled={isExplaining}
                         className="mx-auto flex items-center gap-2 px-6 py-3 bg-surface border border-primary/30 text-primary rounded-full hover:bg-primary/10 transition-colors text-sm font-medium mb-8"
                       >
-                        {isExplaining ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-                        Decifrar Letra
+                        {isExplaining && explainingIndex === null ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                        Decifrar Obra Completa
                       </button>
                     )}
 

@@ -8,7 +8,8 @@ export function Lore() {
   const [chapters, setChapters] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [explanations, setExplanations] = useState<Record<number, string>>({});
-  const [loadingExplanations, setLoadingExplanations] = useState<Record<number, boolean>>({});
+  const [paragraphExplanations, setParagraphExplanations] = useState<Record<string, string>>({});
+  const [loadingExplanations, setLoadingExplanations] = useState<Record<string, boolean>>({}); // key: chapterId or `${chapterId}-${pIndex}`
 
   useEffect(() => {
     async function fetchLore() {
@@ -25,29 +26,44 @@ export function Lore() {
     fetchLore();
   }, []);
 
-  const handleExplainLore = async (chapter: any) => {
-    if (explanations[chapter.id]) return; // Already explained
+  const handleExplainLore = async (chapter: any, text?: string, pIndex?: number) => {
+    const textToAnalyze = text || chapter.content;
+    const key = pIndex !== undefined ? `${chapter.id}-${pIndex}` : `${chapter.id}`;
+    
+    // Only return early if we have a successful explanation (not an error message)
+    if (pIndex !== undefined && paragraphExplanations[key] && !paragraphExplanations[key].includes("inaudíveis") && !paragraphExplanations[key].includes("configurada")) return;
+    if (pIndex === undefined && explanations[chapter.id] && !explanations[chapter.id].includes("inaudíveis") && !explanations[chapter.id].includes("configurada")) return;
 
-    setLoadingExplanations(prev => ({ ...prev, [chapter.id]: true }));
+    setLoadingExplanations(prev => ({ ...prev, [key]: true }));
 
     try {
-      // @ts-ignore
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+      // Use process.env.GEMINI_API_KEY as per platform guidelines
+      const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env.VITE_GEMINI_API_KEY;
 
       if (!apiKey) {
-        setExplanations(prev => ({ ...prev, [chapter.id]: "A API Key do Gemini não foi encontrada. Por favor, adicione a secret VITE_GEMINI_API_KEY no AI Studio ou no Vercel." }));
-        setLoadingExplanations(prev => ({ ...prev, [chapter.id]: false }));
+        const errorMsg = "A chave de acesso (API Key) não foi configurada. Verifique as configurações do sistema.";
+        if (pIndex !== undefined) {
+          setParagraphExplanations(prev => ({ ...prev, [key]: errorMsg }));
+        } else {
+          setExplanations(prev => ({ ...prev, [chapter.id]: errorMsg }));
+        }
+        setLoadingExplanations(prev => ({ ...prev, [key]: false }));
         return;
       }
 
       const ai = new GoogleGenAI({ apiKey });
       
-      const prompt = `Você é um arquivista místico decifrando textos antigos. 
-      Analise o seguinte capítulo da cosmogonia de Kyvra:
+      const prompt = `Você é um especialista em Dark Romance Gótico e literatura clássica decifrando crônicas antigas. 
+      Analise o seguinte capítulo (ou trecho) da cosmogonia de Kyvra:
       Título: "${chapter.title}"
-      Conteúdo: "${chapter.content}"
+      Conteúdo: "${textToAnalyze}"
       
-      Forneça uma interpretação profunda e poética deste capítulo. Explique os significados ocultos, as metáforas e os sentimentos transmitidos. Relacione os eventos descritos com temas de tempo, memória, escuridão e renascimento. Mantenha um tom gótico, surreal e acadêmico-místico. Seja conciso (máximo de 2 parágrafos).`;
+      Sua missão é:
+      1. Explicar o significado de forma simples e acessível para qualquer pessoa, sem usar palavras excessivamente difíceis.
+      2. Relacionar o conteúdo com a estética do Dark Romance Gótico, focando na linha tênue entre o amor e a ruína, momentos de queda, dor, sensualidade, narcisismo e percepção.
+      3. Se houver semelhança ou pertinência, relacione trechos específicos a livros, obras de arte ou poemas famosos (ex: Edgar Allan Poe, Lord Byron, Emily Brontë, etc).
+      4. IMPORTANTE: NÃO use asteriscos (**) para negrito ou qualquer outra formatação de markdown. Use apenas texto puro e quebras de linha.
+      5. Mantenha um tom envolvente e profundo, mas compreensível. Máximo de 2 parágrafos.`;
 
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
@@ -55,13 +71,25 @@ export function Lore() {
       });
 
       if (response.text) {
-        setExplanations(prev => ({ ...prev, [chapter.id]: response.text }));
+        const cleanText = response.text.replace(/\*\*/g, '').replace(/\*/g, '').trim();
+        if (pIndex !== undefined) {
+          setParagraphExplanations(prev => ({ ...prev, [key]: cleanText }));
+        } else {
+          setExplanations(prev => ({ ...prev, [chapter.id]: cleanText }));
+        }
+      } else {
+        throw new Error("Resposta vazia da IA");
       }
     } catch (err) {
       console.error("Erro ao gerar explicação:", err);
-      setExplanations(prev => ({ ...prev, [chapter.id]: "As brumas do tempo obscurecem esta interpretação. Tente novamente mais tarde." }));
+      const errorMsg = "As brumas do tempo obscurecem esta interpretação. Tente novamente mais tarde.";
+      if (pIndex !== undefined) {
+        setParagraphExplanations(prev => ({ ...prev, [key]: errorMsg }));
+      } else {
+        setExplanations(prev => ({ ...prev, [chapter.id]: errorMsg }));
+      }
     } finally {
-      setLoadingExplanations(prev => ({ ...prev, [chapter.id]: false }));
+      setLoadingExplanations(prev => ({ ...prev, [key]: false }));
     }
   };
 
@@ -127,23 +155,60 @@ export function Lore() {
                     )}
 
                     <div className="prose prose-invert max-w-none">
-                      <p className="font-sans font-light text-[17px] leading-[1.9] text-text-mid mb-8 whitespace-pre-line">
-                        {chapter.content}
-                      </p>
+                      <div className="space-y-8 mb-8">
+                        {chapter.content.split('\n\n').map((paragraph, pIdx) => (
+                          <div key={pIdx} className="group relative">
+                            <p className="font-sans font-light text-[17px] leading-[1.9] text-text-mid whitespace-pre-line">
+                              {paragraph}
+                            </p>
+                            
+                            <div className={`mt-4 flex flex-col ${isEven ? 'items-end' : 'items-start'}`}>
+                              {!paragraphExplanations[`${chapter.id}-${pIdx}`] && (
+                                <button 
+                                  onClick={() => handleExplainLore(chapter, paragraph, pIdx)}
+                                  disabled={loadingExplanations[`${chapter.id}-${pIdx}`]}
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-primary/60 hover:text-primary disabled:opacity-50"
+                                >
+                                  {loadingExplanations[`${chapter.id}-${pIdx}`] ? (
+                                    <Loader2 size={10} className="animate-spin" />
+                                  ) : (
+                                    <Sparkles size={10} />
+                                  )}
+                                  Decifrar Parágrafo
+                                </button>
+                              )}
+
+                              <AnimatePresence>
+                                {paragraphExplanations[`${chapter.id}-${pIdx}`] && (
+                                  <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="w-full bg-primary/5 border border-primary/10 rounded-lg p-4 mt-2 text-left"
+                                  >
+                                    <p className="text-text-mid text-xs leading-relaxed italic">
+                                      {paragraphExplanations[`${chapter.id}-${pIdx}`]}
+                                    </p>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                       
                       <div className={`flex flex-col gap-4 mt-8 ${isEven ? 'items-end' : 'items-start'}`}>
                         {!explanations[chapter.id] && (
                           <button
                             onClick={() => handleExplainLore(chapter)}
-                            disabled={loadingExplanations[chapter.id]}
+                            disabled={loadingExplanations[`${chapter.id}`]}
                             className="flex items-center gap-2 px-4 py-2 bg-surface border border-primary/30 text-primary rounded-full hover:bg-primary/10 transition-colors text-sm font-medium"
                           >
-                            {loadingExplanations[chapter.id] ? (
+                            {loadingExplanations[`${chapter.id}`] ? (
                               <Loader2 size={16} className="animate-spin" />
                             ) : (
                               <Sparkles size={16} />
                             )}
-                            Decifrar Capítulo
+                            Decifrar Capítulo Completo
                           </button>
                         )}
 

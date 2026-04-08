@@ -154,11 +154,11 @@ export function Admin() {
     setError('');
     
     try {
-      // @ts-ignore
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+      // Use process.env.GEMINI_API_KEY as per platform guidelines
+      const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env.VITE_GEMINI_API_KEY;
 
       if (!apiKey) {
-        setError("A API Key do Gemini não foi encontrada. Por favor, adicione a secret VITE_GEMINI_API_KEY no AI Studio ou no Vercel.");
+        setError("A chave de acesso (API Key) não foi configurada. Verifique as configurações do sistema.");
         setIsGeneratingImage(false);
         return;
       }
