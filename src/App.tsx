@@ -53,6 +53,10 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
 }
 
 export default function App() {
+  React.useEffect(() => {
+    console.log("Kyvra App mounted successfully.");
+  }, []);
+
   return (
     <ErrorBoundary>
       <HashRouter>

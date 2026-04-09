@@ -9,7 +9,11 @@ export function Layout() {
   const height = useTransform(scrollYProgress, [0, 1], ['0%', '100%']);
 
   return (
-    <div className="min-h-screen flex flex-col relative">
+    <div className="min-h-screen flex flex-col relative border-4 border-primary/20">
+      {/* Debug Marker */}
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 bg-primary text-void px-2 py-0.5 text-[10px] z-[10001] font-mono">
+        KYVRA_V1.0_ACTIVE
+      </div>
       <BackgroundEffects />
       
       <div className="noise-overlay" />

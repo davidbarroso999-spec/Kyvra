@@ -7,7 +7,14 @@ export function BackgroundEffects() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d', { alpha: false }); // Optimize by disabling alpha
+    let ctx: CanvasRenderingContext2D | null = null;
+    try {
+      ctx = canvas.getContext('2d', { alpha: false });
+    } catch (e) {
+      console.error("Failed to get canvas context:", e);
+      return;
+    }
+    
     if (!ctx) return;
 
     let animationFrameId: number;
