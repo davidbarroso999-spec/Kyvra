@@ -37,21 +37,7 @@ export function Lore() {
     setLoadingExplanations(prev => ({ ...prev, [key]: true }));
 
     try {
-      // Use process.env.GEMINI_API_KEY as per platform guidelines
-      const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env.VITE_GEMINI_API_KEY;
-
-      if (!apiKey) {
-        const errorMsg = "A chave de acesso (API Key) não foi configurada. Verifique as configurações do sistema.";
-        if (pIndex !== undefined) {
-          setParagraphExplanations(prev => ({ ...prev, [key]: errorMsg }));
-        } else {
-          setExplanations(prev => ({ ...prev, [chapter.id]: errorMsg }));
-        }
-        setLoadingExplanations(prev => ({ ...prev, [key]: false }));
-        return;
-      }
-
-      const ai = new GoogleGenAI({ apiKey });
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
       
       const prompt = `Imagine que você está contando esta história para alguém que não conhece nada sobre este mundo. Use uma linguagem simples, direta e fácil de entender, sem palavras complicadas.
 
@@ -69,7 +55,7 @@ export function Lore() {
          - Use no máximo 2 parágrafos curtos.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.1-pro-preview',
+        model: 'gemini-2.5-flash-preview',
         contents: prompt
       });
 

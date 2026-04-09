@@ -106,26 +106,25 @@ export function Admin() {
         .single();
 
       if (trackData && trackData.lyrics) {
-        const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env.VITE_GEMINI_API_KEY;
-        if (apiKey) {
-          const ai = new GoogleGenAI({ apiKey });
-          const prompt = `Faça uma sinopse curta (máximo 2 parágrafos) sobre a música "${trackData.title}" do artista "${trackData.artist || 'Kyvra'}".
-          Analise a letra abaixo e explique sobre o que ela se trata e seus sentimentos.
-          Relacione com a filosofia central de Kyvra: "a busca por um amor que não é benéfico, mas proporcionalmente viciante, com alguns momentos de egocentrismo por parte do eu lírico".
-          REGRAS CRÍTICAS:
-          - NÃO use asteriscos (*) ou (**) em hipótese alguma.
-          - NÃO use termos rebuscados ou difíceis.
-          
-          Letra:
-          "${trackData.lyrics}"`;
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+        
+        const prompt = `Faça uma sinopse curta (máximo 2 parágrafos) sobre a música "${trackData.title}" do artista "${trackData.artist || 'Kyvra'}".
+        Analise a letra abaixo e explique sobre o que ela se trata e seus sentimentos.
+        Relacione com a filosofia central de Kyvra: "a busca por um amor que não é benéfico, mas proporcionalmente viciante, com alguns momentos de egocentrismo por parte do eu lírico".
+        REGRAS CRÍTICAS:
+        - NÃO use asteriscos (*) ou (**) em hipótese alguma.
+        - NÃO use termos rebuscados ou difíceis.
+        
+        Letra:
+        "${trackData.lyrics}"`;
 
-          const response = await ai.models.generateContent({
-            model: 'gemini-3.1-pro-preview',
-            contents: prompt
-          });
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash-preview',
+          contents: prompt
+        });
 
-          if (response.text) {
-            const cleanText = response.text.replace(/\*\*/g, '').replace(/\*/g, '').trim();
+        if (response.text) {
+          const cleanText = response.text.replace(/\*\*/g, '').replace(/\*/g, '').trim();
             
             const { data: existingSynopsis } = await supabase
               .from('lore_chapters')
@@ -149,11 +148,10 @@ export function Admin() {
             }
           }
         }
-      }
 
-      setFeaturedSuccess('Música de destaque atualizada com sucesso!');
-      setTimeout(() => setFeaturedSuccess(''), 3000);
-    } catch (err: any) {
+        setFeaturedSuccess('Música de destaque atualizada com sucesso!');
+        setTimeout(() => setFeaturedSuccess(''), 3000);
+      } catch (err: any) {
       console.error('Erro ao salvar destaque:', err);
       setError('Falha ao salvar destaque: ' + err.message);
     } finally {
@@ -208,16 +206,7 @@ export function Admin() {
     setError('');
     
     try {
-      // Use process.env.GEMINI_API_KEY as per platform guidelines
-      const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env.VITE_GEMINI_API_KEY;
-
-      if (!apiKey) {
-        setError("A chave de acesso (API Key) não foi configurada. Verifique as configurações do sistema.");
-        setIsGeneratingImage(false);
-        return;
-      }
-
-      const ai = new GoogleGenAI({ apiKey });
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
       
       const prompt = `Create an illustration for a story chapter titled "${loreTitle}". 
       Story content: "${loreContent}". 
@@ -226,22 +215,15 @@ export function Admin() {
 
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
-        contents: {
-          parts: [
-            { text: prompt }
-          ]
-        }
+        contents: prompt
       });
 
-      const candidate = response.candidates?.[0];
-      if (candidate?.content?.parts) {
-        for (const part of candidate.content.parts) {
-          if (part.inlineData) {
-            const base64EncodeString = part.inlineData.data;
-            const imageUrl = `data:${part.inlineData.mimeType || 'image/png'};base64,${base64EncodeString}`;
-            setGeneratedImage(imageUrl);
-            break;
-          }
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) {
+          const base64EncodeString = part.inlineData.data;
+          const imageUrl = `data:image/png;base64,${base64EncodeString}`;
+          setGeneratedImage(imageUrl);
+          break;
         }
       }
     } catch (err) {
@@ -396,27 +378,26 @@ export function Admin() {
 
       // 4. Generate Album Synopsis
       if (allLyrics) {
-        const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env.VITE_GEMINI_API_KEY;
-        if (apiKey) {
-          const ai = new GoogleGenAI({ apiKey });
-          const prompt = `Faça uma sinopse curta (máximo 2 parágrafos) sobre o álbum "${albumTitle}".
-          Analise as letras das músicas abaixo, levando em consideração a ordem em que aparecem (como uma jornada).
-          Crie uma "mini lore" explicando a jornada deste álbum, por exemplo: "O início da jornada, onde Kyvra percebe tal coisa...".
-          Relacione com a filosofia central de Kyvra: "a busca por um amor que não é benéfico, mas proporcionalmente viciante, com alguns momentos de egocentrismo por parte do eu lírico".
-          REGRAS CRÍTICAS:
-          - NÃO use asteriscos (*) ou (**) em hipótese alguma.
-          - NÃO use termos rebuscados ou difíceis.
-          
-          Letras do álbum:
-          "${allLyrics}"`;
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+        
+        const prompt = `Faça uma sinopse curta (máximo 2 parágrafos) sobre o álbum "${albumTitle}".
+        Analise as letras das músicas abaixo, levando em consideração a ordem em que aparecem (como uma jornada).
+        Crie uma "mini lore" explicando a jornada deste álbum, por exemplo: "O início da jornada, onde Kyvra percebe tal coisa...".
+        Relacione com a filosofia central de Kyvra: "a busca por um amor que não é benéfico, mas proporcionalmente viciante, com alguns momentos de egocentrismo por parte do eu lírico".
+        REGRAS CRÍTICAS:
+        - NÃO use asteriscos (*) ou (**) em hipótese alguma.
+        - NÃO use termos rebuscados ou difíceis.
+        
+        Letras do álbum:
+        "${allLyrics}"`;
 
-          const response = await ai.models.generateContent({
-            model: 'gemini-3.1-pro-preview',
-            contents: prompt
-          });
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash-preview',
+          contents: prompt
+        });
 
-          if (response.text) {
-            const cleanText = response.text.replace(/\*\*/g, '').replace(/\*/g, '').trim();
+        if (response.text) {
+          const cleanText = response.text.replace(/\*\*/g, '').replace(/\*/g, '').trim();
             
             // Append synopsis to album description
             const newDesc = albumDesc ? `${albumDesc}\n\n${cleanText}` : cleanText;
@@ -426,17 +407,16 @@ export function Admin() {
               .eq('id', albumData.id);
           }
         }
-      }
 
-      setAlbumSuccess('Álbum publicado com sucesso!');
-      setAlbumTitle('');
-      setAlbumYear('');
-      setAlbumDesc('');
-      setAlbumCover(null);
-      setAlbumTracks([{ id: Date.now(), title: '', file: null }]);
-      
-      setTimeout(() => setAlbumSuccess(''), 5000);
-    } catch (err: any) {
+        setAlbumSuccess('Álbum publicado com sucesso!');
+        setAlbumTitle('');
+        setAlbumYear('');
+        setAlbumDesc('');
+        setAlbumCover(null);
+        setAlbumTracks([{ id: Date.now(), title: '', file: null }]);
+        
+        setTimeout(() => setAlbumSuccess(''), 5000);
+      } catch (err: any) {
       console.error('Erro ao publicar álbum:', err);
       setError('Falha ao publicar álbum: ' + err.message);
     } finally {
@@ -450,14 +430,6 @@ export function Admin() {
     setAlbumSuccess('');
 
     try {
-      const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env.VITE_GEMINI_API_KEY;
-      if (!apiKey) {
-        setError("API Key não configurada.");
-        return;
-      }
-
-      const ai = new GoogleGenAI({ apiKey });
-
       // Fetch all albums
       const { data: albums, error: albumsError } = await supabase
         .from('albums')
@@ -488,6 +460,8 @@ export function Admin() {
         }
 
         if (allLyrics) {
+          const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+          
           const prompt = `Faça uma sinopse curta (máximo 2 parágrafos) sobre o álbum "${album.title}".
           Analise as letras das músicas abaixo, levando em consideração a ordem em que aparecem (como uma jornada).
           Crie uma "mini lore" explicando a jornada deste álbum, por exemplo: "O início da jornada, onde Kyvra percebe tal coisa...".
@@ -500,7 +474,7 @@ export function Admin() {
           "${allLyrics}"`;
 
           const response = await ai.models.generateContent({
-            model: 'gemini-3.1-pro-preview',
+            model: 'gemini-2.5-flash-preview',
             contents: prompt
           });
 

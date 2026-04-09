@@ -4,7 +4,6 @@ import { Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Volume2, Volume1, 
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { TrackDuration } from '@/components/ui/TrackDuration';
-
 import { GoogleGenAI } from '@google/genai';
 
 export function MiniPlayer() {
@@ -131,17 +130,7 @@ export function MiniPlayer() {
     setIsExplaining(true);
     
     try {
-      // Use process.env.GEMINI_API_KEY as per platform guidelines
-      const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env.VITE_GEMINI_API_KEY;
-      
-      if (!apiKey) {
-        const errorMsg = "A chave de acesso (API Key) não foi configurada. Verifique as configurações do sistema.";
-        setLyricsExplanation(errorMsg);
-        setIsExplaining(false);
-        return;
-      }
-
-      const ai = new GoogleGenAI({ apiKey });
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
       
       const prompt = `Imagine que você está explicando o significado desta letra para alguém que nunca ouviu falar desta banda ou deste universo. Seja direto, use palavras simples e evite termos difíceis ou muito "místicos".
 
@@ -159,7 +148,7 @@ export function MiniPlayer() {
          - Use no máximo 2 parágrafos curtos.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.1-pro-preview',
+        model: 'gemini-2.5-flash-preview',
         contents: prompt
       });
 
