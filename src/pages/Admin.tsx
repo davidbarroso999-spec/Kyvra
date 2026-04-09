@@ -119,7 +119,7 @@ export function Admin() {
         "${trackData.lyrics}"`;
 
         const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash-preview',
+          model: 'gemini-2.0-flash',
           contents: prompt
         });
 
@@ -218,12 +218,15 @@ export function Admin() {
         contents: prompt
       });
 
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) {
-          const base64EncodeString = part.inlineData.data;
-          const imageUrl = `data:image/png;base64,${base64EncodeString}`;
-          setGeneratedImage(imageUrl);
-          break;
+      const parts = response.candidates?.[0]?.content?.parts;
+      if (parts) {
+        for (const part of parts) {
+          if (part.inlineData) {
+            const base64EncodeString = part.inlineData.data;
+            const imageUrl = `data:image/png;base64,${base64EncodeString}`;
+            setGeneratedImage(imageUrl);
+            break;
+          }
         }
       }
     } catch (err) {
@@ -392,7 +395,7 @@ export function Admin() {
         "${allLyrics}"`;
 
         const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash-preview',
+          model: 'gemini-2.0-flash',
           contents: prompt
         });
 
@@ -474,7 +477,7 @@ export function Admin() {
           "${allLyrics}"`;
 
           const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-preview',
+            model: 'gemini-2.0-flash',
             contents: prompt
           });
 
