@@ -132,20 +132,28 @@ export function MiniPlayer() {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
       
-      const prompt = `Imagine que você está explicando o significado desta letra para alguém que nunca ouviu falar desta banda ou deste universo. Seja direto, use palavras simples e evite termos difíceis ou muito "místicos".
+      const prompt = `Você é o Arquivista de Kyvra. Sua missão é decifrar a letra da música "${currentTrack.title}" do artista "${currentTrack.artist}" sob a ótica do Arco Psicológico de Kyvra.
 
-      Analise a letra completa da música "${currentTrack.title}" do artista "${currentTrack.artist}":
-      
-      "${textToAnalyze}"
+      FILOSOFIA KYVRA (O Arco Psicológico):
+      1. ✨ Fascínio: O amor é visto como salvação sobrenatural, mas as almas não se tocam, apenas especulam.
+      2. 🔥 Entrega: Perda de identidade e mergulho espiritual completo.
+      3. 🌑 Obsessão: O amor vira vício, ciúme e dependência dolorosa.
+      4. 🩸 Ruína: A percepção de que o amor destrói, mas a escolha consciente pelo abismo em vez do vazio.
+      5. 🕯️ Consciência: O entendimento da dor sem arrependimento, abraçando a destruição com um toque de narcisismo.
+
+      ESTÉTICA: Gótica, íntima e dramática (estilo Evanescence/Black Veil Brides).
+
+      Analise esta letra: "${textToAnalyze}"
       
       Sua missão:
-      1. Explique o que está acontecendo aqui de um jeito que qualquer pessoa entenda.
-      2. Conecte com a filosofia central de Kyvra: "a busca por um amor que não é benéfico, mas proporcionalmente viciante, com alguns momentos de egocentrismo por parte do eu lírico".
-      3. Faça uma comparação com alguma obra histórica famosa (pode ser um livro, filme, pintura ou fato histórico) que combine com esse sentimento.
-      4. REGRAS CRÍTICAS: 
-         - NÃO use asteriscos (*) ou (**) em hipótese alguma.
-         - NÃO use palavras rebuscadas ou difíceis.
-         - Use no máximo 2 parágrafos curtos.`;
+      1. Identifique em qual estágio do arco esta música se encontra.
+      2. Explique o significado de forma visceral e direta.
+      3. Conecte com o diferencial de Kyvra: o abraço à destruição e o ego do eu lírico.
+      4. Compare com uma obra histórica/cultural que transmita essa mesma "beleza trágica".
+      
+      REGRAS CRÍTICAS: 
+      - NÃO use asteriscos (*) ou (**).
+      - Use no máximo 2 parágrafos curtos.`;
 
       const response = await ai.models.generateContent({
         model: 'gemini-2.0-flash',
@@ -315,9 +323,13 @@ export function MiniPlayer() {
                     <h2 className="text-3xl font-display text-text-high mb-2">{currentTrack.title}</h2>
                     <p className="text-lg text-text-mid mb-2">{currentTrack.artist}</p>
                     {currentTrack.vibe && (
-                      <span className="inline-block px-3 py-1 rounded-full bg-surface border border-border text-xs text-text-mid">
-                        {currentTrack.vibe}
-                      </span>
+                      <div className="flex flex-wrap justify-center gap-2">
+                        {currentTrack.vibe.split(' | ').map((tag, idx) => (
+                          <span key={idx} className="px-3 py-1 rounded-full bg-surface border border-border text-[10px] uppercase tracking-widest text-text-mid font-mono">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
                     )}
                   </div>
                 </motion.div>

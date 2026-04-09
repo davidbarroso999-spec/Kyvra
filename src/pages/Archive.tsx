@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { TrackDuration } from '@/components/ui/TrackDuration';
 
-const VIBES = ['Todos', 'Melancólico', 'Dark', 'Etéreo', 'Ambient', 'Introspectivo'];
+const VIBES = ['Todos', 'Dark', 'Etéreo', 'Melancólico', 'Agressivo', 'Introspectivo', 'Grandioso', 'Assombrado', 'Majestoso', 'Caótico'];
 
 export function Archive() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -61,7 +61,7 @@ export function Archive() {
 
   const filteredTracks = tracks.filter(track => {
     const matchesSearch = track.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesVibe = selectedVibe === 'Todos' || track.vibe === selectedVibe;
+    const matchesVibe = selectedVibe === 'Todos' || track.vibe.toLowerCase().includes(selectedVibe.toLowerCase());
     return matchesSearch && matchesVibe;
   });
 
@@ -174,10 +174,12 @@ export function Archive() {
                 <p className="text-sm text-text-low truncate">{track.artist}</p>
               </div>
               
-              <div className="hidden md:block">
-                <span className="px-3 py-1 rounded-full bg-surface border border-border text-xs text-text-mid">
-                  {track.vibe}
-                </span>
+              <div className="hidden md:flex flex-wrap gap-2">
+                {track.vibe.split(' | ').map((tag: string, idx: number) => (
+                  <span key={idx} className="px-2 py-0.5 rounded-full bg-surface border border-border text-[9px] uppercase tracking-widest text-text-mid font-mono">
+                    {tag}
+                  </span>
+                ))}
               </div>
               
               <div className="font-mono text-sm text-text-low w-12 text-right">

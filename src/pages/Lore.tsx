@@ -39,20 +39,28 @@ export function Lore() {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
       
-      const prompt = `Imagine que você está contando esta história para alguém que não conhece nada sobre este mundo. Use uma linguagem simples, direta e fácil de entender, sem palavras complicadas.
+      const prompt = `Você é o Cronista de Kyvra. Sua missão é explicar este trecho da história "${chapter.title}" sob a ótica do Arco Psicológico de Kyvra.
 
-      Analise este trecho da história "${chapter.title}":
-      
-      "${textToAnalyze}"
+      FILOSOFIA KYVRA (O Arco Psicológico):
+      1. ✨ Fascínio: O amor é visto como salvação sobrenatural, mas as almas não se tocam, apenas especulam.
+      2. 🔥 Entrega: Perda de identidade e mergulho espiritual completo.
+      3. 🌑 Obsessão: O amor vira vício, ciúme e dependência dolorosa.
+      4. 🩸 Ruína: A percepção de que o amor destrói, mas a escolha consciente pelo abismo em vez do vazio.
+      5. 🕯️ Consciência: O entendimento da dor sem arrependimento, abraçando a destruição com um toque de narcisismo.
+
+      ESTÉTICA: Gótica, íntima e dramática (estilo Evanescence/Black Veil Brides).
+
+      Analise este trecho: "${textToAnalyze}"
       
       Sua missão:
-      1. Explique o que está acontecendo aqui de forma clara.
-      2. Relacione com a filosofia central de Kyvra: "a busca por um amor que não é benéfico, mas proporcionalmente viciante, com alguns momentos de egocentrismo por parte do eu lírico".
-      3. Compare este momento com alguma obra histórica real (livro, quadro, filme ou evento histórico) que passe uma sensação parecida.
-      4. REGRAS CRÍTICAS: 
-         - NÃO use asteriscos (*) ou (**) em hipótese alguma.
-         - NÃO use termos rebuscados ou difíceis.
-         - Use no máximo 2 parágrafos curtos.`;
+      1. Identifique em qual estágio do arco este momento se encontra.
+      2. Explique o que está acontecendo de forma visceral e clara.
+      3. Conecte com o diferencial de Kyvra: o abraço à destruição e o ego do eu lírico.
+      4. Compare com uma obra histórica/cultural real que transmita essa mesma sensação.
+      
+      REGRAS CRÍTICAS: 
+      - NÃO use asteriscos (*) ou (**).
+      - Use no máximo 2 parágrafos curtos.`;
 
       const response = await ai.models.generateContent({
         model: 'gemini-2.0-flash',

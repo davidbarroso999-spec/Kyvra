@@ -108,15 +108,26 @@ export function Admin() {
       if (trackData && trackData.lyrics) {
         const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
         
-        const prompt = `Faça uma sinopse curta (máximo 2 parágrafos) sobre a música "${trackData.title}" do artista "${trackData.artist || 'Kyvra'}".
-        Analise a letra abaixo e explique sobre o que ela se trata e seus sentimentos.
-        Relacione com a filosofia central de Kyvra: "a busca por um amor que não é benéfico, mas proporcionalmente viciante, com alguns momentos de egocentrismo por parte do eu lírico".
-        REGRAS CRÍTICAS:
-        - NÃO use asteriscos (*) ou (**) em hipótese alguma.
-        - NÃO use termos rebuscados ou difíceis.
+        const prompt = `Faça uma sinopse visceral (máximo 2 parágrafos) sobre a música "${trackData.title}" do artista "${trackData.artist || 'Kyvra'}" sob a ótica do Arco Psicológico de Kyvra.
+
+        FILOSOFIA KYVRA (O Arco Psicológico):
+        1. ✨ Fascínio: O amor é visto como salvação sobrenatural, mas as almas não se tocam, apenas especulam.
+        2. 🔥 Entrega: Perda de identidade e mergulho espiritual completo.
+        3. 🌑 Obsessão: O amor vira vício, ciúme e dependência dolorosa.
+        4. 🩸 Ruína: A percepção de que o amor destrói, mas a escolha consciente pelo abismo em vez do vazio.
+        5. 🕯️ Consciência: O entendimento da dor sem arrependimento, abraçando a destruição com um toque de narcisismo.
+
+        ESTÉTICA: Gótica, íntima e dramática (estilo Evanescence/Black Veil Brides).
+
+        Analise a letra: "${trackData.lyrics}"
         
-        Letra:
-        "${trackData.lyrics}"`;
+        Sua missão:
+        1. Explique a essência da música dentro do arco.
+        2. Relacione com o diferencial de Kyvra: o abraço à destruição e o ego do eu lírico.
+        
+        REGRAS CRÍTICAS:
+        - NÃO use asteriscos (*) ou (**).
+        - NÃO use termos rebuscados.`;
 
         const response = await ai.models.generateContent({
           model: 'gemini-2.0-flash',
@@ -208,10 +219,11 @@ export function Admin() {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
       
-      const prompt = `Create an illustration for a story chapter titled "${loreTitle}". 
+      const prompt = `Create a dark fantasy illustration for a story chapter titled "${loreTitle}". 
       Story content: "${loreContent}". 
-      Aesthetic: medieval surreal and gothic painting, inspired by symphonic metal/rock album covers like Blackbriar. 
-      The colors should deeply reflect the mood and aesthetic of the narrative. Highly detailed, atmospheric, dark fantasy.`;
+      Aesthetic: medieval surreal and gothic painting, inspired by symphonic metal/rock album covers like Evanescence, Black Veil Brides, and Blackbriar. 
+      The colors should deeply reflect the mood of the Kyvra narrative arc (Fascination, Surrender, Obsession, Ruin, or Consciousness). 
+      Highly detailed, atmospheric, dark fantasy, emotional, dramatic lighting, cinematic.`;
 
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
@@ -352,6 +364,57 @@ export function Admin() {
         if (track.lyrics) {
           allLyrics += `\n\nFaixa ${i + 1} - ${track.title}:\n${track.lyrics}`;
         }
+
+        // --- NOVO: Análise Automática de Vibe e Gênero ---
+        let detectedGenre = track.genre;
+        let detectedVibe = track.duration; // Usando o campo duration temporariamente se não houver um campo vibe no estado local, mas vamos ajustar a lógica abaixo
+
+        if (track.file && track.lyrics) {
+          try {
+            const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+
+            // Converter áudio para base64 para análise
+            const reader = new FileReader();
+            const audioBase64 = await new Promise<string>((resolve) => {
+              reader.onload = () => {
+                const base64 = (reader.result as string).split(',')[1];
+                resolve(base64);
+              };
+              reader.readAsDataURL(track.file!);
+            });
+
+            const analysisPrompt = `Analise esta música (áudio e letra) e identifique:
+            1. Gêneros Musicais (ex: Symphonic Metal, Gothic Rock, Industrial).
+            2. Vibe/Sentimento descritivo (ex: Dark, Etéreo, Melancólico, Agressivo, Introspectivo, Grandioso, Assombrado, Majestoso, Caótico).
+            3. Estágio do Arco de Kyvra (Fascínio, Entrega, Obsessão, Ruína ou Consciência).
+            
+            Letra: "${track.lyrics}"
+            
+            Responda APENAS um JSON no formato: {"genre": "gêneros aqui", "vibe": "vibe descritiva aqui", "arc": "estágio do arco aqui"}`;
+
+            const result = await ai.models.generateContent({
+              model: "gemini-2.0-flash",
+              contents: [
+                { text: analysisPrompt },
+                { inlineData: { mimeType: track.file.type, data: audioBase64 } }
+              ]
+            });
+
+            if (result.text) {
+              const jsonMatch = result.text.match(/\{.*\}/s);
+              if (jsonMatch) {
+                const analysis = JSON.parse(jsonMatch[0]);
+                detectedGenre = analysis.genre;
+                // Combinando vibe descritiva, estágio do arco e gênero
+                detectedVibe = `${analysis.vibe} | ${analysis.arc} | ${analysis.genre}`;
+              }
+            }
+          } catch (analysisErr) {
+            console.error("Erro na análise automática da faixa:", analysisErr);
+          }
+        }
+        // ------------------------------------------------
+
         const fileExt = track.file!.name.split('.').pop();
         const audioFileName = `track_${Date.now()}_${i}.${fileExt}`;
 
@@ -371,7 +434,7 @@ export function Admin() {
           audio_url: audioUrlData.publicUrl,
           track_number: i + 1,
           duration: track.duration,
-          vibe: track.genre,
+          vibe: detectedVibe || track.genre, // Prioriza a detecção automática
           lyrics: track.lyrics,
           artist: track.artist
         });
@@ -383,16 +446,26 @@ export function Admin() {
       if (allLyrics) {
         const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
         
-        const prompt = `Faça uma sinopse curta (máximo 2 parágrafos) sobre o álbum "${albumTitle}".
-        Analise as letras das músicas abaixo, levando em consideração a ordem em que aparecem (como uma jornada).
-        Crie uma "mini lore" explicando a jornada deste álbum, por exemplo: "O início da jornada, onde Kyvra percebe tal coisa...".
-        Relacione com a filosofia central de Kyvra: "a busca por um amor que não é benéfico, mas proporcionalmente viciante, com alguns momentos de egocentrismo por parte do eu lírico".
-        REGRAS CRÍTICAS:
-        - NÃO use asteriscos (*) ou (**) em hipótese alguma.
-        - NÃO use termos rebuscados ou difíceis.
+        const prompt = `Faça uma sinopse visceral (máximo 2 parágrafos) sobre o álbum "${albumTitle}" sob a ótica do Arco Psicológico de Kyvra.
+
+        FILOSOFIA KYVRA (O Arco Psicológico):
+        1. ✨ Fascínio: O amor é visto como salvação sobrenatural, mas as almas não se tocam, apenas especulam.
+        2. 🔥 Entrega: Perda de identidade e mergulho espiritual completo.
+        3. 🌑 Obsessão: O amor vira vício, ciúme e dependência dolorosa.
+        4. 🩸 Ruína: A percepção de que o amor destrói, mas a escolha consciente pelo abismo em vez do vazio.
+        5. 🕯️ Consciência: O entendimento da dor sem arrependimento, abraçando a destruição com um toque de narcisismo.
+
+        ESTÉTICA: Gótica, íntima e dramática (estilo Evanescence/Black Veil Brides).
+
+        Analise a jornada das letras abaixo:
+        "${allLyrics}"
         
-        Letras do álbum:
-        "${allLyrics}"`;
+        Sua missão:
+        1. Explique a jornada do álbum através dos estágios do arco.
+        2. Relacione com o diferencial de Kyvra: o abraço à destruição e o ego do eu lírico.
+        
+        REGRAS CRÍTICAS:
+        - NÃO use asteriscos (*) ou (**).`;
 
         const response = await ai.models.generateContent({
           model: 'gemini-2.0-flash',
@@ -465,16 +538,26 @@ export function Admin() {
         if (allLyrics) {
           const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
           
-          const prompt = `Faça uma sinopse curta (máximo 2 parágrafos) sobre o álbum "${album.title}".
-          Analise as letras das músicas abaixo, levando em consideração a ordem em que aparecem (como uma jornada).
-          Crie uma "mini lore" explicando a jornada deste álbum, por exemplo: "O início da jornada, onde Kyvra percebe tal coisa...".
-          Relacione com a filosofia central de Kyvra: "a busca por um amor que não é benéfico, mas proporcionalmente viciante, com alguns momentos de egocentrismo por parte do eu lírico".
-          REGRAS CRÍTICAS:
-          - NÃO use asteriscos (*) ou (**) em hipótese alguma.
-          - NÃO use termos rebuscados ou difíceis.
+          const prompt = `Faça uma sinopse visceral (máximo 2 parágrafos) sobre o álbum "${album.title}" sob a ótica do Arco Psicológico de Kyvra.
+
+          FILOSOFIA KYVRA (O Arco Psicológico):
+          1. ✨ Fascínio: O amor é visto como salvação sobrenatural, mas as almas não se tocam, apenas especulam.
+          2. 🔥 Entrega: Perda de identidade e mergulho espiritual completo.
+          3. 🌑 Obsessão: O amor vira vício, ciúme e dependência dolorosa.
+          4. 🩸 Ruína: A percepção de que o amor destrói, mas a escolha consciente pelo abismo em vez do vazio.
+          5. 🕯️ Consciência: O entendimento da dor sem arrependimento, abraçando a destruição com um toque de narcisismo.
+
+          ESTÉTICA: Gótica, íntima e dramática (estilo Evanescence/Black Veil Brides).
+
+          Analise a jornada das letras abaixo:
+          "${allLyrics}"
           
-          Letras do álbum:
-          "${allLyrics}"`;
+          Sua missão:
+          1. Explique a jornada do álbum através dos estágios do arco.
+          2. Relacione com o diferencial de Kyvra: o abraço à destruição e o ego do eu lírico.
+          
+          REGRAS CRÍTICAS:
+          - NÃO use asteriscos (*) ou (**).`;
 
           const response = await ai.models.generateContent({
             model: 'gemini-2.0-flash',
