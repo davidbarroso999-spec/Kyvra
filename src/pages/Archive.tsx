@@ -4,6 +4,7 @@ import { Search, Play, Pause } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
+import { TrackDuration } from '@/components/ui/TrackDuration';
 
 const VIBES = ['Todos', 'Melancólico', 'Dark', 'Etéreo', 'Ambient', 'Introspectivo'];
 
@@ -180,7 +181,7 @@ export function Archive() {
               </div>
               
               <div className="font-mono text-sm text-text-low w-12 text-right">
-                {track.duration}
+                <TrackDuration audioUrl={track.audioUrl} defaultDuration={track.duration} />
               </div>
             </motion.div>
           );

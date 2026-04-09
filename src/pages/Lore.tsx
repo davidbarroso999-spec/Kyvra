@@ -61,7 +61,7 @@ export function Lore() {
       
       Sua missão:
       1. Explique o que está acontecendo aqui de forma clara.
-      2. Relacione com a estética "Dark Romance Gótico", focando na linha entre o amor e a ruína, a dor, a queda ou a busca por perfeição (narcisismo).
+      2. Relacione com a filosofia central de Kyvra: "a busca por um amor que não é benéfico, mas proporcionalmente viciante, com alguns momentos de egocentrismo por parte do eu lírico".
       3. Compare este momento com alguma obra histórica real (livro, quadro, filme ou evento histórico) que passe uma sensação parecida.
       4. REGRAS CRÍTICAS: 
          - NÃO use asteriscos (*) ou (**) em hipótese alguma.
@@ -69,7 +69,7 @@ export function Lore() {
          - Use no máximo 2 parágrafos curtos.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.1-flash-lite-preview',
+        model: 'gemini-3.1-pro-preview',
         contents: prompt
       });
 

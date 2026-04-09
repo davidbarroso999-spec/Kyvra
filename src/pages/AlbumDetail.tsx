@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { motion } from 'motion/react';
-import { Play } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Play, ChevronDown, ChevronUp } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/lib/supabase';
+import { TrackDuration } from '@/components/ui/TrackDuration';
 
 export function AlbumDetail() {
   const { id } = useParams();
   const { setCurrentTrack, setIsPlaying, setQueue } = useStore();
   const [album, setAlbum] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isSynopsisExpanded, setIsSynopsisExpanded] = useState(false);
 
   useEffect(() => {
     async function fetchAlbum() {
@@ -141,17 +143,37 @@ export function AlbumDetail() {
 
       {/* Content */}
       <div className="max-w-5xl mx-auto px-6 mt-12">
-        <div className="flex items-center gap-6 mb-12">
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-6 mb-12">
           <button 
             onClick={handlePlayAlbum}
-            className="flex items-center gap-3 px-8 py-4 bg-primary text-void font-sans font-medium rounded-full hover:scale-105 transition-transform shadow-[0_0_30px_var(--glow-purple)]"
+            className="flex items-center gap-3 px-8 py-4 bg-primary text-void font-sans font-medium rounded-full hover:scale-105 transition-transform shadow-[0_0_30px_var(--glow-purple)] shrink-0"
           >
             <Play size={20} className="fill-current" />
             Tocar Álbum Completo
           </button>
-          <p className="text-text-mid font-sans max-w-md hidden md:block">
-            {album.description}
-          </p>
+          
+          {album.description && (
+            <div className="flex-1 w-full md:max-w-2xl bg-surface/30 p-6 rounded-2xl border border-border/50">
+              <div className="relative">
+                <p className={`text-text-mid font-sans leading-relaxed transition-all duration-300 ${isSynopsisExpanded ? '' : 'line-clamp-3'}`}>
+                  {album.description}
+                </p>
+                {!isSynopsisExpanded && (
+                  <div className="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-void/90 to-transparent pointer-events-none" />
+                )}
+              </div>
+              <button 
+                onClick={() => setIsSynopsisExpanded(!isSynopsisExpanded)}
+                className="mt-3 flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors font-medium"
+              >
+                {isSynopsisExpanded ? (
+                  <>Ver menos <ChevronUp size={16} /></>
+                ) : (
+                  <>Ler sinopse completa <ChevronDown size={16} /></>
+                )}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Tracklist */}
@@ -169,7 +191,9 @@ export function AlbumDetail() {
                 {index + 1}
               </span>
               <h3 className="flex-1 font-medium text-text-high">{track.title}</h3>
-              <span className="font-mono text-sm text-text-low">{track.duration}</span>
+              <span className="font-mono text-sm text-text-low">
+                <TrackDuration audioUrl={track.audioUrl} defaultDuration={track.duration} />
+              </span>
             </motion.div>
           ))}
         </div>

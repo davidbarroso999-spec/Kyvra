@@ -23,11 +23,15 @@ interface AppState {
   isPlaying: boolean;
   queue: Track[];
   volume: number;
+  isShuffle: boolean;
+  repeatMode: 'off' | 'all' | 'one';
   
   setCurrentTrack: (track: Track) => void;
   setIsPlaying: (isPlaying: boolean) => void;
   setQueue: (queue: Track[]) => void;
   setVolume: (volume: number) => void;
+  toggleShuffle: () => void;
+  toggleRepeat: () => void;
   playNext: () => void;
   playPrevious: () => void;
 }
@@ -46,27 +50,50 @@ export const useStore = create<AppState>()(
       isPlaying: false,
       queue: [],
       volume: 0.8,
+      isShuffle: false,
+      repeatMode: 'off',
       
       setCurrentTrack: (track) => set({ currentTrack: track, isPlaying: true }),
       setIsPlaying: (isPlaying) => set({ isPlaying }),
       setQueue: (queue) => set({ queue }),
       setVolume: (volume) => set({ volume }),
+      toggleShuffle: () => set((state) => ({ isShuffle: !state.isShuffle })),
+      toggleRepeat: () => set((state) => {
+        const nextMode = state.repeatMode === 'off' ? 'all' : state.repeatMode === 'all' ? 'one' : 'off';
+        return { repeatMode: nextMode };
+      }),
       
       playNext: () => {
-        const { currentTrack, queue } = get();
+        const { currentTrack, queue, isShuffle, repeatMode } = get();
         if (!currentTrack || queue.length === 0) return;
         
+        if (isShuffle) {
+          const randomIndex = Math.floor(Math.random() * queue.length);
+          set({ currentTrack: queue[randomIndex], isPlaying: true });
+          return;
+        }
+
         const currentIndex = queue.findIndex(t => t.id === currentTrack.id);
         if (currentIndex !== -1) {
+          if (repeatMode === 'off' && currentIndex === queue.length - 1) {
+            set({ isPlaying: false });
+            return;
+          }
           const nextIndex = (currentIndex + 1) % queue.length;
           set({ currentTrack: queue[nextIndex], isPlaying: true });
         }
       },
       
       playPrevious: () => {
-        const { currentTrack, queue } = get();
+        const { currentTrack, queue, isShuffle } = get();
         if (!currentTrack || queue.length === 0) return;
         
+        if (isShuffle) {
+          const randomIndex = Math.floor(Math.random() * queue.length);
+          set({ currentTrack: queue[randomIndex], isPlaying: true });
+          return;
+        }
+
         const currentIndex = queue.findIndex(t => t.id === currentTrack.id);
         if (currentIndex !== -1) {
           const prevIndex = currentIndex > 0 ? currentIndex - 1 : queue.length - 1;

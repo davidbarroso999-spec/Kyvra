@@ -111,7 +111,7 @@ export function Admin() {
           const ai = new GoogleGenAI({ apiKey });
           const prompt = `Faça uma sinopse curta (máximo 2 parágrafos) sobre a música "${trackData.title}" do artista "${trackData.artist || 'Kyvra'}".
           Analise a letra abaixo e explique sobre o que ela se trata e seus sentimentos.
-          Relacione com a estética "Dark Romance Gótico", focando na linha entre o amor e a ruína, a dor, a queda ou a busca por perfeição (narcisismo).
+          Relacione com a filosofia central de Kyvra: "a busca por um amor que não é benéfico, mas proporcionalmente viciante, com alguns momentos de egocentrismo por parte do eu lírico".
           REGRAS CRÍTICAS:
           - NÃO use asteriscos (*) ou (**) em hipótese alguma.
           - NÃO use termos rebuscados ou difíceis.
@@ -120,7 +120,7 @@ export function Admin() {
           "${trackData.lyrics}"`;
 
           const response = await ai.models.generateContent({
-            model: 'gemini-3.1-flash-lite-preview',
+            model: 'gemini-3.1-pro-preview',
             contents: prompt
           });
 
@@ -402,7 +402,7 @@ export function Admin() {
           const prompt = `Faça uma sinopse curta (máximo 2 parágrafos) sobre o álbum "${albumTitle}".
           Analise as letras das músicas abaixo, levando em consideração a ordem em que aparecem (como uma jornada).
           Crie uma "mini lore" explicando a jornada deste álbum, por exemplo: "O início da jornada, onde Kyvra percebe tal coisa...".
-          Relacione com a estética "Dark Romance Gótico", focando na linha entre o amor e a ruína, a dor, a queda ou a busca por perfeição (narcisismo).
+          Relacione com a filosofia central de Kyvra: "a busca por um amor que não é benéfico, mas proporcionalmente viciante, com alguns momentos de egocentrismo por parte do eu lírico".
           REGRAS CRÍTICAS:
           - NÃO use asteriscos (*) ou (**) em hipótese alguma.
           - NÃO use termos rebuscados ou difíceis.
@@ -411,7 +411,7 @@ export function Admin() {
           "${allLyrics}"`;
 
           const response = await ai.models.generateContent({
-            model: 'gemini-3.1-flash-lite-preview',
+            model: 'gemini-3.1-pro-preview',
             contents: prompt
           });
 
@@ -491,7 +491,7 @@ export function Admin() {
           const prompt = `Faça uma sinopse curta (máximo 2 parágrafos) sobre o álbum "${album.title}".
           Analise as letras das músicas abaixo, levando em consideração a ordem em que aparecem (como uma jornada).
           Crie uma "mini lore" explicando a jornada deste álbum, por exemplo: "O início da jornada, onde Kyvra percebe tal coisa...".
-          Relacione com a estética "Dark Romance Gótico", focando na linha entre o amor e a ruína, a dor, a queda ou a busca por perfeição (narcisismo).
+          Relacione com a filosofia central de Kyvra: "a busca por um amor que não é benéfico, mas proporcionalmente viciante, com alguns momentos de egocentrismo por parte do eu lírico".
           REGRAS CRÍTICAS:
           - NÃO use asteriscos (*) ou (**) em hipótese alguma.
           - NÃO use termos rebuscados ou difíceis.
@@ -500,7 +500,7 @@ export function Admin() {
           "${allLyrics}"`;
 
           const response = await ai.models.generateContent({
-            model: 'gemini-3.1-flash-lite-preview',
+            model: 'gemini-3.1-pro-preview',
             contents: prompt
           });
 

@@ -9,6 +9,7 @@ import { Play } from 'lucide-react';
 export function Home() {
   const [featuredTrack, setFeaturedTrack] = useState<any>(null);
   const [featuredSynopsis, setFeaturedSynopsis] = useState<string>('');
+  const [isSynopsisExpanded, setIsSynopsisExpanded] = useState(false);
   const { setCurrentTrack, setIsPlaying, setQueue } = useStore();
 
   useEffect(() => {
@@ -164,10 +165,21 @@ export function Home() {
                 <p className="text-text-mid font-mono text-sm mb-6">{featuredTrack.artist} • {featuredTrack.albumTitle}</p>
                 
                 {featuredSynopsis && (
-                  <div className="prose prose-invert max-w-none">
-                    <p className="text-text-mid text-sm md:text-base leading-relaxed italic border-l-2 border-primary/30 pl-4 py-2">
-                      {featuredSynopsis}
-                    </p>
+                  <div className="w-full relative mt-2 mb-6">
+                    <div className={`prose prose-invert max-w-none transition-all duration-300 ${isSynopsisExpanded ? '' : 'line-clamp-3'}`}>
+                      <p className="text-text-mid text-sm md:text-base leading-relaxed italic border-l-2 border-primary/30 pl-4 py-2 text-left">
+                        {featuredSynopsis}
+                      </p>
+                    </div>
+                    {!isSynopsisExpanded && (
+                      <div className="absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-glass to-transparent pointer-events-none" />
+                    )}
+                    <button 
+                      onClick={() => setIsSynopsisExpanded(!isSynopsisExpanded)}
+                      className="mt-2 flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors font-medium"
+                    >
+                      {isSynopsisExpanded ? 'Ver menos' : 'Ler sinopse completa'}
+                    </button>
                   </div>
                 )}
                 

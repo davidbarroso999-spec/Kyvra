@@ -3,20 +3,20 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Volume2, Volume1, VolumeX, Sparkles, Loader2, AlignLeft } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
+import { TrackDuration } from '@/components/ui/TrackDuration';
+
 import { GoogleGenAI } from '@google/genai';
 
 export function MiniPlayer() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showLyrics, setShowLyrics] = useState(false);
-  const { currentTrack, isPlaying, setIsPlaying, playNext, playPrevious, volume } = useStore();
+  const { currentTrack, isPlaying, setIsPlaying, playNext, playPrevious, volume, isShuffle, repeatMode, toggleShuffle, toggleRepeat } = useStore();
   const audioRef = useRef<HTMLAudioElement>(null);
   const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState('0:00');
   
   const [lyricsExplanation, setLyricsExplanation] = useState<string | null>(null);
-  const [stanzaExplanations, setStanzaExplanations] = useState<Record<number, string>>({});
   const [isExplaining, setIsExplaining] = useState(false);
-  const [explainingIndex, setExplainingIndex] = useState<number | null>(null); // null for full, number for stanza
 
   // Volume states
   const [isHoveringVolume, setIsHoveringVolume] = useState(false);
@@ -27,8 +27,14 @@ export function MiniPlayer() {
   useEffect(() => {
     // Reset explanation and lyrics view when track changes
     setLyricsExplanation(null);
-    setStanzaExplanations({});
     setShowLyrics(false);
+    
+    // Reset time when track changes
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+      setProgress(0);
+      setCurrentTime('0:00');
+    }
   }, [currentTrack?.id]);
 
   useEffect(() => {
@@ -118,12 +124,11 @@ export function MiniPlayer() {
     }
   };
 
-  const handleExplainLyrics = async (text?: string, index?: number) => {
-    const textToAnalyze = text || currentTrack?.lyrics;
+  const handleExplainLyrics = async () => {
+    const textToAnalyze = currentTrack?.lyrics;
     if (!textToAnalyze) return;
     
     setIsExplaining(true);
-    setExplainingIndex(index !== undefined ? index : null);
     
     try {
       // Use process.env.GEMINI_API_KEY as per platform guidelines
@@ -131,11 +136,7 @@ export function MiniPlayer() {
       
       if (!apiKey) {
         const errorMsg = "A chave de acesso (API Key) não foi configurada. Verifique as configurações do sistema.";
-        if (index !== undefined) {
-          setStanzaExplanations(prev => ({ ...prev, [index]: errorMsg }));
-        } else {
-          setLyricsExplanation(errorMsg);
-        }
+        setLyricsExplanation(errorMsg);
         setIsExplaining(false);
         return;
       }
@@ -144,13 +145,13 @@ export function MiniPlayer() {
       
       const prompt = `Imagine que você está explicando o significado desta letra para alguém que nunca ouviu falar desta banda ou deste universo. Seja direto, use palavras simples e evite termos difíceis ou muito "místicos".
 
-      Analise este trecho da música "${currentTrack.title}" do artista "${currentTrack.artist}":
+      Analise a letra completa da música "${currentTrack.title}" do artista "${currentTrack.artist}":
       
       "${textToAnalyze}"
       
       Sua missão:
       1. Explique o que está acontecendo aqui de um jeito que qualquer pessoa entenda.
-      2. Conecte com o tema "Dark Romance Gótico" — fale sobre como o amor pode levar à destruição, a dor da perda, o desejo intenso ou a obsessão (narcisismo).
+      2. Conecte com a filosofia central de Kyvra: "a busca por um amor que não é benéfico, mas proporcionalmente viciante, com alguns momentos de egocentrismo por parte do eu lírico".
       3. Faça uma comparação com alguma obra histórica famosa (pode ser um livro, filme, pintura ou fato histórico) que combine com esse sentimento.
       4. REGRAS CRÍTICAS: 
          - NÃO use asteriscos (*) ou (**) em hipótese alguma.
@@ -158,31 +159,63 @@ export function MiniPlayer() {
          - Use no máximo 2 parágrafos curtos.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.1-flash-lite-preview',
+        model: 'gemini-3.1-pro-preview',
         contents: prompt
       });
 
       if (response.text) {
         const cleanText = response.text.replace(/\*\*/g, '').replace(/\*/g, '').trim();
-        if (index !== undefined) {
-          setStanzaExplanations(prev => ({ ...prev, [index]: cleanText }));
-        } else {
-          setLyricsExplanation(cleanText);
-        }
+        setLyricsExplanation(cleanText);
       } else {
         throw new Error("Resposta vazia da IA");
       }
     } catch (err) {
       console.error("Erro ao gerar explicação da letra:", err);
       const errorMsg = "As vozes do passado estão inaudíveis no momento. Tente novamente mais tarde.";
-      if (index !== undefined) {
-        setStanzaExplanations(prev => ({ ...prev, [index]: errorMsg }));
-      } else {
-        setLyricsExplanation(errorMsg);
-      }
+      setLyricsExplanation(errorMsg);
     } finally {
       setIsExplaining(false);
-      setExplainingIndex(null);
+    }
+  };
+
+  const handleEnded = () => {
+    if (repeatMode === 'one') {
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play();
+      }
+    } else {
+      handleNext();
+    }
+  };
+
+  const handleNext = () => {
+    const prevId = currentTrack?.id;
+    playNext();
+    setTimeout(() => {
+      if (useStore.getState().currentTrack?.id === prevId) {
+        if (audioRef.current) {
+          audioRef.current.currentTime = 0;
+          audioRef.current.play();
+        }
+      }
+    }, 10);
+  };
+
+  const handlePrev = () => {
+    if (audioRef.current && audioRef.current.currentTime > 3) {
+      audioRef.current.currentTime = 0;
+    } else {
+      const prevId = currentTrack?.id;
+      playPrevious();
+      setTimeout(() => {
+        if (useStore.getState().currentTrack?.id === prevId) {
+          if (audioRef.current) {
+            audioRef.current.currentTime = 0;
+            audioRef.current.play();
+          }
+        }
+      }, 10);
     }
   };
 
@@ -195,7 +228,7 @@ export function MiniPlayer() {
           ref={audioRef} 
           src={currentTrack.audioUrl} 
           onTimeUpdate={handleTimeUpdate}
-          onEnded={playNext}
+          onEnded={handleEnded}
         />
       )}
       
@@ -213,7 +246,7 @@ export function MiniPlayer() {
           <p className="text-xs text-text-low truncate">{currentTrack.artist}</p>
         </div>
         <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-          <button onClick={playPrevious} className="text-text-mid hover:text-text-high transition-colors">
+          <button onClick={handlePrev} className="text-text-mid hover:text-text-high transition-colors">
             <SkipBack size={16} />
           </button>
           <button 
@@ -222,7 +255,7 @@ export function MiniPlayer() {
           >
             {isPlaying ? <Pause size={14} /> : <Play size={14} className="ml-0.5" />}
           </button>
-          <button onClick={playNext} className="text-text-mid hover:text-text-high transition-colors">
+          <button onClick={handleNext} className="text-text-mid hover:text-text-high transition-colors">
             <SkipForward size={16} />
           </button>
         </div>
@@ -318,37 +351,6 @@ export function MiniPlayer() {
                           <p className="text-text-high text-lg leading-relaxed whitespace-pre-line font-medium">
                             {stanza}
                           </p>
-                          
-                          <div className="mt-4 flex flex-col items-center gap-4">
-                            {!stanzaExplanations[sIdx] && (
-                              <button 
-                                onClick={() => handleExplainLyrics(stanza, sIdx)}
-                                disabled={isExplaining}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 mx-auto text-[10px] uppercase tracking-[0.2em] text-primary/60 hover:text-primary disabled:opacity-50"
-                              >
-                                {isExplaining && explainingIndex === sIdx ? (
-                                  <Loader2 size={10} className="animate-spin" />
-                                ) : (
-                                  <Sparkles size={10} />
-                                )}
-                                Decifrar Estrofe
-                              </button>
-                            )}
-
-                            <AnimatePresence>
-                              {stanzaExplanations[sIdx] && (
-                                <motion.div
-                                  initial={{ opacity: 0, y: 10 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  className="w-full bg-primary/5 border border-primary/10 rounded-lg p-4 text-left"
-                                >
-                                  <p className="text-text-mid text-xs leading-relaxed italic">
-                                    {stanzaExplanations[sIdx]}
-                                  </p>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-                          </div>
                         </div>
                       ))}
                     </div>
@@ -359,7 +361,7 @@ export function MiniPlayer() {
                         disabled={isExplaining}
                         className="mx-auto flex items-center gap-2 px-6 py-3 bg-surface border border-primary/30 text-primary rounded-full hover:bg-primary/10 transition-colors text-sm font-medium mb-8"
                       >
-                        {isExplaining && explainingIndex === null ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                        {isExplaining ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
                         Decifrar Obra Completa
                       </button>
                     )}
@@ -397,22 +399,35 @@ export function MiniPlayer() {
               </div>
               <div className="flex justify-between mt-2 font-mono text-xs text-text-low">
                 <span>{currentTime}</span>
-                <span>{currentTrack.duration}</span>
+                <TrackDuration audioUrl={currentTrack.audioUrl} defaultDuration={currentTrack.duration} />
               </div>
             </div>
 
             {/* Controls */}
             <div className="flex items-center justify-between w-full mb-8 px-4">
-              <button className="text-text-mid hover:text-primary transition-colors p-2"><Shuffle size={20} /></button>
-              <button onClick={playPrevious} className="text-text-high hover:text-primary transition-colors p-2"><SkipBack size={32} /></button>
+              <button 
+                onClick={toggleShuffle}
+                className={cn("transition-colors p-2", isShuffle ? "text-primary" : "text-text-mid hover:text-primary")}
+              >
+                <Shuffle size={20} />
+              </button>
+              <button onClick={handlePrev} className="text-text-high hover:text-primary transition-colors p-2"><SkipBack size={32} /></button>
               <button 
                 onClick={() => setIsPlaying(!isPlaying)}
                 className="w-16 h-16 flex items-center justify-center bg-primary text-void rounded-full hover:scale-105 transition-transform shadow-[0_0_30px_var(--glow-purple)]"
               >
                 {isPlaying ? <Pause size={28} /> : <Play size={28} className="ml-1" />}
               </button>
-              <button onClick={playNext} className="text-text-high hover:text-primary transition-colors p-2"><SkipForward size={32} /></button>
-              <button className="text-text-mid hover:text-primary transition-colors p-2"><Repeat size={20} /></button>
+              <button onClick={handleNext} className="text-text-high hover:text-primary transition-colors p-2"><SkipForward size={32} /></button>
+              <button 
+                onClick={toggleRepeat}
+                className={cn("transition-colors p-2 relative", repeatMode !== 'off' ? "text-primary" : "text-text-mid hover:text-primary")}
+              >
+                <Repeat size={20} />
+                {repeatMode === 'one' && (
+                  <span className="absolute top-1 right-1 text-[8px] font-bold bg-surface rounded-full w-3 h-3 flex items-center justify-center">1</span>
+                )}
+              </button>
             </div>
 
             {/* Volume - Hidden on mobile for better UX (use hardware buttons) */}
