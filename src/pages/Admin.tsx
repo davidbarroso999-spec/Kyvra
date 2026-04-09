@@ -130,7 +130,7 @@ export function Admin() {
         - NÃO use termos rebuscados.`;
 
         const response = await ai.models.generateContent({
-          model: 'gemini-2.0-flash',
+          model: 'gemini-3-flash-preview',
           contents: prompt
         });
 
@@ -393,11 +393,13 @@ export function Admin() {
             Responda APENAS um JSON no formato: {"genre": "gêneros aqui", "vibe": "vibe descritiva aqui", "arc": "estágio do arco aqui"}`;
 
             const result = await ai.models.generateContent({
-              model: "gemini-2.0-flash",
-              contents: [
-                { text: analysisPrompt },
-                { inlineData: { mimeType: track.file.type, data: audioBase64 } }
-              ]
+              model: "gemini-3-flash-preview",
+              contents: {
+                parts: [
+                  { text: analysisPrompt },
+                  { inlineData: { mimeType: track.file.type, data: audioBase64 } }
+                ]
+              }
             });
 
             if (result.text) {
@@ -468,7 +470,7 @@ export function Admin() {
         - NÃO use asteriscos (*) ou (**).`;
 
         const response = await ai.models.generateContent({
-          model: 'gemini-2.0-flash',
+          model: 'gemini-3-flash-preview',
           contents: prompt
         });
 
@@ -560,7 +562,7 @@ export function Admin() {
           - NÃO use asteriscos (*) ou (**).`;
 
           const response = await ai.models.generateContent({
-            model: 'gemini-2.0-flash',
+            model: 'gemini-3-flash-preview',
             contents: prompt
           });
 
