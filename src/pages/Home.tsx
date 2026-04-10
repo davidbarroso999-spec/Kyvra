@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
@@ -7,27 +7,43 @@ import { useStore } from '@/store/useStore';
 import { Play } from 'lucide-react';
 
 export function Home() {
-  const [featuredTrack, setFeaturedTrack] = useState<any>(null);
-  const [featuredSynopsis, setFeaturedSynopsis] = useState<string>('');
+  const [featuredTracks, setFeaturedTracks] = useState<any[]>([]);
+  const [activeFeaturedIndex, setActiveFeaturedIndex] = useState(0);
   const [isSynopsisExpanded, setIsSynopsisExpanded] = useState(false);
   const { setCurrentTrack, setIsPlaying, setQueue } = useStore();
 
   useEffect(() => {
     async function fetchFeatured() {
-      // 1. Get featured track ID
-      const { data: settings, error: settingsError } = await supabase
+      // 1. Get featured track IDs (try JSON first, then fallback)
+      const { data: settings } = await supabase
         .from('lore_chapters')
         .select('content')
-        .eq('title', '__FEATURED_TRACK__')
+        .eq('title', '__FEATURED_TRACKS_JSON__')
         .single();
       
-      if (settingsError) {
-        console.error("Error fetching featured track settings:", settingsError);
+      let trackIds: string[] = [];
+      if (settings && settings.content) {
+        try {
+          trackIds = JSON.parse(settings.content);
+        } catch (e) {
+          console.error("Error parsing featured tracks JSON:", e);
+        }
+      }
+
+      if (trackIds.length === 0) {
+        const { data: oldSettings } = await supabase
+          .from('lore_chapters')
+          .select('content')
+          .eq('title', '__FEATURED_TRACK__')
+          .single();
+        if (oldSettings && oldSettings.content) {
+          trackIds = [oldSettings.content];
+        }
       }
       
-      if (settings && settings.content) {
-        // 2. Fetch track details
-        const { data: track, error: trackError } = await supabase
+      if (trackIds.length > 0) {
+        // 2. Fetch all featured tracks details
+        const { data: tracks, error: tracksError } = await supabase
           .from('tracks')
           .select(`
             *,
@@ -36,53 +52,59 @@ export function Home() {
               cover_url
             )
           `)
-          .eq('id', settings.content)
-          .single();
+          .in('id', trackIds);
           
-        if (trackError) {
-          console.error("Error fetching featured track details:", trackError);
+        if (tracksError) {
+          console.error("Error fetching featured tracks details:", tracksError);
+          return;
         }
           
-        if (track) {
-          setFeaturedTrack({
-            id: track.id,
-            title: track.title,
-            artist: track.artist || 'Kyvra',
-            vibe: track.vibe || 'Introspectivo',
-            duration: track.duration || '0:00',
-            coverUrl: track.albums?.cover_url || '',
-            audioUrl: track.audio_url,
-            albumTitle: track.albums?.title || '',
-            lyrics: track.lyrics
-          });
-        }
+        if (tracks && tracks.length > 0) {
+          // Sort tracks to match the order in trackIds
+          const sortedTracks = trackIds.map(id => tracks.find(t => t.id.toString() === id.toString())).filter(Boolean);
 
-        // 3. Fetch synopsis
-        const { data: synopsisData, error: synopsisError } = await supabase
-          .from('lore_chapters')
-          .select('content')
-          .eq('title', '__FEATURED_TRACK_SYNOPSIS__')
-          .single();
-        
-        if (synopsisError) {
-          console.error("Error fetching featured track synopsis:", synopsisError);
-        }
-        
-        if (synopsisData && synopsisData.content) {
-          setFeaturedSynopsis(synopsisData.content);
+          // 3. Fetch synopses for these tracks
+          const synopsisTitles = trackIds.map(id => `__SYNOPSIS_${id}__`);
+          // Also check for the old synopsis title for the first track
+          synopsisTitles.push('__FEATURED_TRACK_SYNOPSIS__');
+
+          const { data: synopses } = await supabase
+            .from('lore_chapters')
+            .select('title, content')
+            .in('title', synopsisTitles);
+
+          const tracksWithSynopses = sortedTracks.map(track => {
+            const specificSynopsis = synopses?.find(s => s.title === `__SYNOPSIS_${track.id}__`);
+            const fallbackSynopsis = synopses?.find(s => s.title === '__FEATURED_TRACK_SYNOPSIS__');
+            
+            return {
+              id: track.id,
+              title: track.title,
+              artist: track.artist || 'Kyvra',
+              vibe: track.vibe || 'Introspectivo',
+              duration: track.duration || '0:00',
+              coverUrl: track.albums?.cover_url || '',
+              audioUrl: track.audio_url,
+              albumTitle: track.albums?.title || '',
+              lyrics: track.lyrics,
+              synopsis: specificSynopsis?.content || fallbackSynopsis?.content || ''
+            };
+          });
+
+          setFeaturedTracks(tracksWithSynopses);
         }
       }
     }
     fetchFeatured();
   }, []);
 
-  const handlePlayFeatured = () => {
-    if (featuredTrack) {
-      setQueue([featuredTrack]);
-      setCurrentTrack(featuredTrack);
-      setIsPlaying(true);
-    }
+  const handlePlayTrack = (track: any) => {
+    setQueue([track]);
+    setCurrentTrack(track);
+    setIsPlaying(true);
   };
+
+  const currentFeatured = featuredTracks[activeFeaturedIndex];
 
   return (
     <div className="w-full">
@@ -145,24 +167,27 @@ export function Home() {
       </section>
 
       {/* Featured Track Card Section */}
-      {featuredTrack && (
+      {featuredTracks.length > 0 && currentFeatured && (
         <section className="py-24 px-6 relative flex items-center justify-center overflow-hidden bg-deep">
           <div className="max-w-5xl mx-auto relative z-10 w-full">
-            <motion.div 
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="glass p-8 md:p-12 rounded-2xl flex flex-col md:flex-row gap-8 md:gap-12 items-center"
-            >
+            <AnimatePresence mode="wait">
+              <motion.div 
+                key={currentFeatured.id}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.5, ease: "easeInOut" }}
+                className="glass p-8 md:p-12 rounded-2xl flex flex-col md:flex-row gap-8 md:gap-12 items-center relative"
+              >
               <div className="w-full md:w-1/3 shrink-0 relative group">
                 <img 
-                  src={featuredTrack.coverUrl} 
-                  alt={featuredTrack.title} 
+                  src={currentFeatured.coverUrl} 
+                  alt={currentFeatured.title} 
                   className="w-full aspect-square object-cover rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
                   referrerPolicy="no-referrer"
                 />
                 <button 
-                  onClick={handlePlayFeatured}
+                  onClick={() => handlePlayTrack(currentFeatured)}
                   className="absolute inset-0 bg-void/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center rounded-xl"
                 >
                   <div className="w-16 h-16 bg-primary text-void rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-[0_0_30px_var(--glow-purple)]">
@@ -173,14 +198,14 @@ export function Home() {
               
               <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left">
                 <span className="font-sc text-xs tracking-[0.3em] text-primary mb-4 block">DESTAQUE DO ARQUIVO</span>
-                <h2 className="text-4xl md:text-5xl font-display text-text-high mb-2">{featuredTrack.title}</h2>
-                <p className="text-text-mid font-mono text-sm mb-6">{featuredTrack.artist} • {featuredTrack.albumTitle}</p>
+                <h2 className="text-4xl md:text-5xl font-display text-text-high mb-2">{currentFeatured.title}</h2>
+                <p className="text-text-mid font-mono text-sm mb-6">{currentFeatured.artist} • {currentFeatured.albumTitle}</p>
                 
-                {featuredSynopsis && (
+                {currentFeatured.synopsis && (
                   <div className="w-full relative mt-2 mb-6">
                     <div className={`prose prose-invert max-w-none transition-all duration-300 ${isSynopsisExpanded ? '' : 'line-clamp-3'}`}>
                       <p className="text-text-mid text-sm md:text-base leading-relaxed italic border-l-2 border-primary/30 pl-4 py-2 text-left">
-                        {featuredSynopsis}
+                        {currentFeatured.synopsis}
                       </p>
                     </div>
                     {!isSynopsisExpanded && (
@@ -196,17 +221,37 @@ export function Home() {
                 )}
                 
                 <button 
-                  onClick={handlePlayFeatured}
+                  onClick={() => handlePlayTrack(currentFeatured)}
                   className="mt-8 px-8 py-3 border border-border text-text-high font-sans font-medium rounded-[4px] hover:bg-overlay transition-colors duration-300 flex items-center gap-2 group"
                 >
                   <Play size={16} className="text-primary group-hover:scale-110 transition-transform" />
                   Ouvir Agora
                 </button>
               </div>
+
+              {/* Navigation Dots */}
+              {featuredTracks.length > 1 && (
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                  {featuredTracks.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        setActiveFeaturedIndex(idx);
+                        setIsSynopsisExpanded(false);
+                      }}
+                      className={cn(
+                        "w-2 h-2 rounded-full transition-all",
+                        idx === activeFeaturedIndex ? "bg-primary w-6" : "bg-border hover:bg-primary/50"
+                      )}
+                    />
+                  ))}
+                </div>
+              )}
             </motion.div>
-          </div>
-        </section>
-      )}
+          </AnimatePresence>
+        </div>
+      </section>
+    )}
 
       {/* Citação Poética */}
       <section className="py-24 md:py-32 px-6 relative flex items-center justify-center overflow-hidden">

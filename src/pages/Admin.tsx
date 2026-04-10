@@ -45,121 +45,153 @@ export function Admin() {
   const [lyricsSuccess, setLyricsSuccess] = useState('');
 
   // Destaque State
-  const [featuredTrackId, setFeaturedTrackId] = useState<string>('');
+  const [featuredTrackIds, setFeaturedTrackIds] = useState<string[]>([]);
   const [isSavingFeatured, setIsSavingFeatured] = useState(false);
   const [featuredSuccess, setFeaturedSuccess] = useState('');
 
   useEffect(() => {
     if (isAuthenticated && (activeTab === 'editar_letras' || activeTab === 'destaque')) {
-      fetchExistingTracks();
+      if (existingTracks.length === 0) {
+        fetchExistingTracks();
+      }
     }
     if (isAuthenticated && activeTab === 'destaque') {
-      fetchFeaturedTrack();
+      fetchFeaturedTracks();
     }
   }, [isAuthenticated, activeTab]);
 
-  const fetchFeaturedTrack = async () => {
+  const fetchFeaturedTracks = async () => {
     const { data } = await supabase
       .from('lore_chapters')
-      .select('id, content')
-      .eq('title', '__FEATURED_TRACK__')
+      .select('content')
+      .eq('title', '__FEATURED_TRACKS_JSON__')
       .single();
     
-    if (data) {
-      setFeaturedTrackId(data.content);
+    if (data && data.content) {
+      try {
+        const ids = JSON.parse(data.content);
+        if (Array.isArray(ids)) {
+          setFeaturedTrackIds(ids);
+          return;
+        }
+      } catch (e) { console.error(e); }
     }
+
+    const { data: oldData } = await supabase
+      .from('lore_chapters')
+      .select('content')
+      .eq('title', '__FEATURED_TRACK__')
+      .single();
+    if (oldData) setFeaturedTrackIds([oldData.content]);
   };
 
   const handleSaveFeatured = async () => {
-    if (!featuredTrackId) return;
+    if (featuredTrackIds.length === 0) return;
     setIsSavingFeatured(true);
     setFeaturedSuccess('');
     setError('');
 
     try {
+      const jsonContent = JSON.stringify(featuredTrackIds);
+      
+      // 1. Save the JSON array of featured tracks
       const { data: existing } = await supabase
         .from('lore_chapters')
         .select('id')
-        .eq('title', '__FEATURED_TRACK__')
+        .eq('title', '__FEATURED_TRACKS_JSON__')
         .single();
 
       if (existing) {
         await supabase
           .from('lore_chapters')
-          .update({ content: featuredTrackId })
+          .update({ content: jsonContent })
           .eq('id', existing.id);
       } else {
         await supabase
           .from('lore_chapters')
           .insert({
-            title: '__FEATURED_TRACK__',
-            content: featuredTrackId,
-            chapter_number: -1
+            title: '__FEATURED_TRACKS_JSON__',
+            content: jsonContent,
+            chapter_number: -10
           });
       }
 
-      // Generate synopsis for the featured track
-      const { data: trackData } = await supabase
-        .from('tracks')
-        .select('title, artist, lyrics')
-        .eq('id', featuredTrackId)
+      // 2. Compatibility: Update the old single featured track entry with the first one
+      const { data: oldExisting } = await supabase
+        .from('lore_chapters')
+        .select('id')
+        .eq('title', '__FEATURED_TRACK__')
         .single();
+      
+      if (oldExisting) {
+        await supabase.from('lore_chapters').update({ content: featuredTrackIds[0] }).eq('id', oldExisting.id);
+      } else {
+        await supabase.from('lore_chapters').insert({ 
+          title: '__FEATURED_TRACK__', 
+          content: featuredTrackIds[0], 
+          chapter_number: -1 
+        });
+      }
 
-      if (trackData && trackData.lyrics) {
-        const prompt = `Faça uma sinopse visceral (máximo 2 parágrafos) sobre a música "${trackData.title}" do artista "${trackData.artist || 'Kyvra'}" sob a ótica do Arco Psicológico de Kyvra.
+      // 3. Generate synopses for each track if they don't exist
+      for (const trackId of featuredTrackIds) {
+        const synopsisTitle = `__SYNOPSIS_${trackId}__`;
+        const { data: existingSyn } = await supabase
+          .from('lore_chapters')
+          .select('id')
+          .eq('title', synopsisTitle)
+          .single();
 
-        FILOSOFIA KYVRA (O Arco Psicológico):
-        1. ✨ Fascínio: O amor é visto como salvação sobrenatural, mas as almas não se tocam, apenas especulam.
-        2. 🔥 Entrega: Perda de identidade e mergulho espiritual completo.
-        3. 🌑 Obsessão: O amor vira vício, ciúme e dependência dolorosa.
-        4. 🩸 Ruína: A percepção de que o amor destrói, mas a escolha consciente pelo abismo em vez do vazio.
-        5. 🕯️ Consciência: O entendimento da dor sem arrependimento, abraçando a destruição com um toque de narcisismo.
-
-        ESTÉTICA: Gótica, íntima e dramática (estilo Evanescence/Black Veil Brides).
-
-        Analise a letra: "${trackData.lyrics}"
-        
-        Sua missão:
-        1. Explique a essência da música dentro do arco.
-        2. Relacione com o diferencial de Kyvra: o abraço à destruição e o ego do eu lírico.
-        
-        REGRAS CRÍTICAS:
-        - NÃO use asteriscos (*) ou (**).
-        - NÃO use termos rebuscados.`;
-
-        try {
-          const cleanText = await generateText(prompt);
-            
-          const { data: existingSynopsis } = await supabase
-            .from('lore_chapters')
-            .select('id')
-            .eq('title', '__FEATURED_TRACK_SYNOPSIS__')
+        if (!existingSyn) {
+          const { data: trackData } = await supabase
+            .from('tracks')
+            .select('title, artist, lyrics')
+            .eq('id', trackId)
             .single();
 
-          if (existingSynopsis) {
-            await supabase
-              .from('lore_chapters')
-              .update({ content: cleanText })
-              .eq('id', existingSynopsis.id);
-          } else {
-            await supabase
-              .from('lore_chapters')
-              .insert({
-                title: '__FEATURED_TRACK_SYNOPSIS__',
-                content: cleanText,
-                chapter_number: -2
-              });
+          if (trackData && trackData.lyrics) {
+            const prompt = `Faça uma sinopse visceral (máximo 2 parágrafos) sobre a música "${trackData.title}" do artista "${trackData.artist || 'Kyvra'}" sob a ótica do Arco Psicológico de Kyvra.
+
+            FILOSOFIA KYVRA (O Arco Psicológico):
+            1. ✨ Fascínio: O amor é visto como salvação sobrenatural, mas as almas não se tocam, apenas especulam.
+            2. 🔥 Entrega: Perda de identidade e mergulho espiritual completo.
+            3. 🌑 Obsessão: O amor vira vício, ciúme e dependência dolorosa.
+            4. 🩸 Ruína: A percepção de que o amor destrói, mas a escolha consciente pelo abismo em vez do vazio.
+            5. 🕯️ Consciência: O entendimento da dor sem arrependimento, abraçando a destruição com um toque de narcisismo.
+
+            ESTÉTICA: Gótica, íntima e dramática (estilo Evanescence/Black Veil Brides).
+
+            Analise a letra: "${trackData.lyrics}"
+            
+            Sua missão:
+            1. Explique a essência da música dentro do arco.
+            2. Relacione com o diferencial de Kyvra: o abraço à destruição e o ego do eu lírico.
+            
+            REGRAS CRÍTICAS:
+            - NÃO use asteriscos (*) ou (**).
+            - NÃO use termos rebuscados.`;
+            
+            try {
+              const cleanText = await generateText(prompt);
+              await supabase
+                .from('lore_chapters')
+                .insert({
+                  title: synopsisTitle,
+                  content: cleanText,
+                  chapter_number: -11
+                });
+            } catch (e) { 
+              console.error(`Erro ao gerar sinopse para track ${trackId}:`, e); 
+            }
           }
-        } catch (aiErr) {
-          console.error("Erro ao gerar sinopse da música de destaque:", aiErr);
         }
       }
 
-        setFeaturedSuccess('Música de destaque atualizada com sucesso!');
-        setTimeout(() => setFeaturedSuccess(''), 3000);
-      } catch (err: any) {
-      console.error('Erro ao salvar destaque:', err);
-      setError('Falha ao salvar destaque: ' + err.message);
+      setFeaturedSuccess('Destaques atualizados com sucesso!');
+      setTimeout(() => setFeaturedSuccess(''), 3000);
+    } catch (err: any) {
+      console.error('Erro ao salvar destaques:', err);
+      setError('Falha ao salvar destaques: ' + err.message);
     } finally {
       setIsSavingFeatured(false);
     }
@@ -357,30 +389,22 @@ export function Admin() {
       if (albumDbError) throw albumDbError;
       console.log('Álbum registrado ID:', albumData.id);
 
-      // 3. Upload das Faixas e Inserção no BD
-      let allLyrics = '';
-      const ai = getAI();
+      // 3. Upload das Faixas e Inserção no BD (Paralelizado)
+      console.log(`Iniciando processamento de ${validTracks.length} faixas em paralelo...`);
       
-      for (let i = 0; i < validTracks.length; i++) {
-        const track = validTracks[i];
-        console.log(`Processando faixa ${i + 1}/${validTracks.length}: ${track.title}`);
+      const ai = getAI();
+      const trackPromises = validTracks.map(async (track, i) => {
+        console.log(`Processando faixa: ${track.title}`);
         
-        if (track.lyrics) {
-          allLyrics += `\n\nFaixa ${i + 1} - ${track.title}:\n${track.lyrics}`;
-        }
-
-        // --- NOVO: Análise Automática de Vibe e Gênero ---
+        // --- Análise Automática de Vibe e Gênero ---
         let detectedGenre = track.genre;
         let detectedVibe = track.duration; 
 
         if (track.file && track.lyrics) {
           try {
-            console.log(`Analisando vibe da faixa ${track.title}...`);
-            
-            // Se o arquivo for muito grande (> 4MB), analisamos apenas pela letra para evitar lentidão/timeout
+            // Se o arquivo for muito grande (> 4MB), analisamos apenas pela letra
             let analysisResult;
             if (track.file.size > 4 * 1024 * 1024) {
-              console.log('Arquivo grande detectado, analisando apenas pela letra...');
               const analysisPrompt = `Analise esta letra de música e identifique:
               1. Gêneros Musicais (ex: Symphonic Metal, Gothic Rock, Industrial).
               2. Vibe/Sentimento descritivo (ex: Dark, Etéreo, Melancólico, Agressivo, Introspectivo, Grandioso, Assombrado, Majestoso, Caótico).
@@ -392,7 +416,6 @@ export function Admin() {
 
               analysisResult = await generateText(analysisPrompt);
             } else {
-              // Converter áudio para base64 para análise (apenas para arquivos pequenos)
               const reader = new FileReader();
               const audioBase64 = await new Promise<string>((resolve, reject) => {
                 reader.onload = () => {
@@ -433,12 +456,11 @@ export function Admin() {
               }
             }
           } catch (analysisErr) {
-            console.error("Erro na análise automática da faixa:", analysisErr);
+            console.error(`Erro na análise da faixa ${track.title}:`, analysisErr);
           }
         }
-        // ------------------------------------------------
 
-        console.log(`Fazendo upload do áudio: ${track.title}...`);
+        // Upload do áudio
         const fileExt = track.file!.name.split('.').pop();
         const audioFileName = `track_${Date.now()}_${i}.${fileExt}`;
 
@@ -452,7 +474,7 @@ export function Admin() {
           .from('kyvra-audio')
           .getPublicUrl(audioFileName);
 
-        console.log(`Registrando faixa no banco: ${track.title}`);
+        // Inserção no BD
         const { error: trackDbError } = await supabase.from('tracks').insert({
           album_id: albumData.id,
           title: track.title,
@@ -465,9 +487,17 @@ export function Admin() {
         });
 
         if (trackDbError) throw trackDbError;
-      }
+        
+        return { title: track.title, lyrics: track.lyrics };
+      });
 
+      const processedTracks = await Promise.all(trackPromises);
+      
       // 4. Generate Album Synopsis
+      const allLyrics = processedTracks
+        .filter(t => t.lyrics)
+        .map((t, i) => `Faixa ${i + 1} - ${t.title}:\n${t.lyrics}`)
+        .join('\n\n');
       if (allLyrics) {
         console.log('Gerando sinopse do álbum...');
         const prompt = `Faça uma sinopse visceral (máximo 2 parágrafos) sobre o álbum "${albumTitle}" sob a ótica do Arco Psicológico de Kyvra.
@@ -1085,38 +1115,65 @@ export function Admin() {
         </div>
       ) : activeTab === 'destaque' ? (
         <div className="glass p-6 rounded-xl">
-          <h2 className="text-xl mb-6">Música em Destaque (Home)</h2>
+          <h2 className="text-xl mb-6">Músicas em Destaque (Home)</h2>
           <p className="text-text-mid text-sm mb-8">
-            Selecione a música que será exibida com destaque na página inicial como "Último Lançamento".
+            Selecione as músicas que serão exibidas na página inicial. Você pode selecionar múltiplas músicas.
           </p>
 
           {error && <div className="text-red-400 text-sm mb-4">{error}</div>}
           {featuredSuccess && <div className="text-primary text-sm mb-4 flex items-center gap-2"><CheckCircle2 size={16} /> {featuredSuccess}</div>}
 
           <div className="space-y-6">
-            <div>
-              <label className="block text-sm text-text-mid mb-2">Selecione a Música</label>
-              <select
-                value={featuredTrackId}
-                onChange={(e) => setFeaturedTrackId(e.target.value)}
-                className="w-full bg-void border border-border rounded p-3 focus:border-primary outline-none transition-colors"
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-2 scrollbar-hide">
+              {existingTracks.map(track => {
+                const isSelected = featuredTrackIds.includes(track.id.toString());
+                return (
+                  <div 
+                    key={track.id}
+                    onClick={() => {
+                      if (isSelected) {
+                        setFeaturedTrackIds(featuredTrackIds.filter(id => id !== track.id.toString()));
+                      } else {
+                        setFeaturedTrackIds([...featuredTrackIds, track.id.toString()]);
+                      }
+                    }}
+                    className={cn(
+                      "p-4 rounded-lg border cursor-pointer transition-all flex items-center justify-between group",
+                      isSelected ? "bg-primary/10 border-primary" : "bg-void/50 border-border hover:border-primary/50"
+                    )}
+                  >
+                    <div className="flex-1">
+                      <h3 className={cn("font-medium text-sm", isSelected ? "text-primary" : "text-text-high")}>{track.title}</h3>
+                      <p className="text-[10px] text-text-low uppercase tracking-wider">{track.artist || 'Kyvra'}</p>
+                    </div>
+                    <div className={cn(
+                      "w-5 h-5 rounded-full border flex items-center justify-center transition-colors",
+                      isSelected ? "bg-primary border-primary text-void" : "border-border group-hover:border-primary"
+                    )}>
+                      {isSelected && <CheckCircle2 size={12} />}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center justify-between text-xs text-text-low border-t border-border pt-4">
+              <span>{featuredTrackIds.length} música(s) selecionada(s)</span>
+              <button 
+                onClick={() => setFeaturedTrackIds([])}
+                className="text-primary hover:underline"
               >
-                <option value="">-- Nenhuma música selecionada --</option>
-                {existingTracks.map(track => (
-                  <option key={track.id} value={track.id.toString()}>
-                    {track.title} {track.artist ? `- ${track.artist}` : ''}
-                  </option>
-                ))}
-              </select>
+                Limpar seleção
+              </button>
             </div>
 
             <button
               onClick={handleSaveFeatured}
-              disabled={isSavingFeatured || !featuredTrackId}
+              disabled={isSavingFeatured || featuredTrackIds.length === 0}
               className="w-full bg-primary text-void font-medium py-3 rounded hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {isSavingFeatured ? <div className="w-5 h-5 border-2 border-void border-t-transparent rounded-full animate-spin" /> : <Save size={18} />}
-              {isSavingFeatured ? 'Salvando...' : 'Salvar Destaque'}
+              {isSavingFeatured ? 'Salvando...' : 'Salvar Destaques'}
             </button>
           </div>
         </div>
