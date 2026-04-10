@@ -4,7 +4,7 @@ import { Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Volume2, Volume1, 
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { TrackDuration } from '@/components/ui/TrackDuration';
-import { GoogleGenAI } from '@google/genai';
+import { getAI, MODELS } from '@/lib/ai';
 
 export function MiniPlayer() {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -130,7 +130,7 @@ export function MiniPlayer() {
     setIsExplaining(true);
     
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+      const ai = getAI();
       
       const prompt = `Você é o Arquivista de Kyvra. Sua missão é decifrar a letra da música "${currentTrack.title}" do artista "${currentTrack.artist}" sob a ótica do Arco Psicológico de Kyvra.
 
@@ -156,8 +156,8 @@ export function MiniPlayer() {
       - Use no máximo 2 parágrafos curtos.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: prompt
+        model: MODELS.TEXT,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }]
       });
 
       if (response.text) {
@@ -168,7 +168,7 @@ export function MiniPlayer() {
       }
     } catch (err) {
       console.error("Erro ao gerar explicação da letra:", err);
-      const errorMsg = "As vozes do passado estão inaudíveis no momento. Tente novamente mais tarde.";
+      const errorMsg = "As vozes do passado estão inaudíveis no momento. Verifique a configuração da IA.";
       setLyricsExplanation(errorMsg);
     } finally {
       setIsExplaining(false);

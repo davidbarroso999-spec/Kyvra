@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Upload, Lock, X, Plus, Sparkles, CheckCircle2, Edit3, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { GoogleGenAI } from '@google/genai';
+import { getAI, MODELS } from '@/lib/ai';
 import { supabase } from '@/lib/supabase';
 import { getAudioMetadata } from '@/lib/audioMetadata';
 
@@ -106,7 +106,7 @@ export function Admin() {
         .single();
 
       if (trackData && trackData.lyrics) {
-        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+        const ai = getAI();
         
         const prompt = `Faça uma sinopse visceral (máximo 2 parágrafos) sobre a música "${trackData.title}" do artista "${trackData.artist || 'Kyvra'}" sob a ótica do Arco Psicológico de Kyvra.
 
@@ -130,8 +130,8 @@ export function Admin() {
         - NÃO use termos rebuscados.`;
 
         const response = await ai.models.generateContent({
-          model: 'gemini-3-flash-preview',
-          contents: prompt
+          model: MODELS.TEXT,
+          contents: [{ role: 'user', parts: [{ text: prompt }] }]
         });
 
         if (response.text) {
@@ -217,7 +217,7 @@ export function Admin() {
     setError('');
     
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+      const ai = getAI();
       
       const prompt = `Create a dark fantasy illustration for a story chapter titled "${loreTitle}". 
       Story content: "${loreContent}". 
@@ -226,8 +226,8 @@ export function Admin() {
       Highly detailed, atmospheric, dark fantasy, emotional, dramatic lighting, cinematic.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
-        contents: prompt
+        model: MODELS.IMAGE,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }]
       });
 
       const parts = response.candidates?.[0]?.content?.parts;
@@ -359,6 +359,8 @@ export function Admin() {
 
       // 3. Upload das Faixas e Inserção no BD
       let allLyrics = '';
+      const ai = getAI();
+      
       for (let i = 0; i < validTracks.length; i++) {
         const track = validTracks[i];
         if (track.lyrics) {
@@ -367,12 +369,10 @@ export function Admin() {
 
         // --- NOVO: Análise Automática de Vibe e Gênero ---
         let detectedGenre = track.genre;
-        let detectedVibe = track.duration; // Usando o campo duration temporariamente se não houver um campo vibe no estado local, mas vamos ajustar a lógica abaixo
+        let detectedVibe = track.duration; 
 
         if (track.file && track.lyrics) {
           try {
-            const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
-
             // Converter áudio para base64 para análise
             const reader = new FileReader();
             const audioBase64 = await new Promise<string>((resolve) => {
@@ -393,7 +393,7 @@ export function Admin() {
             Responda APENAS um JSON no formato: {"genre": "gêneros aqui", "vibe": "vibe descritiva aqui", "arc": "estágio do arco aqui"}`;
 
             const result = await ai.models.generateContent({
-              model: "gemini-3-flash-preview",
+              model: MODELS.TEXT,
               contents: {
                 parts: [
                   { text: analysisPrompt },
@@ -446,7 +446,7 @@ export function Admin() {
 
       // 4. Generate Album Synopsis
       if (allLyrics) {
-        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+        const ai = getAI();
         
         const prompt = `Faça uma sinopse visceral (máximo 2 parágrafos) sobre o álbum "${albumTitle}" sob a ótica do Arco Psicológico de Kyvra.
 
@@ -470,8 +470,8 @@ export function Admin() {
         - NÃO use asteriscos (*) ou (**).`;
 
         const response = await ai.models.generateContent({
-          model: 'gemini-3-flash-preview',
-          contents: prompt
+          model: MODELS.TEXT,
+          contents: [{ role: 'user', parts: [{ text: prompt }] }]
         });
 
         if (response.text) {
@@ -516,6 +516,7 @@ export function Admin() {
       if (albumsError) throw albumsError;
 
       let generatedCount = 0;
+      const ai = getAI();
 
       for (const album of albums) {
         // Skip if it already has a description (assuming it's a synopsis)
@@ -538,8 +539,6 @@ export function Admin() {
         }
 
         if (allLyrics) {
-          const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
-          
           const prompt = `Faça uma sinopse visceral (máximo 2 parágrafos) sobre o álbum "${album.title}" sob a ótica do Arco Psicológico de Kyvra.
 
           FILOSOFIA KYVRA (O Arco Psicológico):
@@ -562,8 +561,8 @@ export function Admin() {
           - NÃO use asteriscos (*) ou (**).`;
 
           const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: prompt
+            model: MODELS.TEXT,
+            contents: [{ role: 'user', parts: [{ text: prompt }] }]
           });
 
           if (response.text) {

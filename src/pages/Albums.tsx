@@ -28,7 +28,7 @@ export function Albums() {
           year: a.release_year,
           coverUrl: a.cover_url,
           description: a.description,
-          tracks: a.tracks[0].count
+          tracks: a.tracks?.[0]?.count || 0
         })));
       }
       setLoading(false);

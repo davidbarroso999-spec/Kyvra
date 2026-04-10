@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
-import { GoogleGenAI } from '@google/genai';
+import { getAI, MODELS } from '@/lib/ai';
 import { Sparkles, Loader2 } from 'lucide-react';
 
 export function Lore() {
@@ -41,7 +41,7 @@ export function Lore() {
     setLoadingExplanations(prev => ({ ...prev, [key]: true }));
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+      const ai = getAI();
       
       const prompt = `Você é o Cronista de Kyvra. Sua missão é explicar este trecho da história "${chapter.title}" sob a ótica do Arco Psicológico de Kyvra.
 
@@ -67,8 +67,8 @@ export function Lore() {
       - Use no máximo 2 parágrafos curtos.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: prompt
+        model: MODELS.TEXT,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }]
       });
 
       if (response.text) {
@@ -83,7 +83,7 @@ export function Lore() {
       }
     } catch (err) {
       console.error("Erro ao gerar explicação:", err);
-      const errorMsg = "As brumas do tempo obscurecem esta interpretação. Tente novamente mais tarde.";
+      const errorMsg = "As brumas do tempo obscurecem esta interpretação. Verifique a conexão com a IA.";
       if (pIndex !== undefined) {
         setParagraphExplanations(prev => ({ ...prev, [key]: errorMsg }));
       } else {
