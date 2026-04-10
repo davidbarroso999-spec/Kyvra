@@ -17,7 +17,11 @@ export function Albums() {
         `)
         .order('created_at', { ascending: false });
 
-      if (!error && data) {
+      if (error) {
+        console.error("Error fetching albums:", error);
+      }
+
+      if (data) {
         setAlbums(data.map(a => ({
           id: a.id,
           title: a.title,

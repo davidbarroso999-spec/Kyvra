@@ -15,15 +15,19 @@ export function Home() {
   useEffect(() => {
     async function fetchFeatured() {
       // 1. Get featured track ID
-      const { data: settings } = await supabase
+      const { data: settings, error: settingsError } = await supabase
         .from('lore_chapters')
         .select('content')
         .eq('title', '__FEATURED_TRACK__')
         .single();
       
+      if (settingsError) {
+        console.error("Error fetching featured track settings:", settingsError);
+      }
+      
       if (settings && settings.content) {
         // 2. Fetch track details
-        const { data: track } = await supabase
+        const { data: track, error: trackError } = await supabase
           .from('tracks')
           .select(`
             *,
@@ -34,6 +38,10 @@ export function Home() {
           `)
           .eq('id', settings.content)
           .single();
+          
+        if (trackError) {
+          console.error("Error fetching featured track details:", trackError);
+        }
           
         if (track) {
           setFeaturedTrack({
@@ -50,11 +58,15 @@ export function Home() {
         }
 
         // 3. Fetch synopsis
-        const { data: synopsisData } = await supabase
+        const { data: synopsisData, error: synopsisError } = await supabase
           .from('lore_chapters')
           .select('content')
           .eq('title', '__FEATURED_TRACK_SYNOPSIS__')
           .single();
+        
+        if (synopsisError) {
+          console.error("Error fetching featured track synopsis:", synopsisError);
+        }
         
         if (synopsisData && synopsisData.content) {
           setFeaturedSynopsis(synopsisData.content);

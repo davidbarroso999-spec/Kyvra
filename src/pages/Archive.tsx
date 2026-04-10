@@ -29,7 +29,11 @@ export function Archive() {
         `)
         .order('created_at', { ascending: false });
 
-      if (!error && data) {
+      if (error) {
+        console.error("Error fetching tracks:", error);
+      }
+
+      if (data) {
         setTracks(data.map(t => ({
           id: t.id,
           title: t.title,

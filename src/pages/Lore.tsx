@@ -18,7 +18,11 @@ export function Lore() {
         .select('*')
         .order('chapter_number', { ascending: true });
 
-      if (!error && data) {
+      if (error) {
+        console.error("Error fetching lore chapters:", error);
+      }
+
+      if (data) {
         setChapters(data.filter(c => c.chapter_number >= 0));
       }
       setLoading(false);
