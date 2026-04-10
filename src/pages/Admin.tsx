@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Upload, Lock, X, Plus, Sparkles, CheckCircle2, Edit3, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getAI, MODELS } from '@/lib/ai';
+import { getAI, MODELS, generateText } from '@/lib/ai';
 import { supabase } from '@/lib/supabase';
 import { getAudioMetadata } from '@/lib/audioMetadata';
 
@@ -106,8 +106,6 @@ export function Admin() {
         .single();
 
       if (trackData && trackData.lyrics) {
-        const ai = getAI();
-        
         const prompt = `Faça uma sinopse visceral (máximo 2 parágrafos) sobre a música "${trackData.title}" do artista "${trackData.artist || 'Kyvra'}" sob a ótica do Arco Psicológico de Kyvra.
 
         FILOSOFIA KYVRA (O Arco Psicológico):
@@ -129,36 +127,33 @@ export function Admin() {
         - NÃO use asteriscos (*) ou (**).
         - NÃO use termos rebuscados.`;
 
-        const response = await ai.models.generateContent({
-          model: MODELS.TEXT,
-          contents: [{ role: 'user', parts: [{ text: prompt }] }]
-        });
-
-        if (response.text) {
-          const cleanText = response.text.replace(/\*\*/g, '').replace(/\*/g, '').trim();
+        try {
+          const cleanText = await generateText(prompt);
             
-            const { data: existingSynopsis } = await supabase
-              .from('lore_chapters')
-              .select('id')
-              .eq('title', '__FEATURED_TRACK_SYNOPSIS__')
-              .single();
+          const { data: existingSynopsis } = await supabase
+            .from('lore_chapters')
+            .select('id')
+            .eq('title', '__FEATURED_TRACK_SYNOPSIS__')
+            .single();
 
-            if (existingSynopsis) {
-              await supabase
-                .from('lore_chapters')
-                .update({ content: cleanText })
-                .eq('id', existingSynopsis.id);
-            } else {
-              await supabase
-                .from('lore_chapters')
-                .insert({
-                  title: '__FEATURED_TRACK_SYNOPSIS__',
-                  content: cleanText,
-                  chapter_number: -2
-                });
-            }
+          if (existingSynopsis) {
+            await supabase
+              .from('lore_chapters')
+              .update({ content: cleanText })
+              .eq('id', existingSynopsis.id);
+          } else {
+            await supabase
+              .from('lore_chapters')
+              .insert({
+                title: '__FEATURED_TRACK_SYNOPSIS__',
+                content: cleanText,
+                chapter_number: -2
+              });
           }
+        } catch (aiErr) {
+          console.error("Erro ao gerar sinopse da música de destaque:", aiErr);
         }
+      }
 
         setFeaturedSuccess('Música de destaque atualizada com sucesso!');
         setTimeout(() => setFeaturedSuccess(''), 3000);
@@ -227,7 +222,7 @@ export function Admin() {
 
       const response = await ai.models.generateContent({
         model: MODELS.IMAGE,
-        contents: [{ role: 'user', parts: [{ text: prompt }] }]
+        contents: prompt
       });
 
       const parts = response.candidates?.[0]?.content?.parts;
@@ -446,8 +441,6 @@ export function Admin() {
 
       // 4. Generate Album Synopsis
       if (allLyrics) {
-        const ai = getAI();
-        
         const prompt = `Faça uma sinopse visceral (máximo 2 parágrafos) sobre o álbum "${albumTitle}" sob a ótica do Arco Psicológico de Kyvra.
 
         FILOSOFIA KYVRA (O Arco Psicológico):
@@ -469,22 +462,19 @@ export function Admin() {
         REGRAS CRÍTICAS:
         - NÃO use asteriscos (*) ou (**).`;
 
-        const response = await ai.models.generateContent({
-          model: MODELS.TEXT,
-          contents: [{ role: 'user', parts: [{ text: prompt }] }]
-        });
-
-        if (response.text) {
-          const cleanText = response.text.replace(/\*\*/g, '').replace(/\*/g, '').trim();
+        try {
+          const cleanText = await generateText(prompt);
             
-            // Append synopsis to album description
-            const newDesc = albumDesc ? `${albumDesc}\n\n${cleanText}` : cleanText;
-            await supabase
-              .from('albums')
-              .update({ description: newDesc })
-              .eq('id', albumData.id);
-          }
+          // Append synopsis to album description
+          const newDesc = albumDesc ? `${albumDesc}\n\n${cleanText}` : cleanText;
+          await supabase
+            .from('albums')
+            .update({ description: newDesc })
+            .eq('id', albumData.id);
+        } catch (aiErr) {
+          console.error("Erro ao gerar sinopse do álbum:", aiErr);
         }
+      }
 
         setAlbumSuccess('Álbum publicado com sucesso!');
         setAlbumTitle('');
@@ -560,13 +550,8 @@ export function Admin() {
           REGRAS CRÍTICAS:
           - NÃO use asteriscos (*) ou (**).`;
 
-          const response = await ai.models.generateContent({
-            model: MODELS.TEXT,
-            contents: [{ role: 'user', parts: [{ text: prompt }] }]
-          });
-
-          if (response.text) {
-            const cleanText = response.text.replace(/\*\*/g, '').replace(/\*/g, '').trim();
+          try {
+            const cleanText = await generateText(prompt);
             
             const newDesc = album.description ? `${album.description}\n\n${cleanText}` : cleanText;
             await supabase
@@ -575,6 +560,8 @@ export function Admin() {
               .eq('id', album.id);
             
             generatedCount++;
+          } catch (aiErr) {
+            console.error(`Erro ao gerar sinopse para o álbum ${album.title}:`, aiErr);
           }
         }
       }

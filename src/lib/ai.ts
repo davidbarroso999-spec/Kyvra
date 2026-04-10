@@ -4,13 +4,26 @@ let aiInstance: GoogleGenAI | null = null;
 
 export function getAI() {
   if (!aiInstance) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.error("GEMINI_API_KEY is missing from the environment.");
-      // We don't throw here to avoid crashing the whole app, 
-      // but the subsequent calls will fail.
+    // Try process.env first as per skill instructions
+    let apiKey = '';
+    
+    try {
+      apiKey = process.env.GEMINI_API_KEY || '';
+    } catch (e) {
+      // process might not be defined in browser
     }
-    aiInstance = new GoogleGenAI({ apiKey: apiKey || '' });
+    
+    // Fallback to import.meta.env if process.env is not available or empty
+    if (!apiKey && typeof (import.meta as any).env !== 'undefined') {
+      apiKey = (import.meta as any).env.GEMINI_API_KEY || (import.meta as any).env.VITE_GEMINI_API_KEY || '';
+    }
+
+    if (!apiKey) {
+      console.error("GEMINI_API_KEY is missing from all environment sources.");
+    } else {
+      console.log("GEMINI_API_KEY detected and AI instance initialized.");
+    }
+    aiInstance = new GoogleGenAI({ apiKey });
   }
   return aiInstance;
 }
@@ -26,7 +39,7 @@ export async function generateText(prompt: string, systemInstruction?: string) {
   try {
     const response = await ai.models.generateContent({
       model: MODELS.TEXT,
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      contents: prompt,
       config: systemInstruction ? { systemInstruction } : undefined
     });
 

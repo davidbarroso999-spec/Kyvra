@@ -4,7 +4,7 @@ import { Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Volume2, Volume1, 
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { TrackDuration } from '@/components/ui/TrackDuration';
-import { getAI, MODELS } from '@/lib/ai';
+import { getAI, MODELS, generateText } from '@/lib/ai';
 
 export function MiniPlayer() {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -129,10 +129,7 @@ export function MiniPlayer() {
     
     setIsExplaining(true);
     
-    try {
-      const ai = getAI();
-      
-      const prompt = `Você é o Arquivista de Kyvra. Sua missão é decifrar a letra da música "${currentTrack.title}" do artista "${currentTrack.artist}" sob a ótica do Arco Psicológico de Kyvra.
+    const prompt = `Você é o Arquivista de Kyvra. Sua missão é decifrar a letra da música "${currentTrack.title}" do artista "${currentTrack.artist}" sob a ótica do Arco Psicológico de Kyvra.
 
       FILOSOFIA KYVRA (O Arco Psicológico):
       1. ✨ Fascínio: O amor é visto como salvação sobrenatural, mas as almas não se tocam, apenas especulam.
@@ -155,17 +152,9 @@ export function MiniPlayer() {
       - NÃO use asteriscos (*) ou (**).
       - Use no máximo 2 parágrafos curtos.`;
 
-      const response = await ai.models.generateContent({
-        model: MODELS.TEXT,
-        contents: [{ role: 'user', parts: [{ text: prompt }] }]
-      });
-
-      if (response.text) {
-        const cleanText = response.text.replace(/\*\*/g, '').replace(/\*/g, '').trim();
-        setLyricsExplanation(cleanText);
-      } else {
-        throw new Error("Resposta vazia da IA");
-      }
+    try {
+      const explanation = await generateText(prompt);
+      setLyricsExplanation(explanation);
     } catch (err) {
       console.error("Erro ao gerar explicação da letra:", err);
       const errorMsg = "As vozes do passado estão inaudíveis no momento. Verifique a configuração da IA.";

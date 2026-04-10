@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
-import { getAI, MODELS } from '@/lib/ai';
+import { getAI, MODELS, generateText } from '@/lib/ai';
 import { Sparkles, Loader2 } from 'lucide-react';
 
 export function Lore() {
@@ -40,10 +40,7 @@ export function Lore() {
 
     setLoadingExplanations(prev => ({ ...prev, [key]: true }));
 
-    try {
-      const ai = getAI();
-      
-      const prompt = `Você é o Cronista de Kyvra. Sua missão é explicar este trecho da história "${chapter.title}" sob a ótica do Arco Psicológico de Kyvra.
+    const prompt = `Você é o Cronista de Kyvra. Sua missão é explicar este trecho da história "${chapter.title}" sob a ótica do Arco Psicológico de Kyvra.
 
       FILOSOFIA KYVRA (O Arco Psicológico):
       1. ✨ Fascínio: O amor é visto como salvação sobrenatural, mas as almas não se tocam, apenas especulam.
@@ -66,20 +63,12 @@ export function Lore() {
       - NÃO use asteriscos (*) ou (**).
       - Use no máximo 2 parágrafos curtos.`;
 
-      const response = await ai.models.generateContent({
-        model: MODELS.TEXT,
-        contents: [{ role: 'user', parts: [{ text: prompt }] }]
-      });
-
-      if (response.text) {
-        const cleanText = response.text.replace(/\*\*/g, '').replace(/\*/g, '').trim();
-        if (pIndex !== undefined) {
-          setParagraphExplanations(prev => ({ ...prev, [key]: cleanText }));
-        } else {
-          setExplanations(prev => ({ ...prev, [chapter.id]: cleanText }));
-        }
+    try {
+      const explanation = await generateText(prompt);
+      if (pIndex !== undefined) {
+        setParagraphExplanations(prev => ({ ...prev, [key]: explanation }));
       } else {
-        throw new Error("Resposta vazia da IA");
+        setExplanations(prev => ({ ...prev, [chapter.id]: explanation }));
       }
     } catch (err) {
       console.error("Erro ao gerar explicação:", err);
