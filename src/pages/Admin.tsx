@@ -326,9 +326,11 @@ export function Admin() {
     setIsPublishingAlbum(true);
     setError('');
     setAlbumSuccess('');
+    console.log('Iniciando publicação do álbum:', albumTitle);
 
     try {
       // 1. Upload da Capa
+      console.log('Fazendo upload da capa...');
       const coverExt = albumCover.name.split('.').pop();
       const coverFileName = `album_${Date.now()}.${coverExt}`;
       
@@ -341,8 +343,10 @@ export function Admin() {
       const { data: coverUrlData } = supabase.storage
         .from('kyvra_images')
         .getPublicUrl(coverFileName);
+      console.log('Capa enviada com sucesso:', coverUrlData.publicUrl);
 
       // 2. Inserir Álbum no BD
+      console.log('Registrando álbum no banco de dados...');
       const { data: albumData, error: albumDbError } = await supabase.from('albums').insert({
         title: albumTitle,
         release_year: albumYear,
@@ -351,6 +355,7 @@ export function Admin() {
       }).select().single();
 
       if (albumDbError) throw albumDbError;
+      console.log('Álbum registrado ID:', albumData.id);
 
       // 3. Upload das Faixas e Inserção no BD
       let allLyrics = '';
@@ -358,6 +363,8 @@ export function Admin() {
       
       for (let i = 0; i < validTracks.length; i++) {
         const track = validTracks[i];
+        console.log(`Processando faixa ${i + 1}/${validTracks.length}: ${track.title}`);
+        
         if (track.lyrics) {
           allLyrics += `\n\nFaixa ${i + 1} - ${track.title}:\n${track.lyrics}`;
         }
@@ -368,41 +375,60 @@ export function Admin() {
 
         if (track.file && track.lyrics) {
           try {
-            // Converter áudio para base64 para análise
-            const reader = new FileReader();
-            const audioBase64 = await new Promise<string>((resolve) => {
-              reader.onload = () => {
-                const base64 = (reader.result as string).split(',')[1];
-                resolve(base64);
-              };
-              reader.readAsDataURL(track.file!);
-            });
-
-            const analysisPrompt = `Analise esta música (áudio e letra) e identifique:
-            1. Gêneros Musicais (ex: Symphonic Metal, Gothic Rock, Industrial).
-            2. Vibe/Sentimento descritivo (ex: Dark, Etéreo, Melancólico, Agressivo, Introspectivo, Grandioso, Assombrado, Majestoso, Caótico).
-            3. Estágio do Arco de Kyvra (Fascínio, Entrega, Obsessão, Ruína ou Consciência).
+            console.log(`Analisando vibe da faixa ${track.title}...`);
             
-            Letra: "${track.lyrics}"
-            
-            Responda APENAS um JSON no formato: {"genre": "gêneros aqui", "vibe": "vibe descritiva aqui", "arc": "estágio do arco aqui"}`;
+            // Se o arquivo for muito grande (> 4MB), analisamos apenas pela letra para evitar lentidão/timeout
+            let analysisResult;
+            if (track.file.size > 4 * 1024 * 1024) {
+              console.log('Arquivo grande detectado, analisando apenas pela letra...');
+              const analysisPrompt = `Analise esta letra de música e identifique:
+              1. Gêneros Musicais (ex: Symphonic Metal, Gothic Rock, Industrial).
+              2. Vibe/Sentimento descritivo (ex: Dark, Etéreo, Melancólico, Agressivo, Introspectivo, Grandioso, Assombrado, Majestoso, Caótico).
+              3. Estágio do Arco de Kyvra (Fascínio, Entrega, Obsessão, Ruína ou Consciência).
+              
+              Letra: "${track.lyrics}"
+              
+              Responda APENAS um JSON no formato: {"genre": "gêneros aqui", "vibe": "vibe descritiva aqui", "arc": "estágio do arco aqui"}`;
 
-            const result = await ai.models.generateContent({
-              model: MODELS.TEXT,
-              contents: {
-                parts: [
-                  { text: analysisPrompt },
-                  { inlineData: { mimeType: track.file.type, data: audioBase64 } }
-                ]
-              }
-            });
+              analysisResult = await generateText(analysisPrompt);
+            } else {
+              // Converter áudio para base64 para análise (apenas para arquivos pequenos)
+              const reader = new FileReader();
+              const audioBase64 = await new Promise<string>((resolve, reject) => {
+                reader.onload = () => {
+                  const base64 = (reader.result as string).split(',')[1];
+                  resolve(base64);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(track.file!);
+              });
 
-            if (result.text) {
-              const jsonMatch = result.text.match(/\{.*\}/s);
+              const analysisPrompt = `Analise esta música (áudio e letra) e identifique:
+              1. Gêneros Musicais (ex: Symphonic Metal, Gothic Rock, Industrial).
+              2. Vibe/Sentimento descritivo (ex: Dark, Etéreo, Melancólico, Agressivo, Introspectivo, Grandioso, Assombrado, Majestoso, Caótico).
+              3. Estágio do Arco de Kyvra (Fascínio, Entrega, Obsessão, Ruína ou Consciência).
+              
+              Letra: "${track.lyrics}"
+              
+              Responda APENAS um JSON no formato: {"genre": "gêneros aqui", "vibe": "vibe descritiva aqui", "arc": "estágio do arco aqui"}`;
+
+              const result = await ai.models.generateContent({
+                model: MODELS.TEXT,
+                contents: {
+                  parts: [
+                    { text: analysisPrompt },
+                    { inlineData: { mimeType: track.file.type, data: audioBase64 } }
+                  ]
+                }
+              });
+              analysisResult = result.text;
+            }
+
+            if (analysisResult) {
+              const jsonMatch = analysisResult.match(/\{.*\}/s);
               if (jsonMatch) {
                 const analysis = JSON.parse(jsonMatch[0]);
                 detectedGenre = analysis.genre;
-                // Combinando vibe descritiva, estágio do arco e gênero
                 detectedVibe = `${analysis.vibe} | ${analysis.arc} | ${analysis.genre}`;
               }
             }
@@ -412,6 +438,7 @@ export function Admin() {
         }
         // ------------------------------------------------
 
+        console.log(`Fazendo upload do áudio: ${track.title}...`);
         const fileExt = track.file!.name.split('.').pop();
         const audioFileName = `track_${Date.now()}_${i}.${fileExt}`;
 
@@ -425,13 +452,14 @@ export function Admin() {
           .from('kyvra-audio')
           .getPublicUrl(audioFileName);
 
+        console.log(`Registrando faixa no banco: ${track.title}`);
         const { error: trackDbError } = await supabase.from('tracks').insert({
           album_id: albumData.id,
           title: track.title,
           audio_url: audioUrlData.publicUrl,
           track_number: i + 1,
           duration: track.duration,
-          vibe: detectedVibe || track.genre, // Prioriza a detecção automática
+          vibe: detectedVibe || track.genre,
           lyrics: track.lyrics,
           artist: track.artist
         });
@@ -441,6 +469,7 @@ export function Admin() {
 
       // 4. Generate Album Synopsis
       if (allLyrics) {
+        console.log('Gerando sinopse do álbum...');
         const prompt = `Faça uma sinopse visceral (máximo 2 parágrafos) sobre o álbum "${albumTitle}" sob a ótica do Arco Psicológico de Kyvra.
 
         FILOSOFIA KYVRA (O Arco Psicológico):
