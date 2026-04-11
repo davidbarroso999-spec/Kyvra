@@ -52,3 +52,22 @@ export async function generateText(prompt: string, systemInstruction?: string) {
     throw error;
   }
 }
+
+export async function generateMultimodal(prompt: string, parts: any[], systemInstruction?: string) {
+  const ai = getAI();
+  try {
+    const response = await ai.models.generateContent({
+      model: MODELS.TEXT,
+      contents: { parts: [{ text: prompt }, ...parts] },
+      config: systemInstruction ? { systemInstruction } : undefined
+    });
+
+    if (response.text) {
+      return response.text.replace(/\*\*/g, '').replace(/\*/g, '').trim();
+    }
+    throw new Error("Empty response from AI");
+  } catch (error) {
+    console.error("AI Multimodal Error:", error);
+    throw error;
+  }
+}

@@ -310,16 +310,31 @@ export function MiniPlayer() {
 
                   <div className="w-full text-center mb-8">
                     <h2 className="text-3xl font-display text-text-high mb-2">{currentTrack.title}</h2>
-                    <p className="text-lg text-text-mid mb-2">{currentTrack.artist}</p>
-                    {currentTrack.vibe && (
-                      <div className="flex flex-wrap justify-center gap-2">
-                        {currentTrack.vibe.split(' | ').map((tag, idx) => (
-                          <span key={idx} className="px-3 py-1 rounded-full bg-surface border border-border text-[10px] uppercase tracking-widest text-text-mid font-mono">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    <p className="text-lg text-text-mid mb-4">{currentTrack.artist}</p>
+                    
+                    <div className="flex flex-col items-center gap-4">
+                      {currentTrack.genre && (
+                        <span className="text-xs font-sc tracking-[0.2em] text-primary/80 uppercase">
+                          {currentTrack.genre}
+                        </span>
+                      )}
+                      
+                      {currentTrack.vibe && (
+                        <div className="flex flex-wrap justify-center gap-2">
+                          {currentTrack.vibe.split(' | ').map((tag, idx) => (
+                            <motion.span 
+                              key={idx} 
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: 0.2 + idx * 0.1 }}
+                              className="px-4 py-1.5 rounded-full bg-primary/5 border border-primary/20 text-[10px] uppercase tracking-widest text-primary font-mono shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]"
+                            >
+                              {tag}
+                            </motion.span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </motion.div>
               ) : (

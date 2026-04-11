@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Upload, Lock, X, Plus, Sparkles, CheckCircle2, Edit3, Save, Trash2, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getAI, MODELS, generateText } from '@/lib/ai';
+import { getAI, MODELS, generateText, generateMultimodal } from '@/lib/ai';
 import { supabase } from '@/lib/supabase';
 import { getAudioMetadata } from '@/lib/audioMetadata';
 
@@ -54,6 +54,8 @@ export function Admin() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isSyncing, setIsSyncing] = useState<number | null>(null);
+  const [isGeneratingVibes, setIsGeneratingVibes] = useState<number | null>(null);
+  const [isGeneratingAllVibes, setIsGeneratingAllVibes] = useState<number | null>(null);
   const [expandedAlbumId, setExpandedAlbumId] = useState<number | null>(null);
   const [acervoSuccess, setAcervoSuccess] = useState('');
 
@@ -237,6 +239,84 @@ export function Admin() {
     } finally {
       setIsSyncing(null);
     }
+  };
+
+  const handleGenerateVibes = async (track: any, albumId: number) => {
+    if (!track.lyrics) {
+      setError(`A música "${track.title}" não possui letra para análise.`);
+      return;
+    }
+
+    setIsGeneratingVibes(track.id);
+    setError('');
+
+    try {
+      const prompt = `Você é o Arquivista de Kyvra. Analise a letra da música "${track.title}" e defina 3 'vibes' (sentimentos/climas) e 1 gênero musical que descrevam a obra.
+        Use termos intensos, melancólicos e sombrios, mas com apelo estético e poético.
+        Exemplos de vibes: Melancolia Profunda, Fúria Contida, Abismo Etéreo, Desespero Majestoso, Solidão Atroz, Êxtase Sombrio.
+        Exemplos de gêneros: Dark Metal, Metal Sinfônico, Rock Gótico, Doom Metal, Metal Alternativo.
+        
+        Retorne APENAS um JSON no formato: {"vibes": ["vibe1", "vibe2", "vibe3"], "genre": "genero"}.
+        Letra: ${track.lyrics}`;
+
+      const response = await generateText(prompt);
+      const jsonMatch = response.match(/\{.*\}/s);
+      if (!jsonMatch) throw new Error("Não foi possível encontrar o formato JSON na resposta da IA.");
+      
+      const result = JSON.parse(jsonMatch[0]);
+
+      const vibeString = result.vibes.join(' | ');
+      const genre = result.genre;
+
+      const { error: updateError } = await supabase
+        .from('tracks')
+        .update({ vibe: vibeString, genre: genre })
+        .eq('id', track.id);
+
+      if (updateError) throw updateError;
+
+      setAcervoSuccess(`Vibes de "${track.title}" geradas: ${vibeString}`);
+      
+      setAllAlbums(allAlbums.map(a => {
+        if (a.id === albumId) {
+          return {
+            ...a,
+            tracks: a.tracks.map((t: any) => t.id === track.id ? { ...t, vibe: vibeString, genre: genre } : t)
+          };
+        }
+        return a;
+      }));
+
+      setTimeout(() => setAcervoSuccess(''), 3000);
+    } catch (err: any) {
+      console.error('Erro ao gerar vibes:', err);
+      setError('Falha ao gerar vibes: ' + err.message);
+    } finally {
+      setIsGeneratingVibes(null);
+    }
+  };
+
+  const handleGenerateAllVibes = async (album: any) => {
+    if (!album.tracks || album.tracks.length === 0) return;
+    
+    setIsGeneratingAllVibes(album.id);
+    setAcervoSuccess(`Analisando ${album.tracks.length} faixas...`);
+    
+    let successCount = 0;
+    for (const track of album.tracks) {
+      if (track.lyrics) {
+        try {
+          await handleGenerateVibes(track, album.id);
+          successCount++;
+        } catch (e) {
+          console.error(`Erro ao gerar vibes para ${track.title}:`, e);
+        }
+      }
+    }
+    
+    setAcervoSuccess(`${successCount} faixas analisadas com sucesso.`);
+    setIsGeneratingAllVibes(null);
+    setTimeout(() => setAcervoSuccess(''), 3000);
   };
 
   const handleSyncAlbumMetadata = async (album: any) => {
@@ -633,16 +713,9 @@ export function Admin() {
               
               Responda APENAS um JSON no formato: {"genre": "gêneros aqui", "vibe": "vibe descritiva aqui", "arc": "estágio do arco aqui"}`;
 
-              const result = await ai.models.generateContent({
-                model: MODELS.TEXT,
-                contents: {
-                  parts: [
-                    { text: analysisPrompt },
-                    { inlineData: { mimeType: track.file.type, data: audioBase64 } }
-                  ]
-                }
-              });
-              analysisResult = result.text;
+              analysisResult = await generateMultimodal(analysisPrompt, [
+                { inlineData: { mimeType: track.file.type, data: audioBase64 } }
+              ]);
             }
 
             if (analysisResult) {
@@ -680,6 +753,7 @@ export function Admin() {
           track_number: track.trackNumber || (i + 1),
           duration: track.duration,
           vibe: detectedVibe || track.genre,
+          genre: detectedGenre,
           lyrics: track.lyrics,
           artist: track.artist
         });
@@ -1184,6 +1258,17 @@ export function Admin() {
                         <RefreshCw size={18} />
                       </button>
                       <button 
+                        onClick={(e) => { e.stopPropagation(); handleGenerateAllVibes(album); }}
+                        disabled={isGeneratingAllVibes === album.id}
+                        className={cn(
+                          "p-2 text-text-low hover:text-primary transition-colors",
+                          isGeneratingAllVibes === album.id && "animate-pulse text-primary"
+                        )}
+                        title="Gerar Vibes para Todas as Faixas"
+                      >
+                        <Sparkles size={18} />
+                      </button>
+                      <button 
                         onClick={(e) => { e.stopPropagation(); handleDeleteAlbum(album.id); }}
                         className="p-2 text-text-low hover:text-red-400 transition-colors"
                         title="Excluir Álbum"
@@ -1252,6 +1337,17 @@ export function Admin() {
                                   title="Sincronizar Metadados (Tags)"
                                 >
                                   <RefreshCw size={16} />
+                                </button>
+                                <button 
+                                  onClick={() => handleGenerateVibes(track, album.id)}
+                                  disabled={isGeneratingVibes === track.id}
+                                  className={cn(
+                                    "p-1.5 text-text-low hover:text-primary transition-colors",
+                                    isGeneratingVibes === track.id && "animate-pulse text-primary"
+                                  )}
+                                  title="Gerar Vibes com IA"
+                                >
+                                  <Sparkles size={16} />
                                 </button>
                                 <button 
                                   onClick={() => handleDeleteTrack(track.id, album.id)}

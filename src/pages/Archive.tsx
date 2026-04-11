@@ -6,8 +6,6 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { TrackDuration } from '@/components/ui/TrackDuration';
 
-const VIBES = ['Todos', 'Dark', 'Etéreo', 'Melancólico', 'Agressivo', 'Introspectivo', 'Grandioso', 'Assombrado', 'Majestoso', 'Caótico'];
-
 export function Archive() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedVibe, setSelectedVibe] = useState('Todos');
@@ -15,6 +13,7 @@ export function Archive() {
   const { currentTrack, isPlaying, setCurrentTrack, setIsPlaying, setQueue } = useStore();
   const [tracks, setTracks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [availableVibes, setAvailableVibes] = useState<string[]>(['Todos']);
 
   useEffect(() => {
     async function fetchTracks() {
@@ -34,17 +33,27 @@ export function Archive() {
       }
 
       if (data) {
-        setTracks(data.map(t => ({
+        const mappedTracks = data.map(t => ({
           id: t.id,
           title: t.title,
           artist: t.artist || 'Kyvra',
-          vibe: t.vibe || 'Introspectivo',
+          vibe: t.vibe || '',
           duration: t.duration || '0:00',
           coverUrl: t.albums?.cover_url || '',
           audioUrl: t.audio_url,
           albumTitle: t.albums?.title || '',
           lyrics: t.lyrics
-        })));
+        }));
+        setTracks(mappedTracks);
+
+        // Extract unique vibes from tracks
+        const vibesSet = new Set<string>();
+        mappedTracks.forEach(t => {
+          if (t.vibe) {
+            t.vibe.split(' | ').forEach((v: string) => vibesSet.add(v.trim()));
+          }
+        });
+        setAvailableVibes(['Todos', ...Array.from(vibesSet).sort()]);
       }
       setLoading(false);
     }
@@ -119,7 +128,7 @@ export function Archive() {
         transition={{ delay: 0.2 }}
         className="flex flex-wrap justify-center gap-3 mb-16"
       >
-        {VIBES.map(vibe => (
+        {availableVibes.map(vibe => (
           <button
             key={vibe}
             onClick={() => setSelectedVibe(vibe)}
