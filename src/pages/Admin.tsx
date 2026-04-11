@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Upload, Lock, X, Plus, Sparkles, CheckCircle2, Edit3, Save } from 'lucide-react';
+import { Upload, Lock, X, Plus, Sparkles, CheckCircle2, Edit3, Save, Trash2, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getAI, MODELS, generateText } from '@/lib/ai';
 import { supabase } from '@/lib/supabase';
@@ -8,11 +8,11 @@ import { getAudioMetadata } from '@/lib/audioMetadata';
 
 export function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [activeTab, setActiveTab] = useState<'musicas' | 'lore' | 'editar_letras' | 'destaque'>('musicas');
+  const [activeTab, setActiveTab] = useState<'musicas' | 'lore' | 'editar_letras' | 'destaque' | 'acervo'>('musicas');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   
-  const [albumTracks, setAlbumTracks] = useState<{ id: number; title: string; file: File | null; duration?: string; genre?: string; lyrics?: string; artist?: string }[]>([{ id: 1, title: '', file: null }]);
+  const [albumTracks, setAlbumTracks] = useState<{ id: number; title: string; file: File | null; duration?: string; genre?: string; lyrics?: string; artist?: string; trackNumber?: number }[]>([{ id: 1, title: '', file: null }]);
   const [albumTitle, setAlbumTitle] = useState('');
   const [albumYear, setAlbumYear] = useState('');
   const [albumDesc, setAlbumDesc] = useState('');
@@ -49,8 +49,16 @@ export function Admin() {
   const [isSavingFeatured, setIsSavingFeatured] = useState(false);
   const [featuredSuccess, setFeaturedSuccess] = useState('');
 
+  // Acervo State
+  const [allAlbums, setAllAlbums] = useState<any[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isSyncing, setIsSyncing] = useState<number | null>(null);
+  const [expandedAlbumId, setExpandedAlbumId] = useState<number | null>(null);
+  const [acervoSuccess, setAcervoSuccess] = useState('');
+
   useEffect(() => {
-    if (isAuthenticated && (activeTab === 'editar_letras' || activeTab === 'destaque')) {
+    if (isAuthenticated && (activeTab === 'editar_letras' || activeTab === 'destaque' || activeTab === 'acervo')) {
       if (existingTracks.length === 0) {
         fetchExistingTracks();
       }
@@ -58,7 +66,197 @@ export function Admin() {
     if (isAuthenticated && activeTab === 'destaque') {
       fetchFeaturedTracks();
     }
+    if (isAuthenticated && activeTab === 'acervo') {
+      fetchAllAlbums();
+    }
   }, [isAuthenticated, activeTab]);
+
+  const fetchAllAlbums = async () => {
+    const { data, error } = await supabase
+      .from('albums')
+      .select(`
+        *,
+        tracks (*)
+      `)
+      .order('created_at', { ascending: false });
+    
+    if (!error && data) {
+      setAllAlbums(data);
+    }
+  };
+
+  const handleDeleteAlbum = async (albumId: number) => {
+    if (!window.confirm('Tem certeza que deseja excluir este álbum e todas as suas músicas? Esta ação é irreversível.')) return;
+    
+    setIsDeleting(true);
+    setError('');
+    
+    try {
+      // 1. Delete tracks first (Supabase handles this if cascade is on, but let's be safe)
+      const { error: tracksError } = await supabase
+        .from('tracks')
+        .delete()
+        .eq('album_id', albumId);
+      
+      if (tracksError) throw tracksError;
+
+      // 2. Delete the album
+      const { error: albumError } = await supabase
+        .from('albums')
+        .delete()
+        .eq('id', albumId);
+      
+      if (albumError) throw albumError;
+
+      setAcervoSuccess('Álbum e músicas excluídos com sucesso.');
+      setAllAlbums(allAlbums.filter(a => a.id !== albumId));
+      setTimeout(() => setAcervoSuccess(''), 3000);
+    } catch (err: any) {
+      console.error('Erro ao excluir álbum:', err);
+      setError('Falha ao excluir álbum: ' + err.message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteTrack = async (trackId: number, albumId: number) => {
+    if (!window.confirm('Excluir esta música?')) return;
+    
+    setIsDeleting(true);
+    setError('');
+    
+    try {
+      const { error: trackError } = await supabase
+        .from('tracks')
+        .delete()
+        .eq('id', trackId);
+      
+      if (trackError) throw trackError;
+
+      setAcervoSuccess('Música excluída.');
+      setAllAlbums(allAlbums.map(a => {
+        if (a.id === albumId) {
+          return { ...a, tracks: a.tracks.filter((t: any) => t.id !== trackId) };
+        }
+        return a;
+      }));
+      setTimeout(() => setAcervoSuccess(''), 3000);
+    } catch (err: any) {
+      console.error('Erro ao excluir música:', err);
+      setError('Falha ao excluir música: ' + err.message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleUpdateAlbumField = async (albumId: number, field: string, value: any) => {
+    try {
+      const { error: updateError } = await supabase
+        .from('albums')
+        .update({ [field]: value })
+        .eq('id', albumId);
+      
+      if (updateError) throw updateError;
+      
+      setAllAlbums(allAlbums.map(a => a.id === albumId ? { ...a, [field]: value } : a));
+    } catch (err: any) {
+      console.error('Erro ao atualizar álbum:', err);
+      setError('Falha ao atualizar: ' + err.message);
+    }
+  };
+
+  const handleUpdateTrackField = async (trackId: number, albumId: number, field: string, value: any) => {
+    try {
+      const { error: updateError } = await supabase
+        .from('tracks')
+        .update({ [field]: value })
+        .eq('id', trackId);
+      
+      if (updateError) throw updateError;
+      
+      setAllAlbums(allAlbums.map(a => {
+        if (a.id === albumId) {
+          return {
+            ...a,
+            tracks: a.tracks.map((t: any) => t.id === trackId ? { ...t, [field]: value } : t)
+          };
+        }
+        return a;
+      }));
+    } catch (err: any) {
+      console.error('Erro ao atualizar música:', err);
+      setError('Falha ao atualizar música: ' + err.message);
+    }
+  };
+
+  const handleSyncTrackMetadata = async (track: any, albumId: number) => {
+    if (!track.audio_url) return;
+    
+    setIsSyncing(track.id);
+    setError('');
+    
+    try {
+      console.log(`Sincronizando metadados para: ${track.title}`);
+      const metadata = await getAudioMetadata(track.audio_url);
+      
+      const updates: any = {};
+      // Only update if the field is empty or if we want to "refresh"
+      // User said: "sem retirar a edição manual existente" -> we'll only fill what's missing
+      // OR we can just apply everything that was found in the tags.
+      // Let's be smart: if the tag has data, we use it, but we keep track of what was there.
+      
+      if (metadata.title) updates.title = track.title || metadata.title;
+      if (metadata.artist) updates.artist = track.artist || metadata.artist;
+      if (metadata.lyrics) updates.lyrics = track.lyrics || metadata.lyrics;
+      if (metadata.trackNumber) updates.track_number = track.track_number || metadata.trackNumber;
+      if (metadata.duration) updates.duration = track.duration || metadata.duration;
+
+      const { error: updateError } = await supabase
+        .from('tracks')
+        .update(updates)
+        .eq('id', track.id);
+      
+      if (updateError) throw updateError;
+      
+      setAcervoSuccess(`Metadados de "${track.title}" sincronizados.`);
+      
+      setAllAlbums(allAlbums.map(a => {
+        if (a.id === albumId) {
+          return {
+            ...a,
+            tracks: a.tracks.map((t: any) => t.id === track.id ? { ...t, ...updates } : t)
+          };
+        }
+        return a;
+      }));
+
+      setTimeout(() => setAcervoSuccess(''), 3000);
+    } catch (err: any) {
+      console.error('Erro ao sincronizar:', err);
+      setError('Falha na sincronização: ' + err.message);
+    } finally {
+      setIsSyncing(null);
+    }
+  };
+
+  const handleSyncAlbumMetadata = async (album: any) => {
+    if (!album.tracks || album.tracks.length === 0) return;
+    
+    setAcervoSuccess(`Sincronizando ${album.tracks.length} faixas...`);
+    let successCount = 0;
+    
+    for (const track of album.tracks) {
+      try {
+        await handleSyncTrackMetadata(track, album.id);
+        successCount++;
+      } catch (e) {
+        console.error(`Erro ao sincronizar faixa ${track.title}:`, e);
+      }
+    }
+    
+    setAcervoSuccess(`${successCount} faixas sincronizadas com sucesso.`);
+    setTimeout(() => setAcervoSuccess(''), 3000);
+  };
 
   const fetchFeaturedTracks = async () => {
     const { data } = await supabase
@@ -479,7 +677,7 @@ export function Admin() {
           album_id: albumData.id,
           title: track.title,
           audio_url: audioUrlData.publicUrl,
-          track_number: i + 1,
+          track_number: track.trackNumber || (i + 1),
           duration: track.duration,
           vibe: detectedVibe || track.genre,
           lyrics: track.lyrics,
@@ -719,6 +917,12 @@ export function Admin() {
           Músicas & Álbuns
         </button>
         <button 
+          onClick={() => setActiveTab('acervo')}
+          className={cn("pb-4 font-medium transition-colors whitespace-nowrap text-sm sm:text-base", activeTab === 'acervo' ? "text-primary" : "text-text-mid")}
+        >
+          Gerenciar Acervo
+        </button>
+        <button 
           onClick={() => setActiveTab('lore')}
           className={cn("pb-4 font-medium transition-colors whitespace-nowrap text-sm sm:text-base", activeTab === 'lore' ? "text-primary" : "text-text-mid")}
         >
@@ -742,8 +946,8 @@ export function Admin() {
           className="absolute bottom-0 h-[2px] bg-primary"
           initial={false}
           animate={{ 
-            left: activeTab === 'musicas' ? 0 : activeTab === 'lore' ? '155px' : activeTab === 'editar_letras' ? '315px' : '435px',
-            width: activeTab === 'musicas' ? '135px' : activeTab === 'lore' ? '145px' : activeTab === 'editar_letras' ? '100px' : '130px'
+            left: activeTab === 'musicas' ? 0 : activeTab === 'acervo' ? '155px' : activeTab === 'lore' ? '315px' : activeTab === 'editar_letras' ? '475px' : '595px',
+            width: activeTab === 'musicas' ? '135px' : activeTab === 'acervo' ? '140px' : activeTab === 'lore' ? '145px' : activeTab === 'editar_letras' ? '100px' : '130px'
           }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
         />
@@ -804,6 +1008,12 @@ export function Admin() {
                     
                     const newTracks = await Promise.all(files.map(async (file, index) => {
                       const metadata = await getAudioMetadata(file);
+                      
+                      // Auto-populate album title if not set
+                      if (!albumTitle && metadata.album) {
+                        setAlbumTitle(metadata.album);
+                      }
+
                       return {
                         id: Date.now() + index,
                         title: metadata.title || file.name.replace(/\.[^/.]+$/, ""),
@@ -811,7 +1021,8 @@ export function Admin() {
                         duration: metadata.duration,
                         genre: metadata.genre,
                         lyrics: metadata.lyrics,
-                        artist: metadata.artist
+                        artist: metadata.artist,
+                        trackNumber: metadata.trackNumber
                       };
                     }));
 
@@ -875,7 +1086,8 @@ export function Admin() {
                       duration: metadata.duration,
                       genre: metadata.genre,
                       lyrics: metadata.lyrics,
-                      artist: metadata.artist
+                      artist: metadata.artist,
+                      trackNumber: metadata.trackNumber
                     } : t));
                   }
                 }} 
@@ -938,6 +1150,156 @@ export function Admin() {
               </button>
             </div>
           </div>
+        </div>
+      ) : activeTab === 'acervo' ? (
+        <div className="space-y-8">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl">Gerenciar Acervo</h2>
+            {acervoSuccess && <div className="text-primary text-sm flex items-center gap-2"><CheckCircle2 size={16} /> {acervoSuccess}</div>}
+          </div>
+
+          {allAlbums.length === 0 ? (
+            <div className="text-center text-text-low py-12 glass rounded-xl">Nenhum álbum encontrado no arquivo.</div>
+          ) : (
+            <div className="space-y-4">
+              {allAlbums.map(album => (
+                <div key={album.id} className="glass rounded-xl overflow-hidden">
+                  <div 
+                    className="p-4 flex items-center justify-between cursor-pointer hover:bg-surface transition-colors"
+                    onClick={() => setExpandedAlbumId(expandedAlbumId === album.id ? null : album.id)}
+                  >
+                    <div className="flex items-center gap-4">
+                      <img src={album.cover_url} alt={album.title} className="w-12 h-12 rounded object-cover" referrerPolicy="no-referrer" />
+                      <div>
+                        <h3 className="font-medium text-text-high">{album.title}</h3>
+                        <p className="text-xs text-text-low">{album.release_year} • {album.tracks?.length || 0} faixas</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleSyncAlbumMetadata(album); }}
+                        className="p-2 text-text-low hover:text-primary transition-colors"
+                        title="Sincronizar Todas as Faixas"
+                      >
+                        <RefreshCw size={18} />
+                      </button>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleDeleteAlbum(album.id); }}
+                        className="p-2 text-text-low hover:text-red-400 transition-colors"
+                        title="Excluir Álbum"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                      {expandedAlbumId === album.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    </div>
+                  </div>
+
+                  {expandedAlbumId === album.id && (
+                    <div className="p-6 border-t border-border bg-surface/30 space-y-6">
+                      {/* Album Edit Fields */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs text-text-low mb-1">Título do Álbum</label>
+                          <input 
+                            type="text" 
+                            value={album.title} 
+                            onChange={(e) => handleUpdateAlbumField(album.id, 'title', e.target.value)}
+                            className="w-full bg-void border border-border rounded p-2 text-sm focus:border-primary outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-text-low mb-1">Ano</label>
+                          <input 
+                            type="text" 
+                            value={album.release_year} 
+                            onChange={(e) => handleUpdateAlbumField(album.id, 'release_year', e.target.value)}
+                            className="w-full bg-void border border-border rounded p-2 text-sm focus:border-primary outline-none"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-text-low mb-1">Descrição</label>
+                        <textarea 
+                          rows={3}
+                          value={album.description || ''} 
+                          onChange={(e) => handleUpdateAlbumField(album.id, 'description', e.target.value)}
+                          className="w-full bg-void border border-border rounded p-2 text-sm focus:border-primary outline-none resize-y"
+                        />
+                      </div>
+
+                      {/* Tracks List */}
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-medium text-text-mid">Faixas</h4>
+                        {album.tracks?.sort((a: any, b: any) => (a.track_number || 0) - (b.track_number || 0)).map((track: any) => (
+                          <div key={track.id} className="bg-void/50 p-3 rounded border border-border flex flex-col gap-3">
+                            <div className="flex items-center justify-between gap-4">
+                              <div className="flex-1">
+                                <input 
+                                  type="text" 
+                                  value={track.title} 
+                                  onChange={(e) => handleUpdateTrackField(track.id, album.id, 'title', e.target.value)}
+                                  className="w-full bg-transparent border-none p-0 text-sm font-medium text-text-high focus:ring-0"
+                                />
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button 
+                                  onClick={() => handleSyncTrackMetadata(track, album.id)}
+                                  disabled={isSyncing === track.id}
+                                  className={cn(
+                                    "p-1.5 text-text-low hover:text-primary transition-colors",
+                                    isSyncing === track.id && "animate-spin text-primary"
+                                  )}
+                                  title="Sincronizar Metadados (Tags)"
+                                >
+                                  <RefreshCw size={16} />
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteTrack(track.id, album.id)}
+                                  className="text-text-low hover:text-red-400 transition-colors"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                              <input 
+                                type="text" 
+                                placeholder="Artista"
+                                value={track.artist || ''} 
+                                onChange={(e) => handleUpdateTrackField(track.id, album.id, 'artist', e.target.value)}
+                                className="bg-void border border-border rounded p-1.5 text-xs focus:border-primary outline-none"
+                              />
+                              <input 
+                                type="text" 
+                                placeholder="Vibe/Tags"
+                                value={track.vibe || ''} 
+                                onChange={(e) => handleUpdateTrackField(track.id, album.id, 'vibe', e.target.value)}
+                                className="bg-void border border-border rounded p-1.5 text-xs focus:border-primary outline-none"
+                              />
+                              <input 
+                                type="number" 
+                                placeholder="Nº Faixa"
+                                value={track.track_number || ''} 
+                                onChange={(e) => handleUpdateTrackField(track.id, album.id, 'track_number', parseInt(e.target.value))}
+                                className="bg-void border border-border rounded p-1.5 text-xs focus:border-primary outline-none"
+                              />
+                            </div>
+                            <textarea 
+                              placeholder="Letra"
+                              rows={3}
+                              value={track.lyrics || ''} 
+                              onChange={(e) => handleUpdateTrackField(track.id, album.id, 'lyrics', e.target.value)}
+                              className="w-full bg-void border border-border rounded p-2 text-xs focus:border-primary outline-none resize-y font-sans"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       ) : activeTab === 'lore' ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
