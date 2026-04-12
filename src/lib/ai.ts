@@ -8,7 +8,7 @@ export function getAI() {
     let apiKey = '';
     
     try {
-      apiKey = process.env.GEMINI_API_KEY || '';
+      apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || '';
     } catch (e) {
       // process might not be defined in browser
     }
@@ -29,9 +29,9 @@ export function getAI() {
 }
 
 export const MODELS = {
-  TEXT: 'gemini-2.0-flash',
-  IMAGE: 'imagen-3',
-  PRO: 'gemini-2.0-pro-exp-02-05'
+  TEXT: 'gemini-flash-latest',
+  IMAGE: 'gemini-2.5-flash-image',
+  PRO: 'gemini-3.1-pro-preview'
 };
 
 export async function generateText(prompt: string, systemInstruction?: string) {

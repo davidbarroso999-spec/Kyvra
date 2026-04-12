@@ -265,12 +265,11 @@ export function Admin() {
       
       const result = JSON.parse(jsonMatch[0]);
 
-      const vibeString = result.vibes.join(' | ');
-      const genre = result.genre;
+      const vibeString = `${result.vibes.join(' | ')} | ${result.genre}`;
 
       const { error: updateError } = await supabase
         .from('tracks')
-        .update({ vibe: vibeString, genre: genre })
+        .update({ vibe: vibeString })
         .eq('id', track.id);
 
       if (updateError) throw updateError;
@@ -675,8 +674,8 @@ export function Admin() {
         console.log(`Processando faixa: ${track.title}`);
         
         // --- Análise Automática de Vibe e Gênero ---
-        let detectedGenre = track.genre;
-        let detectedVibe = track.duration; 
+        let detectedGenre = track.genre || '';
+        let detectedVibe = track.vibe || ''; 
 
         if (track.file && track.lyrics) {
           try {
@@ -753,7 +752,6 @@ export function Admin() {
           track_number: track.trackNumber || (i + 1),
           duration: track.duration,
           vibe: detectedVibe || track.genre,
-          genre: detectedGenre,
           lyrics: track.lyrics,
           artist: track.artist
         });
