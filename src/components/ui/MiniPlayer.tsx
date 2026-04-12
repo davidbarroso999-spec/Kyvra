@@ -313,12 +313,6 @@ export function MiniPlayer() {
                     <p className="text-lg text-text-mid mb-4">{currentTrack.artist}</p>
                     
                     <div className="flex flex-col items-center gap-4">
-                      {currentTrack.genre && (
-                        <span className="text-xs font-sc tracking-[0.2em] text-primary/80 uppercase">
-                          {currentTrack.genre}
-                        </span>
-                      )}
-                      
                       {currentTrack.vibe && (
                         <div className="flex flex-wrap justify-center gap-2">
                           {currentTrack.vibe.split(' | ').map((tag, idx) => (

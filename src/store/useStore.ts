@@ -10,7 +10,6 @@ interface Track {
   duration: string;
   coverUrl: string;
   vibe: string;
-  genre?: string;
   audioUrl?: string;
   lyrics?: string;
 }

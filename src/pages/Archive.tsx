@@ -8,12 +8,12 @@ import { TrackDuration } from '@/components/ui/TrackDuration';
 
 export function Archive() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedVibe, setSelectedVibe] = useState('Todos');
+  const [selectedGenre, setSelectedGenre] = useState('Todos');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { currentTrack, isPlaying, setCurrentTrack, setIsPlaying, setQueue } = useStore();
   const [tracks, setTracks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [availableVibes, setAvailableVibes] = useState<string[]>(['Todos']);
+  const [availableGenres, setAvailableGenres] = useState<string[]>(['Todos']);
 
   useEffect(() => {
     async function fetchTracks() {
@@ -47,13 +47,13 @@ export function Archive() {
         setTracks(mappedTracks);
 
         // Extract unique vibes from tracks
-        const vibesSet = new Set<string>();
+        const genresSet = new Set<string>();
         mappedTracks.forEach(t => {
           if (t.vibe) {
-            t.vibe.split(' | ').forEach((v: string) => vibesSet.add(v.trim()));
+            t.vibe.split(' | ').forEach((v: string) => genresSet.add(v.trim()));
           }
         });
-        setAvailableVibes(['Todos', ...Array.from(vibesSet).sort()]);
+        setAvailableGenres(['Todos', ...Array.from(genresSet).sort()]);
       }
       setLoading(false);
     }
@@ -74,8 +74,8 @@ export function Archive() {
 
   const filteredTracks = tracks.filter(track => {
     const matchesSearch = track.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesVibe = selectedVibe === 'Todos' || track.vibe.toLowerCase().includes(selectedVibe.toLowerCase());
-    return matchesSearch && matchesVibe;
+    const matchesGenre = selectedGenre === 'Todos' || track.vibe.toLowerCase().includes(selectedGenre.toLowerCase());
+    return matchesSearch && matchesGenre;
   });
 
   const handlePlay = (track: any) => {
@@ -128,18 +128,18 @@ export function Archive() {
         transition={{ delay: 0.2 }}
         className="flex flex-wrap justify-center gap-3 mb-16"
       >
-        {availableVibes.map(vibe => (
+        {availableGenres.map(genre => (
           <button
-            key={vibe}
-            onClick={() => setSelectedVibe(vibe)}
+            key={genre}
+            onClick={() => setSelectedGenre(genre)}
             className={cn(
               "px-4 py-2 rounded-full text-sm font-medium transition-all duration-300",
-              selectedVibe === vibe 
+              selectedGenre === genre 
                 ? "bg-primary/20 text-primary border border-primary/50" 
                 : "bg-surface border border-border text-text-mid hover:text-text-high hover:border-text-mid"
             )}
           >
-            {vibe}
+            {genre}
           </button>
         ))}
       </motion.div>

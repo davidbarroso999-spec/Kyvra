@@ -12,7 +12,7 @@ export function Admin() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   
-  const [albumTracks, setAlbumTracks] = useState<{ id: number; title: string; file: File | null; duration?: string; genre?: string; lyrics?: string; artist?: string; trackNumber?: number }[]>([{ id: 1, title: '', file: null }]);
+  const [albumTracks, setAlbumTracks] = useState<{ id: number; title: string; file: File | null; duration?: string; vibe?: string; lyrics?: string; artist?: string; trackNumber?: number }[]>([{ id: 1, title: '', file: null }]);
   const [albumTitle, setAlbumTitle] = useState('');
   const [albumYear, setAlbumYear] = useState('');
   const [albumDesc, setAlbumDesc] = useState('');
@@ -54,8 +54,6 @@ export function Admin() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isSyncing, setIsSyncing] = useState<number | null>(null);
-  const [isGeneratingVibes, setIsGeneratingVibes] = useState<number | null>(null);
-  const [isGeneratingAllVibes, setIsGeneratingAllVibes] = useState<number | null>(null);
   const [expandedAlbumId, setExpandedAlbumId] = useState<number | null>(null);
   const [acervoSuccess, setAcervoSuccess] = useState('');
 
@@ -212,6 +210,7 @@ export function Admin() {
       if (metadata.lyrics) updates.lyrics = track.lyrics || metadata.lyrics;
       if (metadata.trackNumber) updates.track_number = track.track_number || metadata.trackNumber;
       if (metadata.duration) updates.duration = track.duration || metadata.duration;
+      if (metadata.genre) updates.vibe = track.vibe || metadata.genre;
 
       const { error: updateError } = await supabase
         .from('tracks')
@@ -239,83 +238,6 @@ export function Admin() {
     } finally {
       setIsSyncing(null);
     }
-  };
-
-  const handleGenerateVibes = async (track: any, albumId: number) => {
-    if (!track.lyrics) {
-      setError(`A música "${track.title}" não possui letra para análise.`);
-      return;
-    }
-
-    setIsGeneratingVibes(track.id);
-    setError('');
-
-    try {
-      const prompt = `Você é o Arquivista de Kyvra. Analise a letra da música "${track.title}" e defina 3 'vibes' (sentimentos/climas) e 1 gênero musical que descrevam a obra.
-        Use termos intensos, melancólicos e sombrios, mas com apelo estético e poético.
-        Exemplos de vibes: Melancolia Profunda, Fúria Contida, Abismo Etéreo, Desespero Majestoso, Solidão Atroz, Êxtase Sombrio.
-        Exemplos de gêneros: Dark Metal, Metal Sinfônico, Rock Gótico, Doom Metal, Metal Alternativo.
-        
-        Retorne APENAS um JSON no formato: {"vibes": ["vibe1", "vibe2", "vibe3"], "genre": "genero"}.
-        Letra: ${track.lyrics}`;
-
-      const response = await generateText(prompt);
-      const jsonMatch = response.match(/\{.*\}/s);
-      if (!jsonMatch) throw new Error("Não foi possível encontrar o formato JSON na resposta da IA.");
-      
-      const result = JSON.parse(jsonMatch[0]);
-
-      const vibeString = `${result.vibes.join(' | ')} | ${result.genre}`;
-
-      const { error: updateError } = await supabase
-        .from('tracks')
-        .update({ vibe: vibeString })
-        .eq('id', track.id);
-
-      if (updateError) throw updateError;
-
-      setAcervoSuccess(`Vibes de "${track.title}" geradas: ${vibeString}`);
-      
-      setAllAlbums(allAlbums.map(a => {
-        if (a.id === albumId) {
-          return {
-            ...a,
-            tracks: a.tracks.map((t: any) => t.id === track.id ? { ...t, vibe: vibeString, genre: genre } : t)
-          };
-        }
-        return a;
-      }));
-
-      setTimeout(() => setAcervoSuccess(''), 3000);
-    } catch (err: any) {
-      console.error('Erro ao gerar vibes:', err);
-      setError('Falha ao gerar vibes: ' + err.message);
-    } finally {
-      setIsGeneratingVibes(null);
-    }
-  };
-
-  const handleGenerateAllVibes = async (album: any) => {
-    if (!album.tracks || album.tracks.length === 0) return;
-    
-    setIsGeneratingAllVibes(album.id);
-    setAcervoSuccess(`Analisando ${album.tracks.length} faixas...`);
-    
-    let successCount = 0;
-    for (const track of album.tracks) {
-      if (track.lyrics) {
-        try {
-          await handleGenerateVibes(track, album.id);
-          successCount++;
-        } catch (e) {
-          console.error(`Erro ao gerar vibes para ${track.title}:`, e);
-        }
-      }
-    }
-    
-    setAcervoSuccess(`${successCount} faixas analisadas com sucesso.`);
-    setIsGeneratingAllVibes(null);
-    setTimeout(() => setAcervoSuccess(''), 3000);
   };
 
   const handleSyncAlbumMetadata = async (album: any) => {
@@ -669,67 +591,9 @@ export function Admin() {
       // 3. Upload das Faixas e Inserção no BD (Paralelizado)
       console.log(`Iniciando processamento de ${validTracks.length} faixas em paralelo...`);
       
-      const ai = getAI();
       const trackPromises = validTracks.map(async (track, i) => {
         console.log(`Processando faixa: ${track.title}`);
         
-        // --- Análise Automática de Vibe e Gênero ---
-        let detectedGenre = track.genre || '';
-        let detectedVibe = track.vibe || ''; 
-
-        if (track.file && track.lyrics) {
-          try {
-            // Se o arquivo for muito grande (> 4MB), analisamos apenas pela letra
-            let analysisResult;
-            if (track.file.size > 4 * 1024 * 1024) {
-              const analysisPrompt = `Analise esta letra de música e identifique:
-              1. Gêneros Musicais (ex: Symphonic Metal, Gothic Rock, Industrial).
-              2. Vibe/Sentimento descritivo (ex: Dark, Etéreo, Melancólico, Agressivo, Introspectivo, Grandioso, Assombrado, Majestoso, Caótico).
-              3. Estágio do Arco de Kyvra (Fascínio, Entrega, Obsessão, Ruína ou Consciência).
-              
-              Letra: "${track.lyrics}"
-              
-              Responda APENAS um JSON no formato: {"genre": "gêneros aqui", "vibe": "vibe descritiva aqui", "arc": "estágio do arco aqui"}`;
-
-              analysisResult = await generateText(analysisPrompt);
-            } else {
-              const reader = new FileReader();
-              const audioBase64 = await new Promise<string>((resolve, reject) => {
-                reader.onload = () => {
-                  const base64 = (reader.result as string).split(',')[1];
-                  resolve(base64);
-                };
-                reader.onerror = reject;
-                reader.readAsDataURL(track.file!);
-              });
-
-              const analysisPrompt = `Analise esta música (áudio e letra) e identifique:
-              1. Gêneros Musicais (ex: Symphonic Metal, Gothic Rock, Industrial).
-              2. Vibe/Sentimento descritivo (ex: Dark, Etéreo, Melancólico, Agressivo, Introspectivo, Grandioso, Assombrado, Majestoso, Caótico).
-              3. Estágio do Arco de Kyvra (Fascínio, Entrega, Obsessão, Ruína ou Consciência).
-              
-              Letra: "${track.lyrics}"
-              
-              Responda APENAS um JSON no formato: {"genre": "gêneros aqui", "vibe": "vibe descritiva aqui", "arc": "estágio do arco aqui"}`;
-
-              analysisResult = await generateMultimodal(analysisPrompt, [
-                { inlineData: { mimeType: track.file.type, data: audioBase64 } }
-              ]);
-            }
-
-            if (analysisResult) {
-              const jsonMatch = analysisResult.match(/\{.*\}/s);
-              if (jsonMatch) {
-                const analysis = JSON.parse(jsonMatch[0]);
-                detectedGenre = analysis.genre;
-                detectedVibe = `${analysis.vibe} | ${analysis.arc} | ${analysis.genre}`;
-              }
-            }
-          } catch (analysisErr) {
-            console.error(`Erro na análise da faixa ${track.title}:`, analysisErr);
-          }
-        }
-
         // Upload do áudio
         const fileExt = track.file!.name.split('.').pop();
         const audioFileName = `track_${Date.now()}_${i}.${fileExt}`;
@@ -751,7 +615,7 @@ export function Admin() {
           audio_url: audioUrlData.publicUrl,
           track_number: track.trackNumber || (i + 1),
           duration: track.duration,
-          vibe: detectedVibe || track.genre,
+          vibe: track.vibe,
           lyrics: track.lyrics,
           artist: track.artist
         });
@@ -1091,7 +955,7 @@ export function Admin() {
                         title: metadata.title || file.name.replace(/\.[^/.]+$/, ""),
                         file: file,
                         duration: metadata.duration,
-                        genre: metadata.genre,
+                        vibe: metadata.genre,
                         lyrics: metadata.lyrics,
                         artist: metadata.artist,
                         trackNumber: metadata.trackNumber
@@ -1118,6 +982,15 @@ export function Admin() {
                         value={track.title}
                         onChange={e => setAlbumTracks(albumTracks.map(t => t.id === track.id ? { ...t, title: e.target.value } : t))}
                         placeholder="Título da Faixa" 
+                        className="w-full bg-void border border-border rounded p-2 focus:border-primary outline-none transition-colors text-sm" 
+                      />
+                    </div>
+                    <div className="flex-1 w-full">
+                      <input 
+                        type="text" 
+                        value={track.vibe || ''}
+                        onChange={e => setAlbumTracks(albumTracks.map(t => t.id === track.id ? { ...t, vibe: e.target.value } : t))}
+                        placeholder="Gênero / Tags" 
                         className="w-full bg-void border border-border rounded p-2 focus:border-primary outline-none transition-colors text-sm" 
                       />
                     </div>
@@ -1156,7 +1029,7 @@ export function Admin() {
                       file, 
                       title: metadata.title || t.title || file.name.replace(/\.[^/.]+$/, ""),
                       duration: metadata.duration,
-                      genre: metadata.genre,
+                      vibe: metadata.genre,
                       lyrics: metadata.lyrics,
                       artist: metadata.artist,
                       trackNumber: metadata.trackNumber
@@ -1256,17 +1129,6 @@ export function Admin() {
                         <RefreshCw size={18} />
                       </button>
                       <button 
-                        onClick={(e) => { e.stopPropagation(); handleGenerateAllVibes(album); }}
-                        disabled={isGeneratingAllVibes === album.id}
-                        className={cn(
-                          "p-2 text-text-low hover:text-primary transition-colors",
-                          isGeneratingAllVibes === album.id && "animate-pulse text-primary"
-                        )}
-                        title="Gerar Vibes para Todas as Faixas"
-                      >
-                        <Sparkles size={18} />
-                      </button>
-                      <button 
                         onClick={(e) => { e.stopPropagation(); handleDeleteAlbum(album.id); }}
                         className="p-2 text-text-low hover:text-red-400 transition-colors"
                         title="Excluir Álbum"
@@ -1337,17 +1199,6 @@ export function Admin() {
                                   <RefreshCw size={16} />
                                 </button>
                                 <button 
-                                  onClick={() => handleGenerateVibes(track, album.id)}
-                                  disabled={isGeneratingVibes === track.id}
-                                  className={cn(
-                                    "p-1.5 text-text-low hover:text-primary transition-colors",
-                                    isGeneratingVibes === track.id && "animate-pulse text-primary"
-                                  )}
-                                  title="Gerar Vibes com IA"
-                                >
-                                  <Sparkles size={16} />
-                                </button>
-                                <button 
                                   onClick={() => handleDeleteTrack(track.id, album.id)}
                                   className="text-text-low hover:text-red-400 transition-colors"
                                 >
@@ -1365,7 +1216,7 @@ export function Admin() {
                               />
                               <input 
                                 type="text" 
-                                placeholder="Vibe/Tags"
+                                placeholder="Gêneros (ex: Metal Sinfônico | Rock Gótico)"
                                 value={track.vibe || ''} 
                                 onChange={(e) => handleUpdateTrackField(track.id, album.id, 'vibe', e.target.value)}
                                 className="bg-void border border-border rounded p-1.5 text-xs focus:border-primary outline-none"
