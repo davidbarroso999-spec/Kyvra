@@ -10,10 +10,17 @@ export function Archive() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('Todos');
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const { currentTrack, isPlaying, setCurrentTrack, setIsPlaying, setQueue } = useStore();
+  const { currentTrack, isPlaying, setCurrentTrack, setIsPlaying, setQueue, addToQueue, playNext_track } = useStore();
   const [tracks, setTracks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [availableGenres, setAvailableGenres] = useState<string[]>(['Todos']);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const closeMenu = () => setOpenMenuId(null);
+    window.addEventListener('scroll', closeMenu);
+    return () => window.removeEventListener('scroll', closeMenu);
+  }, []);
 
   useEffect(() => {
     async function fetchTracks() {
@@ -92,10 +99,15 @@ export function Archive() {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-16 text-center"
+        className="mb-16 flex items-end justify-between border-b border-border pb-8"
       >
-        <span className="font-sc text-[11px] tracking-[0.3em] text-primary block mb-4">ARQUIVO SONORO</span>
-        <h1 className="text-5xl md:text-7xl">Biblioteca</h1>
+        <div>
+          <span className="font-sc text-[11px] tracking-[0.3em] text-primary block mb-3">ARQUIVO SONORO</span>
+          <h1 className="text-5xl md:text-7xl leading-none">Biblioteca</h1>
+        </div>
+        <span className="font-mono text-xs text-text-low pb-2 hidden md:block">
+          {filteredTracks.length} fragmentos
+        </span>
       </motion.div>
 
       {/* Search Bar */}
@@ -114,7 +126,7 @@ export function Archive() {
           placeholder="Buscar no arquivo..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full bg-surface border border-border rounded-lg py-4 pl-12 pr-4 text-text-high placeholder:text-text-low focus:outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--glow-purple)] transition-all font-sans"
+          className="w-full bg-surface border border-border r-md py-4 pl-12 pr-4 text-text-high placeholder:text-text-low focus:outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--glow-purple)] transition-all font-sans"
         />
         <div className="hidden md:flex absolute inset-y-0 right-4 items-center pointer-events-none">
           <span className="text-[10px] font-mono text-text-low bg-void/50 px-1.5 py-0.5 rounded border border-border">⌘K</span>
@@ -146,61 +158,137 @@ export function Archive() {
 
       {/* Track List */}
       <div className="flex flex-col">
-        {filteredTracks.map((track, index) => {
-          const isCurrentTrack = currentTrack?.id === track.id;
-          
-          return (
-            <motion.div
-              key={track.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 + index * 0.05 }}
-              onClick={() => handlePlay(track)}
-              className="group flex items-center gap-4 py-4 px-2 hover:bg-primary/5 rounded-lg transition-colors border-b border-border/50 last:border-0 cursor-pointer"
-            >
-              <div className="w-8 flex justify-center text-text-low font-mono text-sm">
-                {isCurrentTrack && isPlaying ? (
-                  <div className="flex items-end gap-[2px] h-4">
-                    <div className="w-1 bg-primary animate-[bounce_1s_infinite_0ms]" style={{ height: '100%' }} />
-                    <div className="w-1 bg-primary animate-[bounce_1s_infinite_200ms]" style={{ height: '60%' }} />
-                    <div className="w-1 bg-primary animate-[bounce_1s_infinite_400ms]" style={{ height: '80%' }} />
-                  </div>
-                ) : (
-                  <span className="group-hover:hidden">{String(index + 1).padStart(2, '0')}</span>
-                )}
-                <button 
-                  className={cn(
-                    "hidden group-hover:flex items-center justify-center text-primary",
-                    isCurrentTrack && isPlaying ? "flex" : ""
+        {loading ? (
+          <div className="flex flex-col gap-1">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="flex items-center gap-4 py-3 px-4">
+                <div className="skeleton w-4 h-3 shrink-0" />
+                <div className="skeleton skeleton-md w-12 h-12 shrink-0" />
+                <div className="flex-1 flex flex-col gap-2">
+                  <div className="skeleton h-4" style={{ width: `${55 + (i % 4) * 10}%` }} />
+                  <div className="skeleton h-3 w-24" />
+                </div>
+                <div className="skeleton h-5 w-20 rounded-full hidden md:block" />
+                <div className="skeleton h-3 w-8 hidden sm:block" />
+              </div>
+            ))}
+          </div>
+        ) : filteredTracks.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-24 gap-4">
+            <div className="w-[1px] h-12 bg-gradient-to-b from-transparent via-border to-transparent" />
+            <p className="font-sc text-xs tracking-[0.3em] text-text-low">FRAGMENTO NÃO ENCONTRADO</p>
+            <p className="font-display text-text-low text-lg">
+              "{searchQuery}" não existe neste universo
+            </p>
+          </div>
+        ) : (
+          filteredTracks.map((track, index) => {
+            const isCurrentTrack = currentTrack?.id === track.id;
+            
+            return (
+              <div
+                key={track.id}
+                onClick={() => handlePlay(track)}
+                className="track-row-hover flex items-center gap-4 py-3 px-4 cursor-pointer rounded-none border-b border-border/50 last:border-0 group"
+              >
+                <div className="w-8 flex justify-center text-text-low font-mono text-sm">
+                  {isCurrentTrack && isPlaying ? (
+                    <div className="flex items-end gap-[2px] h-4">
+                      <div className="w-1 bg-primary animate-[bounce_1s_infinite_0ms]" style={{ height: '100%' }} />
+                      <div className="w-1 bg-primary animate-[bounce_1s_infinite_200ms]" style={{ height: '60%' }} />
+                      <div className="w-1 bg-primary animate-[bounce_1s_infinite_400ms]" style={{ height: '80%' }} />
+                    </div>
+                  ) : (
+                    <span className="group-hover:hidden">{String(index + 1).padStart(2, '0')}</span>
                   )}
-                >
-                  {isCurrentTrack && isPlaying ? <Pause size={16} /> : <Play size={16} className="ml-1" />}
-                </button>
+                  <button 
+                    className={cn(
+                      "hidden group-hover:flex items-center justify-center text-primary",
+                      isCurrentTrack && isPlaying ? "flex" : ""
+                    )}
+                  >
+                    {isCurrentTrack && isPlaying ? <Pause size={16} /> : <Play size={16} className="ml-1" />}
+                  </button>
+                </div>
+                
+                <img src={track.coverUrl} alt={track.title} loading="lazy" className="w-12 h-12 rounded object-cover" referrerPolicy="no-referrer" />
+                
+                <div className="flex-1 min-w-0">
+                  <h3 className={cn("font-medium truncate", isCurrentTrack ? "text-primary" : "text-text-high")}>
+                    {track.title}
+                  </h3>
+                  <p className="text-sm text-text-low truncate">{track.artist}</p>
+                </div>
+                
+                <div className="hidden md:flex flex-wrap gap-2">
+                  {track.vibe.split(' | ').map((tag: string, idx: number) => (
+                    <span key={idx} className="px-2 py-0.5 rounded-full bg-surface border border-border text-[9px] uppercase tracking-widest text-text-mid font-mono">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+                
+                <div className="font-mono text-sm text-text-low w-12 text-right">
+                  <TrackDuration audioUrl={track.audioUrl} defaultDuration={track.duration} />
+                </div>
+
+                {/* Botão de menu — aparece no hover */}
+                <div className="relative">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenMenuId(openMenuId === track.id ? null : track.id);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-2 text-text-low hover:text-primary rounded"
+                  >
+                    {/* Ícone de três pontinhos vertical */}
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                      <circle cx="8" cy="3" r="1.5"/>
+                      <circle cx="8" cy="8" r="1.5"/>
+                      <circle cx="8" cy="13" r="1.5"/>
+                    </svg>
+                  </button>
+
+                  {/* Dropdown do menu */}
+                  {openMenuId === track.id && (
+                    <>
+                      {/* Overlay invisível para fechar o menu ao clicar fora */}
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenMenuId(null);
+                        }}
+                      />
+                      <div className="absolute right-0 bottom-full mb-1 z-50 w-48 glass rounded-lg py-1 shadow-2xl border border-border">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            playNext_track(track);
+                            setOpenMenuId(null);
+                          }}
+                          className="w-full text-left px-4 py-2.5 text-sm text-text-mid hover:text-text-high hover:bg-overlay transition-colors"
+                        >
+                          Tocar em seguida
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            addToQueue(track);
+                            setOpenMenuId(null);
+                          }}
+                          className="w-full text-left px-4 py-2.5 text-sm text-text-mid hover:text-text-high hover:bg-overlay transition-colors"
+                        >
+                          Adicionar à fila
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
-              
-              <img src={track.coverUrl} alt={track.title} loading="lazy" className="w-12 h-12 rounded object-cover" referrerPolicy="no-referrer" />
-              
-              <div className="flex-1 min-w-0">
-                <h3 className={cn("font-medium truncate", isCurrentTrack ? "text-primary" : "text-text-high")}>
-                  {track.title}
-                </h3>
-                <p className="text-sm text-text-low truncate">{track.artist}</p>
-              </div>
-              
-              <div className="hidden md:flex flex-wrap gap-2">
-                {track.vibe.split(' | ').map((tag: string, idx: number) => (
-                  <span key={idx} className="px-2 py-0.5 rounded-full bg-surface border border-border text-[9px] uppercase tracking-widest text-text-mid font-mono">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-              
-              <div className="font-mono text-sm text-text-low w-12 text-right">
-                <TrackDuration audioUrl={track.audioUrl} defaultDuration={track.duration} />
-              </div>
-            </motion.div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
     </div>
   );

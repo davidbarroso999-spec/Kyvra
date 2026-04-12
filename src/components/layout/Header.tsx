@@ -95,7 +95,7 @@ export function Header() {
               </button>
               
               {isThemeMenuOpen && (
-                <div className="absolute top-full right-0 mt-2 w-48 bg-void/80 backdrop-blur-2xl border border-border rounded-lg py-2 flex flex-col gap-1 shadow-2xl">
+                <div className="absolute top-full right-0 mt-2 w-48 bg-void/80 backdrop-blur-2xl border border-border r-md py-2 flex flex-col gap-1 shadow-2xl">
                   {themes.map((t) => (
                     <button
                       key={t.id}
@@ -154,7 +154,7 @@ export function Header() {
                   <Link
                     to={link.path}
                     className={cn(
-                      "block w-full text-center py-4 font-display text-3xl transition-colors rounded-lg",
+                      "block w-full text-center py-4 font-display text-3xl transition-colors r-md",
                       location.pathname === link.path ? "text-primary bg-primary/5" : "text-text-high hover:text-primary"
                     )}
                   >
@@ -170,7 +170,7 @@ export function Header() {
               >
                 <Link
                   to="/arquivista"
-                  className="block w-full text-center py-3 font-sc tracking-[0.2em] text-xs text-text-low hover:text-primary transition-colors border border-border/50 rounded-lg"
+                  className="block w-full text-center py-3 font-sc tracking-[0.2em] text-xs text-text-low hover:text-primary transition-colors border border-border/50 r-md"
                 >
                   O ARQUIVISTA
                 </Link>

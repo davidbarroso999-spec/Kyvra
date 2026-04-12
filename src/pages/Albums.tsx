@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
+import { Play } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 export function Albums() {
@@ -41,38 +42,55 @@ export function Albums() {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-16 text-center"
+        className="mb-16 flex items-end justify-between border-b border-border pb-8"
       >
-        <span className="font-sc text-[11px] tracking-[0.3em] text-primary block mb-4">RELÍQUIAS SONORAS</span>
-        <h1 className="text-5xl md:text-7xl">Álbuns</h1>
+        <div>
+          <span className="font-sc text-[11px] tracking-[0.3em] text-primary block mb-3">RELÍQUIAS SONORAS</span>
+          <h1 className="text-5xl md:text-7xl leading-none">Álbuns</h1>
+        </div>
+        <span className="font-mono text-xs text-text-low pb-2 hidden md:block">
+          {albums.length} {albums.length === 1 ? 'relíquia' : 'relíquias'}
+        </span>
       </motion.div>
 
       {loading ? (
-        <div className="flex justify-center text-primary">Carregando...</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="animate-pulse">
+              <div className="skeleton skeleton-md aspect-[1/1.3] w-full mb-4" />
+              <div className="skeleton h-5 w-3/4 mb-2" style={{ borderRadius: 'var(--radius-sm)' }} />
+              <div className="skeleton h-3 w-1/2" style={{ borderRadius: 'var(--radius-sm)' }} />
+            </div>
+          ))}
+        </div>
       ) : albums.length === 0 ? (
-        <div className="text-center text-text-low">Nenhum álbum encontrado no arquivo.</div>
+        <div className="flex flex-col items-center justify-center py-32 gap-4">
+          <div className="w-[1px] h-16 bg-gradient-to-b from-transparent via-border to-transparent" />
+          <p className="font-sc text-xs tracking-[0.3em] text-text-low">O ARQUIVO ESTÁ SILENCIOSO</p>
+          <p className="font-display text-text-low text-lg">Nenhuma relíquia encontrada</p>
+          <div className="w-[1px] h-16 bg-gradient-to-b from-transparent via-border to-transparent" />
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {albums.map((album, index) => (
-            <motion.div
-              key={album.id}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-            >
+            <div key={album.id}>
               <Link to={`/reliquias/${album.id}`} className="group block">
-                <div className="relative aspect-[1/1.3] rounded-lg overflow-hidden mb-4 bg-deep">
+                <div className="relative aspect-[1/1.3] overflow-hidden mb-4 bg-deep r-md">
                   <img 
                     src={album.coverUrl} 
                     alt={album.title} 
                     loading="lazy"
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    className="w-full h-full object-cover transition-transform duration-700"
                     referrerPolicy="no-referrer"
                   />
-                  <div className="absolute inset-0 bg-void/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-6">
-                    <div className="translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
-                      <span className="text-primary font-sc text-sm tracking-widest block mb-2">EXPLORAR</span>
+                  <div className="play-reveal">
+                    <div>
+                      <span className="font-sc text-[10px] tracking-[0.2em] text-text-mid block">{album.year}</span>
+                      <span className="font-sans text-xs text-text-high">{album.tracks} faixas</span>
                     </div>
+                    <span className="play-reveal-icon">
+                      <Play size={14} className="ml-0.5" />
+                    </span>
                   </div>
                   <div className="absolute top-4 right-4 glass px-3 py-1 rounded-full">
                     <span className="font-mono text-xs text-text-high">{album.tracks} faixas</span>
@@ -86,7 +104,7 @@ export function Albums() {
                   </p>
                 )}
               </Link>
-            </motion.div>
+            </div>
           ))}
         </div>
       )}

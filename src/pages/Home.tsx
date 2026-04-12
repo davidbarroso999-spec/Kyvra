@@ -144,7 +144,7 @@ export function Home() {
             transition={{ duration: 0.8, delay: 0.8 }}
             className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 w-full px-6"
           >
-            <Link to="/arquivo" className="w-full sm:w-auto px-8 py-4 bg-primary text-void font-sans font-medium rounded-[4px] shadow-[0_0_40px_var(--glow-purple)] hover:scale-105 transition-transform duration-300 text-center">
+            <Link to="/arquivo" className="w-full sm:w-auto px-8 py-4 bg-primary text-void font-sans font-medium r-sm shadow-[0_0_40px_var(--glow-purple)] btn-primary-hover text-center">
               Explorar o Arquivo
             </Link>
 
@@ -160,9 +160,15 @@ export function Home() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.5, duration: 1 }}
-          className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4"
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3"
         >
-          <div className="w-[1px] h-12 bg-gradient-to-b from-primary to-transparent animate-pulse" />
+          <span 
+            className="font-sc text-[9px] tracking-[0.3em] text-text-low"
+            style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+          >
+            SCROLL
+          </span>
+          <div className="w-[1px] h-10 bg-gradient-to-b from-primary/50 to-transparent" />
         </motion.div>
       </section>
 
@@ -177,22 +183,23 @@ export function Home() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.5, ease: "easeInOut" }}
-                className="glass p-8 md:p-12 rounded-2xl flex flex-col md:flex-row gap-8 md:gap-12 items-center relative"
+                className="glass p-8 md:p-12 r-md flex flex-col md:flex-row gap-8 md:gap-12 items-center relative"
               >
-              <div className="w-full md:w-1/3 shrink-0 relative group">
+              <div className="w-full md:w-1/3 shrink-0 relative group overflow-hidden r-md">
                 <img 
                   src={currentFeatured.coverUrl} 
                   alt={currentFeatured.title} 
-                  className="w-full aspect-square object-cover rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
+                  className="w-full aspect-square object-cover"
                   referrerPolicy="no-referrer"
                 />
                 <button 
-                  onClick={() => handlePlayTrack(currentFeatured)}
-                  className="absolute inset-0 bg-void/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center rounded-xl"
+                  onClick={(e) => { e.stopPropagation(); handlePlayTrack(currentFeatured); }}
+                  className="play-reveal"
                 >
-                  <div className="w-16 h-16 bg-primary text-void rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-[0_0_30px_var(--glow-purple)]">
-                    <Play size={24} className="ml-1" />
-                  </div>
+                  <span className="font-sc text-[10px] tracking-[0.2em] text-text-mid">REPRODUZIR</span>
+                  <span className="play-reveal-icon">
+                    <Play size={14} className="ml-0.5" />
+                  </span>
                 </button>
               </div>
               
@@ -253,17 +260,37 @@ export function Home() {
       </section>
     )}
 
-      {/* Citação Poética */}
-      <section className="py-24 md:py-32 px-6 relative flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,var(--glow-purple)_0%,transparent_50%)] opacity-30" />
-        <div className="flex items-center gap-4 md:gap-8 max-w-5xl mx-auto relative z-10">
-          <div className="hidden lg:block w-20 h-[1px] bg-primary/30" />
-          <blockquote className="text-center px-4">
-            <p className="font-display italic text-2xl sm:text-3xl md:text-4xl text-text-high leading-relaxed">
-              "Em cada fragmento, uma história. Em cada nota, um suspiro da alma perdida nas névoas do tempo."
+      {/* Citação Poética — Editorial */}
+      <section className="py-24 md:py-32 px-6 relative overflow-hidden">
+        {/* Número decorativo de fundo */}
+        <div 
+          className="absolute left-4 md:left-12 top-1/2 -translate-y-1/2 font-display font-light leading-none select-none pointer-events-none"
+          style={{ 
+            fontSize: 'clamp(120px, 25vw, 280px)', 
+            color: 'var(--primary)', 
+            opacity: 0.04,
+            letterSpacing: '-0.05em'
+          }}
+          aria-hidden="true"
+        >
+          I
+        </div>
+        
+        {/* Gradiente radial de fundo sutil */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_left,var(--glow-purple)_0%,transparent_60%)] opacity-20 pointer-events-none" />
+        
+        <div className="max-w-4xl mx-auto relative z-10">
+          {/* Label acima */}
+          <span className="font-sc text-[10px] tracking-[0.3em] text-primary/60 block mb-8">
+            FRAGMENTO I
+          </span>
+          
+          {/* Citação alinhada à esquerda */}
+          <blockquote>
+            <p className="font-display font-light italic text-3xl sm:text-4xl md:text-5xl text-text-high leading-[1.2] max-w-3xl">
+              — Em cada fragmento, uma história. Em cada nota, um suspiro da alma perdida nas névoas do tempo.
             </p>
           </blockquote>
-          <div className="hidden lg:block w-20 h-[1px] bg-primary/30" />
         </div>
       </section>
     </div>

@@ -85,21 +85,18 @@ export function Lore() {
 
   return (
     <div className="w-full pt-32 px-6 pb-32 max-w-4xl mx-auto">
-      <motion.div 
-        initial={{ opacity: 0, clipPath: 'inset(100% 0 0 0)' }}
-        animate={{ opacity: 1, clipPath: 'inset(0% 0 0 0)' }}
-        transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-        className="mb-24 text-center"
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-16 flex items-end justify-between border-b border-border pb-8"
       >
-        <h1 className="text-5xl md:text-7xl mb-6">Cosmogonia de Kyvra</h1>
-        <motion.p 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="font-sc text-sm tracking-[0.3em] text-primary"
-        >
-          A HISTÓRIA DOS FRAGMENTOS
-        </motion.p>
+        <div>
+          <span className="font-sc text-[11px] tracking-[0.3em] text-primary block mb-3">COSMOGONIA DE KYVRA</span>
+          <h1 className="text-5xl md:text-7xl leading-none">A História</h1>
+        </div>
+        <span className="font-mono text-xs text-text-low pb-2 hidden md:block">
+          {chapters.length} {chapters.length === 1 ? 'capítulo' : 'capítulos'}
+        </span>
       </motion.div>
 
       {loading ? (
@@ -115,12 +112,8 @@ export function Lore() {
             {chapters.map((chapter, index) => {
               const isEven = index % 2 === 0;
               return (
-                <motion.div 
+                <div 
                   key={chapter.id}
-                  initial={{ opacity: 0, y: 50 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-100px" }}
-                  transition={{ duration: 0.8 }}
                   className={`relative flex flex-col md:flex-row gap-8 md:gap-16 ${isEven ? 'md:flex-row-reverse' : ''}`}
                 >
                   {/* Timeline Node */}
@@ -138,7 +131,7 @@ export function Lore() {
                         <img 
                           src={chapter.image_url} 
                           alt={chapter.title}
-                          className="w-full max-w-md rounded-lg shadow-[0_10px_30px_rgba(0,0,0,0.5)] border border-border/50 object-cover aspect-video"
+                          className="w-full max-w-md r-md shadow-[0_10px_30px_rgba(0,0,0,0.5)] border border-border/50 object-cover aspect-video"
                           referrerPolicy="no-referrer"
                         />
                       </div>
@@ -173,7 +166,7 @@ export function Lore() {
                                   <motion.div
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    className="w-full bg-primary/5 border border-primary/10 rounded-lg p-4 mt-2 text-left"
+                                    className="w-full bg-primary/5 border border-primary/10 r-md p-4 mt-2 text-left"
                                   >
                                     <p className="text-text-mid text-xs leading-relaxed italic">
                                       {paragraphExplanations[`${chapter.id}-${pIdx}`]}
@@ -207,7 +200,7 @@ export function Lore() {
                             <motion.div
                               initial={{ opacity: 0, height: 0 }}
                               animate={{ opacity: 1, height: 'auto' }}
-                              className="w-full bg-primary/5 border border-primary/20 rounded-lg p-6 mt-4 text-left"
+                              className="w-full bg-primary/5 border border-primary/20 r-md p-6 mt-4 text-left"
                             >
                               <div className="flex items-center gap-2 text-primary mb-3">
                                 <Sparkles size={18} />
@@ -225,7 +218,7 @@ export function Lore() {
                   
                   {/* Empty space for the other side of the timeline */}
                   <div className="hidden md:block flex-1" />
-                </motion.div>
+                </div>
               );
             })}
           </div>

@@ -8,10 +8,17 @@ import { TrackDuration } from '@/components/ui/TrackDuration';
 
 export function AlbumDetail() {
   const { id } = useParams();
-  const { setCurrentTrack, setIsPlaying, setQueue } = useStore();
+  const { setCurrentTrack, setIsPlaying, setQueue, addToQueue, playNext_track } = useStore();
   const [album, setAlbum] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isSynopsisExpanded, setIsSynopsisExpanded] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const closeMenu = () => setOpenMenuId(null);
+    window.addEventListener('scroll', closeMenu);
+    return () => window.removeEventListener('scroll', closeMenu);
+  }, []);
 
   useEffect(() => {
     async function fetchAlbum() {
@@ -119,7 +126,7 @@ export function AlbumDetail() {
             src={album.coverUrl} 
             alt={album.title} 
             loading="lazy"
-            className="w-64 h-64 md:w-80 md:h-80 object-cover rounded-lg shadow-[0_30px_60px_rgba(0,0,0,0.8)]"
+            className="w-64 h-64 md:w-80 md:h-80 object-cover r-md shadow-[0_30px_60px_rgba(0,0,0,0.8)]"
             referrerPolicy="no-referrer"
           />
           <motion.div 
@@ -146,14 +153,14 @@ export function AlbumDetail() {
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6 mb-12">
           <button 
             onClick={handlePlayAlbum}
-            className="flex items-center gap-3 px-8 py-4 bg-primary text-void font-sans font-medium rounded-full hover:scale-105 transition-transform shadow-[0_0_30px_var(--glow-purple)] shrink-0"
+            className="flex items-center gap-3 px-8 py-4 bg-primary text-void font-sans font-medium r-sm shadow-[0_0_30px_var(--glow-purple)] shrink-0 btn-primary-hover"
           >
             <Play size={20} className="fill-current" />
             Tocar Álbum Completo
           </button>
           
           {album.description && (
-            <div className="flex-1 w-full md:max-w-2xl bg-surface/30 p-6 rounded-2xl border border-border/50">
+            <div className="flex-1 w-full md:max-w-2xl bg-surface/30 p-6 r-md border border-border/50">
               <div className="relative">
                 <p className={`text-text-mid font-sans leading-relaxed transition-all duration-300 ${isSynopsisExpanded ? '' : 'line-clamp-3'}`}>
                   {album.description}
@@ -179,13 +186,10 @@ export function AlbumDetail() {
         {/* Tracklist */}
         <div className="flex flex-col gap-2">
           {album.tracks.map((track, index) => (
-            <motion.div
+            <div
               key={track.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 + index * 0.05 }}
               onClick={() => handlePlayTrack(track)}
-              className="group flex items-center gap-4 py-3 px-4 hover:bg-surface rounded-lg transition-colors border border-transparent hover:border-border cursor-pointer"
+              className="track-row-hover flex items-center gap-4 py-3 px-4 cursor-pointer rounded-none border-b border-border/50 last:border-0 group"
             >
               <span className="w-6 text-right font-mono text-text-low text-sm group-hover:text-primary">
                 {index + 1}
@@ -203,7 +207,61 @@ export function AlbumDetail() {
               <span className="font-mono text-sm text-text-low">
                 <TrackDuration audioUrl={track.audioUrl} defaultDuration={track.duration} />
               </span>
-            </motion.div>
+
+              {/* Botão de menu — aparece no hover */}
+              <div className="relative">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpenMenuId(openMenuId === track.id ? null : track.id);
+                  }}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-2 text-text-low hover:text-primary rounded"
+                >
+                  {/* Ícone de três pontinhos vertical */}
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <circle cx="8" cy="3" r="1.5"/>
+                    <circle cx="8" cy="8" r="1.5"/>
+                    <circle cx="8" cy="13" r="1.5"/>
+                  </svg>
+                </button>
+
+                {/* Dropdown do menu */}
+                {openMenuId === track.id && (
+                  <>
+                    {/* Overlay invisível para fechar o menu ao clicar fora */}
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenMenuId(null);
+                      }}
+                    />
+                    <div className="absolute right-0 bottom-full mb-1 z-50 w-48 glass rounded-lg py-1 shadow-2xl border border-border">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          playNext_track(track);
+                          setOpenMenuId(null);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-text-mid hover:text-text-high hover:bg-overlay transition-colors"
+                      >
+                        Tocar em seguida
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          addToQueue(track);
+                          setOpenMenuId(null);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-text-mid hover:text-text-high hover:bg-overlay transition-colors"
+                      >
+                        Adicionar à fila
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
           ))}
         </div>
       </div>
