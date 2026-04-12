@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type Theme = 'abissal' | 'sangue-de-drago' | 'floresta-negra' | 'mar-profundo' | 'crepusculo' | 'monolito' | 'claro';
+export type Theme = 'abissal' | 'sangue-de-drago' | 'floresta-negra' | 'mar-profundo' | 'crepusculo' | 'monolito';
 
 interface Track {
   id: string;
@@ -40,11 +40,7 @@ export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
       theme: 'abissal',
-      setTheme: (theme) => {
-        set({ theme });
-        // Update html class
-        document.documentElement.className = theme === 'abissal' ? '' : `theme-${theme}`;
-      },
+      setTheme: (theme) => set({ theme }),
       
       currentTrack: null,
       isPlaying: false,

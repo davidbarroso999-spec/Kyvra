@@ -12,7 +12,6 @@ const themes: { id: Theme; icon: React.ReactNode; label: string }[] = [
   { id: 'mar-profundo', icon: <Waves size={14} />, label: 'Mar Profundo' },
   { id: 'crepusculo', icon: <Sunset size={14} />, label: 'Crepúsculo' },
   { id: 'monolito', icon: <Square size={14} />, label: 'Monolito' },
-  { id: 'claro', icon: <Sun size={14} />, label: 'Claro' },
 ];
 
 const navLinks = [

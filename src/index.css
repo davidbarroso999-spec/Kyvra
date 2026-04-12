@@ -110,22 +110,6 @@
     --text-low: #525252;
   }
 
-  html.theme-claro {
-    --void: #faf9f7;
-    --deep: #f0eee9;
-    --surface: #ffffff;
-    --overlay: rgba(0, 0, 0, 0.02);
-    --border: rgba(0, 0, 0, 0.08);
-    --primary: #7c3aed;
-    --secondary: #6d28d9;
-    --accent: #0284c7;
-    --glow-purple: rgba(124, 58, 237, 0.15);
-    --glow-blue: rgba(2, 132, 199, 0.10);
-    --text-high: #111111;
-    --text-mid: #52525b;
-    --text-low: #a1a1aa;
-  }
-
   body {
     @apply bg-void text-text-mid font-sans antialiased selection:bg-primary/30 selection:text-text-high;
     transition: background-color 400ms ease, color 400ms ease;

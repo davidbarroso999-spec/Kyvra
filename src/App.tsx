@@ -11,9 +11,17 @@ import { Albums } from './pages/Albums';
 import { AlbumDetail } from './pages/AlbumDetail';
 import { Lore } from './pages/Lore';
 import { Admin } from './pages/Admin';
+import { useStore } from './store/useStore';
 import React from 'react';
 
 export default function App() {
+  const { theme } = useStore();
+
+  React.useEffect(() => {
+    // Apply theme to document
+    document.documentElement.className = theme === 'abissal' ? '' : `theme-${theme}`;
+  }, [theme]);
+
   React.useEffect(() => {
     console.log("Kyvra App mounted successfully.");
     if (process.env.GEMINI_API_KEY) {
