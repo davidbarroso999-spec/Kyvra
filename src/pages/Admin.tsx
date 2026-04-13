@@ -646,8 +646,7 @@ export function Admin() {
         duration: track.duration,
         vibe: track.vibe,
         lyrics: track.lyrics,
-        artist: track.artist,
-        album_title: albumTitle
+        artist: track.artist
       }));
 
       const { error: tracksDbError } = await supabase.from('tracks').insert(tracksToInsert);
