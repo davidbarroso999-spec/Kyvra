@@ -64,7 +64,7 @@ export function Lore() {
       - Use no máximo 2 parágrafos curtos.`;
 
     try {
-      const explanation = await generateText(prompt);
+      const explanation = await generateText(prompt, MODELS.TEXT);
       if (pIndex !== undefined) {
         setParagraphExplanations(prev => ({ ...prev, [key]: explanation }));
       } else {

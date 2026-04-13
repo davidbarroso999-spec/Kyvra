@@ -304,14 +304,18 @@ export function MiniPlayer() {
   const handleNext = () => {
     const prevId = currentTrack?.id;
     playNext();
+    
+    // Pequeno delay para garantir que o estado da store atualizou
     setTimeout(() => {
-      if (useStore.getState().currentTrack?.id === prevId) {
+      const nextTrack = useStore.getState().currentTrack;
+      if (nextTrack?.id === prevId) {
+        // Se o ID não mudou (ex: fila de 1 música), reinicia
         if (audioRef.current) {
           audioRef.current.currentTime = 0;
           audioRef.current.play();
         }
       }
-    }, 10);
+    }, 50);
   };
 
   const handlePrev = () => {
@@ -320,14 +324,16 @@ export function MiniPlayer() {
     } else {
       const prevId = currentTrack?.id;
       playPrevious();
+      
       setTimeout(() => {
-        if (useStore.getState().currentTrack?.id === prevId) {
+        const nextTrack = useStore.getState().currentTrack;
+        if (nextTrack?.id === prevId) {
           if (audioRef.current) {
             audioRef.current.currentTime = 0;
             audioRef.current.play();
           }
         }
-      }, 10);
+      }, 50);
     }
   };
 
@@ -355,7 +361,9 @@ export function MiniPlayer() {
         <img src={currentTrack.coverUrl} alt="Cover" className="w-12 h-12 rounded object-cover" referrerPolicy="no-referrer" />
         <div className="flex-1 min-w-0">
           <h4 className="text-sm font-medium text-text-high truncate">{currentTrack.title}</h4>
-          <p className="text-xs text-text-low truncate">{currentTrack.artist}</p>
+          <p className="text-[10px] text-text-low truncate uppercase tracking-wider">
+            {currentTrack.artist} {currentTrack.albumTitle && `• ${currentTrack.albumTitle}`}
+          </p>
         </div>
         <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
           <button onClick={handlePrev} className="text-text-mid hover:text-text-high transition-colors">
@@ -565,7 +573,10 @@ export function MiniPlayer() {
 
                   <div className="w-full text-center mb-8">
                     <h2 className="text-3xl font-display text-text-high mb-2">{currentTrack.title}</h2>
-                    <p className="text-lg text-text-mid mb-4">{currentTrack.artist}</p>
+                    <p className="text-lg text-text-mid mb-1">{currentTrack.artist}</p>
+                    {currentTrack.albumTitle && (
+                      <p className="text-xs text-text-low font-sc tracking-[0.2em] mb-4">{currentTrack.albumTitle}</p>
+                    )}
                     
                     <div className="flex flex-col items-center gap-4">
                       {currentTrack.vibe && (
@@ -728,6 +739,12 @@ export function MiniPlayer() {
                   {repeatMode === 'one' ? '1' : '∞'}
                 </div>
               </button>
+            </div>
+
+            {/* Volume Indicator (Mobile & Desktop) */}
+            <div className="flex items-center gap-2 text-[10px] font-mono text-text-low mb-4">
+              <Volume2 size={12} />
+              <span>{Math.round(volume * 100)}%</span>
             </div>
 
             {/* Volume - Hidden on mobile for better UX (use hardware buttons) */}

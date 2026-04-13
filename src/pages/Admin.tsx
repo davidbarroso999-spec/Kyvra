@@ -20,6 +20,7 @@ export function Admin() {
   const [isPublishingAlbum, setIsPublishingAlbum] = useState(false);
   const [isGeneratingSynopses, setIsGeneratingSynopses] = useState(false);
   const [albumSuccess, setAlbumSuccess] = useState('');
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const [loreChapter, setLoreChapter] = useState('');
   const [loreTimeline, setLoreTimeline] = useState('');
@@ -482,6 +483,7 @@ export function Admin() {
     }
 
     setIsPublishingLore(true);
+    setUploadProgress(0);
     setError('');
     setLoreSuccess('');
 
@@ -492,7 +494,11 @@ export function Admin() {
       if (loreImageFile) {
         const fileExt = loreImageFile.name.split('.').pop();
         const fileName = `lore_${Date.now()}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage.from('kyvra_images').upload(fileName, loreImageFile);
+        const { error: uploadError } = await (supabase.storage
+          .from('kyvra_images')
+          .upload(fileName, loreImageFile, {
+            onUploadProgress: (progress: any) => setUploadProgress(Math.round((progress.loaded / progress.total) * 100))
+          } as any));
         if (uploadError) throw uploadError;
         const { data: publicUrlData } = supabase.storage.from('kyvra_images').getPublicUrl(fileName);
         imageUrl = publicUrlData.publicUrl;
@@ -501,9 +507,11 @@ export function Admin() {
         const blob = await res.blob();
         const fileName = `lore_${Date.now()}.png`;
 
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { data: uploadData, error: uploadError } = await (supabase.storage
           .from('kyvra_images')
-          .upload(fileName, blob);
+          .upload(fileName, blob, {
+            onUploadProgress: (progress: any) => setUploadProgress(Math.round((progress.loaded / progress.total) * 100))
+          } as any));
 
         if (uploadError) throw uploadError;
 
@@ -555,26 +563,63 @@ export function Admin() {
     }
 
     setIsPublishingAlbum(true);
+    setUploadProgress(0);
     setError('');
     setAlbumSuccess('');
     console.log('Iniciando publicação do álbum:', albumTitle);
 
     try {
-      // 1. Upload da Capa
-      console.log('Fazendo upload da capa...');
+      // 0. Calcular tamanho total para o progresso
+      const totalBytes = albumCover.size + validTracks.reduce((acc, t) => acc + (t.file?.size || 0), 0);
+      let loadedBytesMap = new Map<string, number>();
+
+      const updateProgress = (id: string, loaded: number) => {
+        loadedBytesMap.set(id, loaded);
+        const totalLoaded = Array.from(loadedBytesMap.values()).reduce((a, b) => a + b, 0);
+        setUploadProgress(Math.round((totalLoaded / totalBytes) * 100));
+      };
+
+      // 1. Upload da Capa e das Faixas em paralelo
+      console.log('Iniciando uploads em paralelo...');
+      
       const coverExt = albumCover.name.split('.').pop();
       const coverFileName = `album_${Date.now()}.${coverExt}`;
       
-      const { error: coverError } = await supabase.storage
+      const coverUploadPromise = (supabase.storage
         .from('kyvra_images')
-        .upload(coverFileName, albumCover);
+        .upload(coverFileName, albumCover, {
+          onUploadProgress: (progress: any) => updateProgress('cover', progress.loaded)
+        } as any));
+
+      const trackUploadPromises = validTracks.map(async (track, i) => {
+        const fileExt = track.file!.name.split('.').pop();
+        const audioFileName = `track_${Date.now()}_${i}.${fileExt}`;
         
+        const { error: uploadError } = await (supabase.storage
+          .from('kyvra-audio')
+          .upload(audioFileName, track.file!, {
+            onUploadProgress: (progress: any) => updateProgress(`track_${i}`, progress.loaded)
+          } as any));
+
+        if (uploadError) throw uploadError;
+
+        const { data: audioUrlData } = supabase.storage
+          .from('kyvra-audio')
+          .getPublicUrl(audioFileName);
+
+        return {
+          ...track,
+          audio_url: audioUrlData.publicUrl
+        };
+      });
+
+      // Aguarda o upload da capa para criar o álbum
+      const { error: coverError } = await coverUploadPromise;
       if (coverError) throw coverError;
 
       const { data: coverUrlData } = supabase.storage
         .from('kyvra_images')
         .getPublicUrl(coverFileName);
-      console.log('Capa enviada com sucesso:', coverUrlData.publicUrl);
 
       // 2. Inserir Álbum no BD
       console.log('Registrando álbum no banco de dados...');
@@ -588,47 +633,28 @@ export function Admin() {
       if (albumDbError) throw albumDbError;
       console.log('Álbum registrado ID:', albumData.id);
 
-      // 3. Upload das Faixas e Inserção no BD (Paralelizado)
-      console.log(`Iniciando processamento de ${validTracks.length} faixas em paralelo...`);
-      
-      const trackPromises = validTracks.map(async (track, i) => {
-        console.log(`Processando faixa: ${track.title}`);
-        
-        // Upload do áudio
-        const fileExt = track.file!.name.split('.').pop();
-        const audioFileName = `track_${Date.now()}_${i}.${fileExt}`;
+      // Aguarda o upload de todas as faixas
+      const uploadedTracks = await Promise.all(trackUploadPromises);
 
-        const { error: audioError } = await supabase.storage
-          .from('kyvra-audio')
-          .upload(audioFileName, track.file!);
+      // 3. Inserção das Faixas no BD (Batch Insert)
+      console.log('Inserindo faixas em lote...');
+      const tracksToInsert = uploadedTracks.map((track, i) => ({
+        album_id: albumData.id,
+        title: track.title,
+        audio_url: track.audio_url,
+        track_number: track.trackNumber || (i + 1),
+        duration: track.duration,
+        vibe: track.vibe,
+        lyrics: track.lyrics,
+        artist: track.artist,
+        album_title: albumTitle
+      }));
 
-        if (audioError) throw audioError;
+      const { error: tracksDbError } = await supabase.from('tracks').insert(tracksToInsert);
+      if (tracksDbError) throw tracksDbError;
 
-        const { data: audioUrlData } = supabase.storage
-          .from('kyvra-audio')
-          .getPublicUrl(audioFileName);
-
-        // Inserção no BD
-        const { error: trackDbError } = await supabase.from('tracks').insert({
-          album_id: albumData.id,
-          title: track.title,
-          audio_url: audioUrlData.publicUrl,
-          track_number: track.trackNumber || (i + 1),
-          duration: track.duration,
-          vibe: track.vibe,
-          lyrics: track.lyrics,
-          artist: track.artist
-        });
-
-        if (trackDbError) throw trackDbError;
-        
-        return { title: track.title, lyrics: track.lyrics };
-      });
-
-      const processedTracks = await Promise.all(trackPromises);
-      
       // 4. Generate Album Synopsis
-      const allLyrics = processedTracks
+      const allLyrics = uploadedTracks
         .filter(t => t.lyrics)
         .map((t, i) => `Faixa ${i + 1} - ${t.title}:\n${t.lyrics}`)
         .join('\n\n');
@@ -801,7 +827,7 @@ export function Admin() {
           className="glass p-8 rounded-xl w-full max-w-md flex flex-col items-center"
         >
           <Lock className="text-primary mb-4" size={32} />
-          <h1 className="font-display text-3xl mb-2">KYVRA</h1>
+          <h1 className="font-display text-3xl mb-2">O ARQUIVISTA</h1>
           <span className="font-sc text-xs tracking-[0.2em] text-text-low mb-8">ACESSO RESTRITO</span>
           
           <input 
@@ -1041,6 +1067,23 @@ export function Admin() {
 
             {error && <div className="text-red-400 text-sm text-right">{error}</div>}
             {albumSuccess && <div className="text-primary text-sm text-right flex items-center justify-end gap-2"><CheckCircle2 size={16} /> {albumSuccess}</div>}
+
+            {isPublishingAlbum && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs font-mono text-text-low">
+                  <span>PROGRESSO DO UPLOAD</span>
+                  <span>{uploadProgress}%</span>
+                </div>
+                <div className="h-1.5 bg-border rounded-full overflow-hidden">
+                  <motion.div 
+                    className="h-full bg-primary"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${uploadProgress}%` }}
+                    transition={{ type: 'spring', bounce: 0, duration: 0.3 }}
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-8">
               <button 
@@ -1288,6 +1331,23 @@ export function Admin() {
             
             {error && <div className="text-red-400 text-sm text-right">{error}</div>}
             {loreSuccess && <div className="text-primary text-sm text-right flex items-center justify-end gap-2"><CheckCircle2 size={16} /> {loreSuccess}</div>}
+
+            {isPublishingLore && (loreImageFile || generatedImage) && (
+              <div className="space-y-2 mt-4">
+                <div className="flex justify-between text-xs font-mono text-text-low">
+                  <span>PROGRESSO DO UPLOAD</span>
+                  <span>{uploadProgress}%</span>
+                </div>
+                <div className="h-1 bg-border rounded-full overflow-hidden">
+                  <motion.div 
+                    className="h-full bg-primary"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${uploadProgress}%` }}
+                    transition={{ type: 'spring', bounce: 0, duration: 0.3 }}
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="mt-8 flex justify-end">
               <button 

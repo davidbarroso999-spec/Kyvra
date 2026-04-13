@@ -49,6 +49,8 @@ export function AlbumDetail() {
             title: t.title,
             duration: t.duration || '0:00',
             audioUrl: t.audio_url,
+            coverUrl: data.cover_url,
+            albumTitle: data.title,
             vibe: t.vibe || 'Introspectivo',
             lyrics: t.lyrics,
             artist: t.artist || 'Kyvra'
@@ -59,6 +61,13 @@ export function AlbumDetail() {
     }
     fetchAlbum();
   }, [id]);
+
+  const [queueFeedback, setQueueFeedback] = useState<string | null>(null);
+
+  const showFeedback = (msg: string) => {
+    setQueueFeedback(msg);
+    setTimeout(() => setQueueFeedback(null), 2000);
+  };
 
   const handlePlayAlbum = () => {
     if (!album) return;
@@ -95,7 +104,37 @@ export function AlbumDetail() {
   };
 
   if (loading) {
-    return <div className="w-full min-h-screen flex items-center justify-center text-primary">Carregando...</div>;
+    return (
+      <div className="w-full min-h-screen pb-32">
+        {/* Hero skeleton */}
+        <div className="relative w-full h-[60vh] min-h-[500px] flex items-end justify-center overflow-hidden bg-deep">
+          <div className="relative z-20 flex flex-col md:flex-row items-end gap-8 max-w-5xl mx-auto px-6 w-full mb-12">
+            <div className="skeleton skeleton-md w-64 h-64 md:w-80 md:h-80 shrink-0" />
+            <div className="flex flex-col gap-4 flex-1 pb-4">
+              <div className="skeleton h-4 w-24" />
+              <div className="skeleton h-16 w-3/4" />
+              <div className="skeleton h-4 w-48" />
+            </div>
+          </div>
+        </div>
+        {/* Tracklist skeleton */}
+        <div className="max-w-5xl mx-auto px-6 mt-12">
+          <div className="skeleton h-14 w-56 mb-12" style={{ borderRadius: 'var(--radius-sm)' }} />
+          <div className="flex flex-col gap-2">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="flex items-center gap-4 py-3 px-4">
+                <div className="skeleton w-6 h-4" />
+                <div className="flex-1 flex flex-col gap-2">
+                  <div className="skeleton h-4" style={{ width: `${50 + (i % 5) * 10}%` }} />
+                  <div className="skeleton h-3 w-20" />
+                </div>
+                <div className="skeleton h-3 w-10" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!album) {
@@ -104,6 +143,20 @@ export function AlbumDetail() {
 
   return (
     <div className="w-full min-h-screen pb-32">
+      {/* Toast de feedback de fila */}
+      <AnimatePresence>
+        {queueFeedback && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[900] glass px-4 py-2 r-sm text-sm text-text-high font-sans whitespace-nowrap"
+          >
+            {queueFeedback}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Aurora Hero */}
       <div className="relative w-full h-[60vh] min-h-[500px] flex items-center justify-center overflow-hidden">
         {/* Blurred Background */}
@@ -242,6 +295,7 @@ export function AlbumDetail() {
                           e.stopPropagation();
                           playNext_track(track);
                           setOpenMenuId(null);
+                          showFeedback('Tocará em seguida');
                         }}
                         className="w-full text-left px-4 py-2.5 text-sm text-text-mid hover:text-text-high hover:bg-overlay transition-colors"
                       >
@@ -252,6 +306,7 @@ export function AlbumDetail() {
                           e.stopPropagation();
                           addToQueue(track);
                           setOpenMenuId(null);
+                          showFeedback('Adicionado à fila');
                         }}
                         className="w-full text-left px-4 py-2.5 text-sm text-text-mid hover:text-text-high hover:bg-overlay transition-colors"
                       >

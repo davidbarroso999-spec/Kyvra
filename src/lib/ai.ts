@@ -29,9 +29,9 @@ export function getAI() {
 }
 
 export const MODELS = {
-  TEXT: 'gemini-flash-latest',
-  IMAGE: 'gemini-2.5-flash-image',
-  PRO: 'gemini-3.1-pro-preview'
+  TEXT: 'gemini-1.5-flash',
+  IMAGE: 'gemini-2.0-flash-preview-image-generation',
+  PRO: 'gemini-1.5-pro'
 };
 
 export async function generateText(prompt: string, systemInstruction?: string) {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Search, Play, Pause } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
@@ -80,22 +80,48 @@ export function Archive() {
   }, []);
 
   const filteredTracks = tracks.filter(track => {
-    const matchesSearch = track.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesGenre = selectedGenre === 'Todos' || track.vibe.toLowerCase().includes(selectedGenre.toLowerCase());
+    const q = searchQuery.toLowerCase();
+    const matchesSearch = !q ||
+      track.title.toLowerCase().includes(q) ||
+      track.artist.toLowerCase().includes(q) ||
+      track.vibe.toLowerCase().includes(q);
+    const matchesGenre = selectedGenre === 'Todos' ||
+      track.vibe.toLowerCase().includes(selectedGenre.toLowerCase());
     return matchesSearch && matchesGenre;
   });
+
+  const [queueFeedback, setQueueFeedback] = useState<string | null>(null);
+
+  const showFeedback = (msg: string) => {
+    setQueueFeedback(msg);
+    setTimeout(() => setQueueFeedback(null), 2000);
+  };
 
   const handlePlay = (track: any) => {
     if (currentTrack?.id === track.id) {
       setIsPlaying(!isPlaying);
     } else {
       setCurrentTrack(track);
-      setQueue(tracks);
+      setQueue(filteredTracks);
     }
   };
 
   return (
     <div className="w-full pt-32 px-6 pb-32 max-w-5xl mx-auto">
+      {/* Toast de feedback de fila */}
+      <AnimatePresence>
+        {queueFeedback && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[900] glass px-4 py-2 r-sm text-sm text-text-high font-sans whitespace-nowrap"
+          >
+            {queueFeedback}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -123,7 +149,7 @@ export function Archive() {
         <input
           ref={searchInputRef}
           type="text"
-          placeholder="Buscar no arquivo..."
+          placeholder="Buscar por título, artista ou gênero..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full bg-surface border border-border r-md py-4 pl-12 pr-4 text-text-high placeholder:text-text-low focus:outline-none focus:border-primary focus:shadow-[0_0_0_3px_var(--glow-purple)] transition-all font-sans"
@@ -177,9 +203,23 @@ export function Archive() {
           <div className="flex flex-col items-center justify-center py-24 gap-4">
             <div className="w-[1px] h-12 bg-gradient-to-b from-transparent via-border to-transparent" />
             <p className="font-sc text-xs tracking-[0.3em] text-text-low">FRAGMENTO NÃO ENCONTRADO</p>
-            <p className="font-display text-text-low text-lg">
-              "{searchQuery}" não existe neste universo
-            </p>
+            {searchQuery ? (
+              <p className="font-display text-text-low text-lg">
+                "{searchQuery}" não existe neste universo
+              </p>
+            ) : (
+              <p className="font-display text-text-low text-lg">
+                Nenhum fragmento com vibe "{selectedGenre}"
+              </p>
+            )}
+            {(searchQuery || selectedGenre !== 'Todos') && (
+              <button
+                onClick={() => { setSearchQuery(''); setSelectedGenre('Todos'); }}
+                className="text-xs text-primary font-sc tracking-widest hover:text-primary/80 transition-colors mt-2"
+              >
+                LIMPAR FILTROS
+              </button>
+            )}
           </div>
         ) : (
           filteredTracks.map((track, index) => {
@@ -191,24 +231,40 @@ export function Archive() {
                 onClick={() => handlePlay(track)}
                 className="track-row-hover flex items-center gap-4 py-3 px-4 cursor-pointer rounded-none border-b border-border/50 last:border-0 group"
               >
-                <div className="w-8 flex justify-center text-text-low font-mono text-sm">
+                <div className="w-8 flex justify-center items-center text-text-low font-mono text-sm shrink-0">
                   {isCurrentTrack && isPlaying ? (
-                    <div className="flex items-end gap-[2px] h-4">
-                      <div className="w-1 bg-primary animate-[bounce_1s_infinite_0ms]" style={{ height: '100%' }} />
-                      <div className="w-1 bg-primary animate-[bounce_1s_infinite_200ms]" style={{ height: '60%' }} />
-                      <div className="w-1 bg-primary animate-[bounce_1s_infinite_400ms]" style={{ height: '80%' }} />
+                    /* Estado: tocando — mostra barras animadas */
+                    <div
+                      className="flex items-end gap-[2px] h-4 cursor-pointer"
+                      onClick={(e) => { e.stopPropagation(); setIsPlaying(false); }}
+                      title="Pausar"
+                    >
+                      <div className="w-1 bg-primary rounded-sm" style={{ height: '100%', animation: 'queueBar 0.8s ease-in-out 0s infinite alternate' }} />
+                      <div className="w-1 bg-primary rounded-sm" style={{ height: '60%', animation: 'queueBar 0.8s ease-in-out 0.2s infinite alternate' }} />
+                      <div className="w-1 bg-primary rounded-sm" style={{ height: '80%', animation: 'queueBar 0.8s ease-in-out 0.1s infinite alternate' }} />
                     </div>
+                  ) : isCurrentTrack && !isPlaying ? (
+                    /* Estado: pausado na faixa atual — mostra play para retomar */
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setIsPlaying(true); }}
+                      className="text-primary"
+                      title="Retomar"
+                    >
+                      <Play size={16} className="ml-0.5" />
+                    </button>
                   ) : (
-                    <span className="group-hover:hidden">{String(index + 1).padStart(2, '0')}</span>
+                    /* Estado: outra faixa ou não tocando — mostra número ou play no hover */
+                    <>
+                      <span className="group-hover:hidden">{String(index + 1).padStart(2, '0')}</span>
+                      <button
+                        className="hidden group-hover:flex items-center justify-center text-primary"
+                        onClick={(e) => { e.stopPropagation(); handlePlay(track); }}
+                        title="Tocar"
+                      >
+                        <Play size={16} className="ml-0.5" />
+                      </button>
+                    </>
                   )}
-                  <button 
-                    className={cn(
-                      "hidden group-hover:flex items-center justify-center text-primary",
-                      isCurrentTrack && isPlaying ? "flex" : ""
-                    )}
-                  >
-                    {isCurrentTrack && isPlaying ? <Pause size={16} /> : <Play size={16} className="ml-1" />}
-                  </button>
                 </div>
                 
                 <img src={track.coverUrl} alt={track.title} loading="lazy" className="w-12 h-12 rounded object-cover" referrerPolicy="no-referrer" />
@@ -266,6 +322,7 @@ export function Archive() {
                             e.stopPropagation();
                             playNext_track(track);
                             setOpenMenuId(null);
+                            showFeedback('Tocará em seguida');
                           }}
                           className="w-full text-left px-4 py-2.5 text-sm text-text-mid hover:text-text-high hover:bg-overlay transition-colors"
                         >
@@ -276,6 +333,7 @@ export function Archive() {
                             e.stopPropagation();
                             addToQueue(track);
                             setOpenMenuId(null);
+                            showFeedback('Adicionado à fila');
                           }}
                           className="w-full text-left px-4 py-2.5 text-sm text-text-mid hover:text-text-high hover:bg-overlay transition-colors"
                         >

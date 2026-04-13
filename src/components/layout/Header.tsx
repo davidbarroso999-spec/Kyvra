@@ -120,7 +120,7 @@ export function Header() {
               to="/arquivista"
               className="hidden md:flex text-xs font-sc tracking-widest text-text-low hover:text-primary transition-colors"
             >
-              ADMIN
+              O ARQUIVISTA
             </Link>
 
             <button
