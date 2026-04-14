@@ -249,13 +249,6 @@ export function AlbumDetail() {
               </span>
               <div className="flex-1 flex flex-col">
                 <h3 className="font-medium text-text-high group-hover:text-primary transition-colors">{track.title}</h3>
-                <div className="flex flex-wrap gap-2 mt-1">
-                  {track.vibe.split(' | ').map((tag: string, idx: number) => (
-                    <span key={idx} className="text-[9px] text-text-low uppercase tracking-widest font-mono border border-border/50 px-1.5 py-0.5 rounded">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
               </div>
               <span className="font-mono text-sm text-text-low">
                 <TrackDuration audioUrl={track.audioUrl} defaultDuration={track.duration} />

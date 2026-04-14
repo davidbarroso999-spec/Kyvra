@@ -8,12 +8,10 @@ import { TrackDuration } from '@/components/ui/TrackDuration';
 
 export function Archive() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedGenre, setSelectedGenre] = useState('Todos');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { currentTrack, isPlaying, setCurrentTrack, setIsPlaying, setQueue, addToQueue, playNext_track } = useStore();
   const [tracks, setTracks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [availableGenres, setAvailableGenres] = useState<string[]>(['Todos']);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -52,15 +50,6 @@ export function Archive() {
           lyrics: t.lyrics
         }));
         setTracks(mappedTracks);
-
-        // Extract unique vibes from tracks
-        const genresSet = new Set<string>();
-        mappedTracks.forEach(t => {
-          if (t.vibe) {
-            t.vibe.split(' | ').forEach((v: string) => genresSet.add(v.trim()));
-          }
-        });
-        setAvailableGenres(['Todos', ...Array.from(genresSet).sort()]);
       }
       setLoading(false);
     }
@@ -81,13 +70,10 @@ export function Archive() {
 
   const filteredTracks = tracks.filter(track => {
     const q = searchQuery.toLowerCase();
-    const matchesSearch = !q ||
+    return !q ||
       track.title.toLowerCase().includes(q) ||
       track.artist.toLowerCase().includes(q) ||
       track.vibe.toLowerCase().includes(q);
-    const matchesGenre = selectedGenre === 'Todos' ||
-      track.vibe.toLowerCase().includes(selectedGenre.toLowerCase());
-    return matchesSearch && matchesGenre;
   });
 
   const [queueFeedback, setQueueFeedback] = useState<string | null>(null);
@@ -141,7 +127,7 @@ export function Archive() {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.1 }}
-        className="max-w-[640px] mx-auto mb-12 relative group"
+        className="max-w-[640px] mx-auto mb-16 relative group"
       >
         <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
           <Search size={18} className="text-text-low group-focus-within:text-primary transition-colors" />
@@ -157,29 +143,6 @@ export function Archive() {
         <div className="hidden md:flex absolute inset-y-0 right-4 items-center pointer-events-none">
           <span className="text-[10px] font-mono text-text-low bg-void/50 px-1.5 py-0.5 rounded border border-border">⌘K</span>
         </div>
-      </motion.div>
-
-      {/* Filters */}
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-        className="flex flex-wrap justify-center gap-3 mb-16"
-      >
-        {availableGenres.map(genre => (
-          <button
-            key={genre}
-            onClick={() => setSelectedGenre(genre)}
-            className={cn(
-              "px-4 py-2 rounded-full text-sm font-medium transition-all duration-300",
-              selectedGenre === genre 
-                ? "bg-primary/20 text-primary border border-primary/50" 
-                : "bg-surface border border-border text-text-mid hover:text-text-high hover:border-text-mid"
-            )}
-          >
-            {genre}
-          </button>
-        ))}
       </motion.div>
 
       {/* Track List */}
@@ -203,21 +166,17 @@ export function Archive() {
           <div className="flex flex-col items-center justify-center py-24 gap-4">
             <div className="w-[1px] h-12 bg-gradient-to-b from-transparent via-border to-transparent" />
             <p className="font-sc text-xs tracking-[0.3em] text-text-low">FRAGMENTO NÃO ENCONTRADO</p>
-            {searchQuery ? (
+            {searchQuery && (
               <p className="font-display text-text-low text-lg">
                 "{searchQuery}" não existe neste universo
               </p>
-            ) : (
-              <p className="font-display text-text-low text-lg">
-                Nenhum fragmento com vibe "{selectedGenre}"
-              </p>
             )}
-            {(searchQuery || selectedGenre !== 'Todos') && (
+            {searchQuery && (
               <button
-                onClick={() => { setSearchQuery(''); setSelectedGenre('Todos'); }}
+                onClick={() => setSearchQuery('')}
                 className="text-xs text-primary font-sc tracking-widest hover:text-primary/80 transition-colors mt-2"
               >
-                LIMPAR FILTROS
+                LIMPAR BUSCA
               </button>
             )}
           </div>
@@ -274,14 +233,6 @@ export function Archive() {
                     {track.title}
                   </h3>
                   <p className="text-sm text-text-low truncate">{track.artist}</p>
-                </div>
-                
-                <div className="hidden md:flex flex-wrap gap-2">
-                  {track.vibe.split(' | ').map((tag: string, idx: number) => (
-                    <span key={idx} className="px-2 py-0.5 rounded-full bg-surface border border-border text-[9px] uppercase tracking-widest text-text-mid font-mono">
-                      {tag}
-                    </span>
-                  ))}
                 </div>
                 
                 <div className="font-mono text-sm text-text-low w-12 text-right">
