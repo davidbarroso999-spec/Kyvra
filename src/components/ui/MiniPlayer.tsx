@@ -104,6 +104,35 @@ export function MiniPlayer() {
     }
   }, [isPlaying, currentTrack]);
 
+  // Media Session API for mobile lock screen controls
+  useEffect(() => {
+    if ('mediaSession' in navigator && currentTrack) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: currentTrack.title,
+        artist: currentTrack.artist || 'Kyvra',
+        album: currentTrack.albumTitle || 'Kyvra',
+        artwork: [
+          { src: currentTrack.coverUrl || '', sizes: '512x512', type: 'image/jpeg' }
+        ]
+      });
+
+      navigator.mediaSession.setActionHandler('play', () => setIsPlaying(true));
+      navigator.mediaSession.setActionHandler('pause', () => setIsPlaying(false));
+      navigator.mediaSession.setActionHandler('previoustrack', () => handlePrev());
+      navigator.mediaSession.setActionHandler('nexttrack', () => handleNext());
+      navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+        if (audioRef.current) {
+          audioRef.current.currentTime = Math.max(audioRef.current.currentTime - (details.seekOffset || 10), 0);
+        }
+      });
+      navigator.mediaSession.setActionHandler('seekforward', (details) => {
+        if (audioRef.current) {
+          audioRef.current.currentTime = Math.min(audioRef.current.currentTime + (details.seekOffset || 10), audioRef.current.duration);
+        }
+      });
+    }
+  }, [currentTrack, isPlaying]);
+
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = volume;
@@ -356,6 +385,7 @@ export function MiniPlayer() {
         animate={{ y: isExpanded ? 100 : 0, opacity: isExpanded ? 0 : 1 }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         className="fixed bottom-4 right-4 left-4 sm:left-auto sm:bottom-6 sm:right-6 z-[1000] glass r-md p-3 flex items-center gap-4 w-auto sm:w-[320px] shadow-2xl cursor-pointer"
+        style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
         onClick={() => setIsExpanded(true)}
       >
         <img src={currentTrack.coverUrl} alt="Cover" className="w-12 h-12 rounded object-cover" referrerPolicy="no-referrer" />
@@ -399,6 +429,8 @@ export function MiniPlayer() {
           style={{
             transform: isDraggingDown ? `translateY(${dragOffset}px)` : undefined,
             transition: isDraggingDown ? 'none' : undefined,
+            paddingTop: 'env(safe-area-inset-top)',
+            paddingBottom: 'env(safe-area-inset-bottom)'
           }}
         >
           {/* Indicador de swipe — visível apenas no mobile */}

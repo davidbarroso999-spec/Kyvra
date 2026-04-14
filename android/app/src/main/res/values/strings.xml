@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Kyvra</string>
+    <string name="title_activity_main">Kyvra</string>
+    <string name="package_name">com.kyvra.app</string>
+    <string name="custom_url_scheme">com.kyvra.app</string>
+</resources>
