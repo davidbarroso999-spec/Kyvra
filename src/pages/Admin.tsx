@@ -93,7 +93,10 @@ export function Admin() {
     setError('');
     
     try {
-      // 1. Delete tracks first (Supabase handles this if cascade is on, but let's be safe)
+      const albumToDelete = allAlbums.find(a => a.id === albumId);
+      const tracksToDelete = albumToDelete?.tracks || [];
+
+      // 1. Delete tracks from DB
       const { error: tracksError } = await supabase
         .from('tracks')
         .delete()
@@ -101,7 +104,7 @@ export function Admin() {
       
       if (tracksError) throw tracksError;
 
-      // 2. Delete the album
+      // 2. Delete the album from DB
       const { error: albumError } = await supabase
         .from('albums')
         .delete()
@@ -109,7 +112,21 @@ export function Admin() {
       
       if (albumError) throw albumError;
 
-      setAcervoSuccess('Álbum e músicas excluídos com sucesso.');
+      // 3. Delete files from Storage
+      if (albumToDelete?.cover_url) {
+        const coverName = albumToDelete.cover_url.split('/').pop();
+        if (coverName) await supabase.storage.from('kyvra_images').remove([coverName]);
+      }
+
+      const audioFileNames = tracksToDelete
+        .map((t: any) => t.audio_url?.split('/').pop())
+        .filter(Boolean);
+      
+      if (audioFileNames.length > 0) {
+        await supabase.storage.from('kyvra-audio').remove(audioFileNames);
+      }
+
+      setAcervoSuccess('Álbum, músicas e arquivos excluídos com sucesso.');
       setAllAlbums(allAlbums.filter(a => a.id !== albumId));
       setTimeout(() => setAcervoSuccess(''), 3000);
     } catch (err: any) {
@@ -127,6 +144,8 @@ export function Admin() {
     setError('');
     
     try {
+      const trackToDelete = allAlbums.flatMap(a => a.tracks).find((t: any) => t.id === trackId);
+
       const { error: trackError } = await supabase
         .from('tracks')
         .delete()
@@ -134,7 +153,12 @@ export function Admin() {
       
       if (trackError) throw trackError;
 
-      setAcervoSuccess('Música excluída.');
+      if (trackToDelete?.audio_url) {
+        const fileName = trackToDelete.audio_url.split('/').pop();
+        if (fileName) await supabase.storage.from('kyvra-audio').remove([fileName]);
+      }
+
+      setAcervoSuccess('Música e arquivo excluídos.');
       setAllAlbums(allAlbums.map(a => {
         if (a.id === albumId) {
           return { ...a, tracks: a.tracks.filter((t: any) => t.id !== trackId) };
@@ -579,29 +603,40 @@ export function Admin() {
         setUploadProgress(Math.round((totalLoaded / totalBytes) * 100));
       };
 
+      // Array para rastrear arquivos enviados e reverter em caso de erro
+      const uploadedFiles: { bucket: string, path: string }[] = [];
+
       // 1. Upload da Capa e das Faixas em paralelo
       console.log('Iniciando uploads em paralelo...');
       
       const coverExt = albumCover.name.split('.').pop();
       const coverFileName = `album_${Date.now()}.${coverExt}`;
       
-      const coverUploadPromise = (supabase.storage
+      const coverUploadPromise = supabase.storage
         .from('kyvra_images')
         .upload(coverFileName, albumCover, {
           onUploadProgress: (progress: any) => updateProgress('cover', progress.loaded)
-        } as any));
+        } as any)
+        .then(res => {
+          if (!res.error) uploadedFiles.push({ bucket: 'kyvra_images', path: coverFileName });
+          return res;
+        });
 
       const trackUploadPromises = validTracks.map(async (track, i) => {
         const fileExt = track.file!.name.split('.').pop();
         const audioFileName = `track_${Date.now()}_${i}.${fileExt}`;
         
-        const { error: uploadError } = await (supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from('kyvra-audio')
           .upload(audioFileName, track.file!, {
             onUploadProgress: (progress: any) => updateProgress(`track_${i}`, progress.loaded)
-          } as any));
+          } as any);
 
-        if (uploadError) throw uploadError;
+        if (!uploadError) {
+          uploadedFiles.push({ bucket: 'kyvra-audio', path: audioFileName });
+        } else {
+          throw uploadError;
+        }
 
         const { data: audioUrlData } = supabase.storage
           .from('kyvra-audio')
@@ -621,6 +656,9 @@ export function Admin() {
         .from('kyvra_images')
         .getPublicUrl(coverFileName);
 
+      // Aguarda o upload de todas as faixas ANTES de inserir no BD
+      const uploadedTracks = await Promise.all(trackUploadPromises);
+
       // 2. Inserir Álbum no BD
       console.log('Registrando álbum no banco de dados...');
       const { data: albumData, error: albumDbError } = await supabase.from('albums').insert({
@@ -632,9 +670,6 @@ export function Admin() {
 
       if (albumDbError) throw albumDbError;
       console.log('Álbum registrado ID:', albumData.id);
-
-      // Aguarda o upload de todas as faixas
-      const uploadedTracks = await Promise.all(trackUploadPromises);
 
       // 3. Inserção das Faixas no BD (Batch Insert)
       console.log('Inserindo faixas em lote...');
@@ -650,7 +685,11 @@ export function Admin() {
       }));
 
       const { error: tracksDbError } = await supabase.from('tracks').insert(tracksToInsert);
-      if (tracksDbError) throw tracksDbError;
+      if (tracksDbError) {
+        // Se falhar a inserção das faixas, deleta o álbum (que vai deletar as faixas em cascata no BD)
+        await supabase.from('albums').delete().eq('id', albumData.id);
+        throw tracksDbError;
+      }
 
       // 4. Generate Album Synopsis
       const allLyrics = uploadedTracks
@@ -705,6 +744,18 @@ export function Admin() {
       } catch (err: any) {
       console.error('Erro ao publicar álbum:', err);
       setError('Falha ao publicar álbum: ' + err.message);
+      
+      // Rollback: deletar arquivos que já foram upados caso algo dê errado
+      if (uploadedFiles && uploadedFiles.length > 0) {
+        console.log('Revertendo uploads devido a erro...');
+        for (const file of uploadedFiles) {
+          try {
+            await supabase.storage.from(file.bucket).remove([file.path]);
+          } catch (rollbackErr) {
+            console.error(`Erro ao reverter arquivo ${file.path}:`, rollbackErr);
+          }
+        }
+      }
     } finally {
       setIsPublishingAlbum(false);
     }
