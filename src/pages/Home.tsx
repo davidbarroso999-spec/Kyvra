@@ -162,12 +162,6 @@ export function Home() {
           transition={{ delay: 1.5, duration: 1 }}
           className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3"
         >
-          <span 
-            className="font-sc text-[9px] tracking-[0.3em] text-text-low"
-            style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
-          >
-            SCROLL
-          </span>
           <div className="w-[1px] h-10 bg-gradient-to-b from-primary/50 to-transparent" />
         </motion.div>
       </section>

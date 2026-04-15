@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Play, ChevronDown, ChevronUp } from 'lucide-react';
+import { Play, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/lib/supabase';
 import { TrackDuration } from '@/components/ui/TrackDuration';
 
 export function AlbumDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { setCurrentTrack, setIsPlaying, setQueue, addToQueue, playNext_track } = useStore();
   const [album, setAlbum] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -159,6 +160,15 @@ export function AlbumDetail() {
 
       {/* Aurora Hero */}
       <div className="relative w-full h-[60vh] min-h-[500px] flex items-center justify-center overflow-hidden">
+        {/* Back Button */}
+        <button 
+          onClick={() => navigate(-1)}
+          className="absolute top-24 left-6 md:left-12 z-30 flex items-center gap-2 text-text-mid hover:text-text-high transition-colors font-sans text-sm bg-surface/30 backdrop-blur-md px-4 py-2 r-full border border-border/50 hover:bg-surface/50"
+        >
+          <ArrowLeft size={16} />
+          Voltar
+        </button>
+
         {/* Blurred Background */}
         <div 
           className="absolute inset-0 z-0 opacity-50"
@@ -203,28 +213,34 @@ export function AlbumDetail() {
 
       {/* Content */}
       <div className="max-w-5xl mx-auto px-6 mt-12">
-        <div className="flex flex-col md:flex-row items-start md:items-center gap-6 mb-12">
-          <button 
-            onClick={handlePlayAlbum}
-            className="flex items-center gap-3 px-8 py-4 bg-primary text-void font-sans font-medium r-sm shadow-[0_0_30px_var(--glow-purple)] shrink-0 btn-primary-hover"
-          >
-            <Play size={20} className="fill-current" />
-            Tocar Álbum Completo
-          </button>
+        <div className="flex flex-col gap-8 mb-12">
+          <div>
+            <button 
+              onClick={handlePlayAlbum}
+              className="flex items-center justify-center sm:justify-start gap-3 px-8 py-4 bg-primary text-void font-sans font-medium r-sm shadow-[0_0_30px_var(--glow-purple)] w-full sm:w-auto btn-primary-hover"
+            >
+              <Play size={20} className="fill-current" />
+              Tocar Álbum Completo
+            </button>
+          </div>
           
           {album.description && (
-            <div className="flex-1 w-full md:max-w-2xl bg-surface/30 p-6 r-md border border-border/50">
+            <div className="w-full bg-surface/20 p-6 md:p-8 r-md border border-border/30 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-1 h-full bg-primary/40" />
+              <h3 className="font-sc text-xl text-text-high mb-4 tracking-wide">O Arco Psicológico</h3>
               <div className="relative">
-                <p className={`text-text-mid font-sans leading-relaxed transition-all duration-300 ${isSynopsisExpanded ? '' : 'line-clamp-3'}`}>
-                  {album.description}
-                </p>
+                <div className={`text-text-mid font-sans leading-relaxed transition-all duration-300 ${isSynopsisExpanded ? '' : 'line-clamp-4'}`}>
+                  {album.description.split('\n').map((paragraph, idx) => (
+                    paragraph.trim() ? <p key={idx} className="mb-4 last:mb-0">{paragraph}</p> : null
+                  ))}
+                </div>
                 {!isSynopsisExpanded && (
-                  <div className="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-void/90 to-transparent pointer-events-none" />
+                  <div className="absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-[#0d0d1a] to-transparent pointer-events-none" />
                 )}
               </div>
               <button 
                 onClick={() => setIsSynopsisExpanded(!isSynopsisExpanded)}
-                className="mt-3 flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors font-medium"
+                className="mt-4 flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors font-medium"
               >
                 {isSynopsisExpanded ? (
                   <>Ver menos <ChevronUp size={16} /></>

@@ -136,47 +136,61 @@ export function Header() {
       {/* Mobile Menu Overlay */}
       <AnimatePresence>
         {isMobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="fixed inset-0 z-40 bg-void/98 backdrop-blur-xl flex flex-col items-center justify-center p-6"
-          >
-            <nav className="flex flex-col items-center gap-6 w-full max-w-xs">
-              {navLinks.map((link, i) => (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="fixed inset-0 z-40 bg-void/60 backdrop-blur-md md:hidden"
+            />
+            
+            {/* Side Drawer */}
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 250 }}
+              className="fixed top-0 right-0 bottom-0 w-[80%] max-w-sm z-40 bg-surface/95 backdrop-blur-xl border-l border-border/50 shadow-2xl flex flex-col p-6 pt-28 md:hidden"
+            >
+              <nav className="flex flex-col gap-2 w-full">
+                {navLinks.map((link, i) => (
+                  <motion.div
+                    key={link.path}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.05 + 0.1, ease: "easeOut" }}
+                    className="w-full"
+                  >
+                    <Link
+                      to={link.path}
+                      className={cn(
+                        "block w-full py-4 px-6 font-display text-2xl transition-colors r-md text-left",
+                        location.pathname === link.path ? "text-primary bg-primary/10 border-l-2 border-primary" : "text-text-high hover:text-primary hover:bg-overlay"
+                      )}
+                    >
+                      {link.label}
+                    </Link>
+                  </motion.div>
+                ))}
                 <motion.div
-                  key={link.path}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="w-full"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: navLinks.length * 0.05 + 0.1, ease: "easeOut" }}
+                  className="mt-8 w-full px-6"
                 >
                   <Link
-                    to={link.path}
-                    className={cn(
-                      "block w-full text-center py-4 font-display text-3xl transition-colors r-md",
-                      location.pathname === link.path ? "text-primary bg-primary/5" : "text-text-high hover:text-primary"
-                    )}
+                    to="/arquivista"
+                    className="block w-full text-center py-3 font-sc tracking-[0.2em] text-xs text-text-low hover:text-primary transition-colors border border-border/50 r-md"
                   >
-                    {link.label}
+                    O ARQUIVISTA
                   </Link>
                 </motion.div>
-              ))}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: navLinks.length * 0.05 }}
-                className="mt-4 w-full"
-              >
-                <Link
-                  to="/arquivista"
-                  className="block w-full text-center py-3 font-sc tracking-[0.2em] text-xs text-text-low hover:text-primary transition-colors border border-border/50 r-md"
-                >
-                  O ARQUIVISTA
-                </Link>
-              </motion.div>
-            </nav>
-          </motion.div>
+              </nav>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </>
