@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Volume2, Volume1, VolumeX, Sparkles, Loader2, AlignLeft, ListMusic, X, GripVertical } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Volume2, Volume1, VolumeX, Sparkles, Loader2, AlignLeft, ListMusic, X, GripVertical, Share, Heart, SlidersHorizontal, Moon } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { TrackDuration } from '@/components/ui/TrackDuration';
@@ -438,47 +438,21 @@ export function MiniPlayer() {
 
           {/* Blurred Background */}
           <div 
-            className="absolute inset-0 opacity-30 pointer-events-none"
-            style={{
-              backgroundImage: `url(${currentTrack.coverUrl})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              filter: 'blur(80px) saturate(1.5) brightness(0.4)'
-            }}
+            className="absolute inset-0 bg-[#1a1a1a] pointer-events-none"
           />
 
-          <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-6 max-w-md mx-auto w-full h-full">
-            {currentTrack.lyrics && (
+          <div className="relative z-10 flex-1 flex flex-col p-6 max-w-md mx-auto w-full h-full">
+            {/* Top Bar */}
+            <div className="flex items-center justify-between w-full mb-6 mt-2">
+              <div className="w-8" /> {/* Spacer */}
+              <div className="text-xs font-sc tracking-widest text-text-mid">TOCANDO AGORA</div>
               <button 
-                onClick={() => { setShowLyrics(!showLyrics); setShowQueue(false); }}
-                className={cn(
-                  "absolute top-6 left-6 transition-colors flex items-center gap-2 text-sm font-medium z-50 p-2",
-                  showLyrics ? "text-primary" : "text-text-mid hover:text-text-high"
-                )}
+                onClick={() => setIsExpanded(false)}
+                className="w-8 h-8 flex items-center justify-center text-text-mid hover:text-text-high"
               >
-                <AlignLeft size={20} />
-                <span className="hidden xs:inline">Letra</span>
+                <span className="text-xl">↓</span>
               </button>
-            )}
-
-            {/* Botão de Fila */}
-            <button
-              onClick={() => { setShowQueue(!showQueue); setShowLyrics(false); }}
-              className={cn(
-                "absolute top-6 right-16 transition-colors flex items-center gap-2 text-sm font-medium z-50 p-2",
-                showQueue ? "text-primary" : "text-text-mid hover:text-text-high"
-              )}
-            >
-              <ListMusic size={20} />
-              <span className="hidden xs:inline">Fila</span>
-            </button>
-
-            <button 
-              onClick={() => setIsExpanded(false)}
-              className="absolute top-6 right-6 text-text-mid hover:text-text-high z-50 p-2"
-            >
-              <span className="text-2xl">↓</span>
-            </button>
+            </div>
 
             <AnimatePresence mode="wait">
               {showQueue ? (
@@ -594,39 +568,79 @@ export function MiniPlayer() {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
-                  className="flex flex-col items-center w-full mt-12"
+                  className="flex flex-col w-full flex-1"
                 >
-                  <img 
-                    src={currentTrack.coverUrl} 
-                    alt="Cover" 
-                    className="w-56 h-56 xs:w-64 xs:h-64 sm:w-80 sm:h-80 r-md object-cover shadow-[0_40px_120px_rgba(0,0,0,0.8),0_0_60px_var(--glow-purple)] mb-8 sm:mb-12"
-                    referrerPolicy="no-referrer"
-                  />
+                  {/* Album Art */}
+                  <div className="w-full aspect-square rounded-md overflow-hidden mb-8 shadow-2xl shrink-0">
+                    <img 
+                      src={currentTrack.coverUrl} 
+                      alt="Cover" 
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
 
-                  <div className="w-full text-center mb-8">
-                    <h2 className="text-3xl font-display text-text-high mb-2">{currentTrack.title}</h2>
-                    <p className="text-lg text-text-mid mb-1">{currentTrack.artist}</p>
-                    {currentTrack.albumTitle && (
-                      <p className="text-xs text-text-low font-sc tracking-[0.2em] mb-4">{currentTrack.albumTitle}</p>
-                    )}
-                    
-                    <div className="flex flex-col items-center gap-4">
-                      {currentTrack.vibe && (
-                        <div className="flex flex-wrap justify-center gap-2">
-                          {currentTrack.vibe.split(' | ').map((tag, idx) => (
-                            <motion.span 
-                              key={idx} 
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: 0.2 + idx * 0.1 }}
-                              className="px-4 py-1.5 rounded-full bg-primary/5 border border-primary/20 text-[10px] uppercase tracking-widest text-primary font-mono shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]"
-                            >
-                              {tag}
-                            </motion.span>
-                          ))}
-                        </div>
-                      )}
+                  {/* Title & Actions */}
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex flex-col overflow-hidden pr-4">
+                      <h2 className="text-2xl font-bold text-text-high mb-1 truncate">{currentTrack.title}</h2>
+                      <p className="text-text-mid text-sm truncate">{currentTrack.artist}</p>
                     </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <button className="w-10 h-10 rounded-full bg-text-high flex items-center justify-center text-void hover:scale-105 transition-transform">
+                        <Share size={18} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Progress */}
+                  <div className="flex flex-col mb-8">
+                    <div className="w-full cursor-pointer py-2 -my-2" ref={progressBarRef} onClick={handleSeek}>
+                      <div className="h-2 bg-surface rounded-full relative">
+                        <div className="absolute top-0 left-0 h-full bg-text-high rounded-full" style={{ width: `${progress}%` }} />
+                        <div className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-text-high rounded-full shadow-md" style={{ left: `calc(${progress}% - 6px)` }} />
+                      </div>
+                    </div>
+                    <div className="flex justify-between mt-2 font-mono text-xs text-text-mid">
+                      <span>{currentTime}</span>
+                      <TrackDuration audioUrl={currentTrack.audioUrl} defaultDuration={currentTrack.duration} />
+                    </div>
+                  </div>
+
+                  {/* Main Controls */}
+                  <div className="flex items-center justify-center gap-6 mb-8">
+                    <button onClick={handlePrev} className="w-14 h-14 rounded-full bg-surface flex items-center justify-center text-text-high hover:bg-border transition-colors">
+                      <SkipBack size={24} />
+                    </button>
+                    <button 
+                      onClick={() => setIsPlaying(!isPlaying)}
+                      className="h-14 px-8 rounded-full bg-text-high flex items-center justify-center gap-2 text-void font-bold text-lg min-w-[140px] hover:scale-105 transition-transform"
+                    >
+                      {isPlaying ? <Pause size={20} /> : <Play size={20} className="ml-1" />}
+                      {isPlaying ? 'Pause' : 'Play'}
+                    </button>
+                    <button onClick={handleNext} className="w-14 h-14 rounded-full bg-surface flex items-center justify-center text-text-high hover:bg-border transition-colors">
+                      <SkipForward size={24} />
+                    </button>
+                  </div>
+
+                  {/* Bottom Controls */}
+                  <div className="flex items-center justify-between mt-auto">
+                    <button onClick={() => { setShowQueue(!showQueue); setShowLyrics(false); }} className="w-12 h-12 rounded-md border border-border flex items-center justify-center text-text-high hover:bg-surface transition-colors">
+                      <ListMusic size={20} />
+                    </button>
+                    <button onClick={() => { setShowLyrics(!showLyrics); setShowQueue(false); }} className="w-12 h-12 rounded-md border border-border flex items-center justify-center text-text-high hover:bg-surface transition-colors">
+                      <Moon size={20} />
+                    </button>
+                    <button onClick={toggleShuffle} className={cn("w-12 h-12 rounded-md border flex items-center justify-center transition-colors", isShuffle ? "border-primary text-primary bg-primary/10" : "border-border text-text-high hover:bg-surface")}>
+                      <Shuffle size={20} />
+                    </button>
+                    <button className="w-12 h-12 rounded-md border border-border flex items-center justify-center text-text-high hover:bg-surface transition-colors">
+                      <SlidersHorizontal size={20} />
+                    </button>
+                    <button onClick={toggleRepeat} className={cn("w-12 h-12 rounded-md border flex items-center justify-center transition-colors", repeatMode !== 'off' ? "border-primary text-primary bg-primary/10" : "border-border text-text-high hover:bg-surface")}>
+                      <Repeat size={20} />
+                    </button>
                   </div>
                 </motion.div>
               ) : (
@@ -684,153 +698,6 @@ export function MiniPlayer() {
                 </motion.div>
               )}
             </AnimatePresence>
-
-            {/* Progress */}
-            <div className="w-full mb-8 cursor-pointer" ref={progressBarRef}>
-              {/* Área de hover maior para facilitar o clique */}
-              <div
-                className="group relative py-2 -my-2"
-                onClick={handleSeek}
-                onMouseMove={(e) => {
-                  if (!audioRef.current || !progressBarRef.current) return;
-                  const bounds = progressBarRef.current.getBoundingClientRect();
-                  const percent = (e.clientX - bounds.left) / bounds.width;
-                  const clampedPercent = Math.max(0, Math.min(1, percent));
-                  const hoverSeconds = clampedPercent * (audioRef.current.duration || 0);
-                  const mins = Math.floor(hoverSeconds / 60);
-                  const secs = Math.floor(hoverSeconds % 60);
-                  setSeekHoverTime(`${mins}:${secs.toString().padStart(2, '0')}`);
-                  setSeekHoverX(e.clientX - bounds.left);
-                }}
-                onMouseLeave={() => setSeekHoverTime(null)}
-              >
-                {/* Tooltip de tempo */}
-                {seekHoverTime && (
-                  <div
-                    className="absolute -top-8 font-mono text-[10px] bg-surface border border-border text-text-high px-2 py-1 rounded pointer-events-none z-10 -translate-x-1/2"
-                    style={{ left: seekHoverX }}
-                  >
-                    {seekHoverTime}
-                  </div>
-                )}
-
-                {/* Barra de progresso */}
-                <div className="h-1.5 bg-border rounded-full relative">
-                  <div
-                    className="absolute top-0 left-0 h-full bg-primary rounded-full"
-                    style={{ width: `${progress}%` }}
-                  />
-                  {/* Knob — aparece no hover */}
-                  <div
-                    className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-text-high rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-[0_0_10px_var(--primary)]"
-                    style={{ left: `calc(${progress}% - 6px)` }}
-                  />
-                </div>
-              </div>
-
-              {/* Tempos */}
-              <div className="flex justify-between mt-2 font-mono text-xs text-text-low">
-                <span>{currentTime}</span>
-                <TrackDuration audioUrl={currentTrack.audioUrl} defaultDuration={currentTrack.duration} />
-              </div>
-            </div>
-
-            {/* Controls */}
-            <div className="flex items-center justify-between w-full mb-8 px-4">
-              <button
-                onClick={toggleShuffle}
-                className={cn("transition-colors p-2 relative flex flex-col items-center gap-0.5",
-                  isShuffle ? "text-primary" : "text-text-mid hover:text-primary")}
-              >
-                <Shuffle size={20} />
-                {/* Ponto indicador de ativo */}
-                <div className={cn(
-                  "w-1 h-1 rounded-full transition-opacity",
-                  isShuffle ? "bg-primary opacity-100" : "opacity-0"
-                )} />
-              </button>
-              <button onClick={handlePrev} className="text-text-high hover:text-primary transition-colors p-2"><SkipBack size={32} /></button>
-              <button
-                onClick={() => setIsPlaying(!isPlaying)}
-                className="w-16 h-16 flex items-center justify-center bg-primary text-void transition-all duration-200 shadow-[0_0_30px_var(--glow-purple)] hover:shadow-[0_0_50px_var(--glow-purple)] hover:-translate-y-0.5 active:translate-y-0"
-                style={{ borderRadius: 'var(--radius-sm)' }}
-              >
-                {isPlaying ? <Pause size={28} /> : <Play size={28} className="ml-1" />}
-              </button>
-              <button onClick={handleNext} className="text-text-high hover:text-primary transition-colors p-2"><SkipForward size={32} /></button>
-              <button
-                onClick={toggleRepeat}
-                className={cn("transition-colors p-2 relative flex flex-col items-center gap-0.5",
-                  repeatMode !== 'off' ? "text-primary" : "text-text-mid hover:text-primary")}
-              >
-                <Repeat size={20} />
-                <div className={cn(
-                  "text-[8px] font-mono font-bold transition-opacity h-3 flex items-center",
-                  repeatMode !== 'off' ? "opacity-100" : "opacity-0"
-                )}>
-                  {repeatMode === 'one' ? '1' : '∞'}
-                </div>
-              </button>
-            </div>
-
-            {/* Volume Indicator (Mobile & Desktop) */}
-            <div className="flex items-center gap-2 text-[10px] font-mono text-text-low mb-4">
-              <Volume2 size={12} />
-              <span>{Math.round(volume * 100)}%</span>
-            </div>
-
-            {/* Volume - Hidden on mobile for better UX (use hardware buttons) */}
-            <div 
-              className="hidden sm:flex items-center gap-3 w-full max-w-[200px] text-text-mid group/volume"
-              onMouseEnter={() => setIsHoveringVolume(true)}
-              onMouseLeave={() => setIsHoveringVolume(false)}
-            >
-              <button 
-                onClick={toggleMute}
-                className="hover:text-text-high transition-colors"
-              >
-                {volume === 0 ? <VolumeX size={16} /> : volume < 0.5 ? <Volume1 size={16} /> : <Volume2 size={16} />}
-              </button>
-              
-              <div 
-                className="h-1.5 flex-1 bg-border rounded-full relative cursor-pointer flex items-center"
-                ref={volumeBarRef}
-                onMouseDown={(e) => {
-                  setIsDraggingVolume(true);
-                  handleVolumeChange(e);
-                }}
-              >
-                <div 
-                  className={cn(
-                    "absolute top-0 left-0 h-full rounded-full transition-colors",
-                    isHoveringVolume || isDraggingVolume ? "bg-primary" : "bg-text-high"
-                  )} 
-                  style={{ width: `${volume * 100}%` }} 
-                />
-                <div 
-                  className={cn(
-                    "absolute w-3 h-3 bg-text-high rounded-full shadow-[0_0_10px_var(--primary)] transition-opacity",
-                    isHoveringVolume || isDraggingVolume ? "opacity-100" : "opacity-0"
-                  )}
-                  style={{ left: `calc(${volume * 100}% - 6px)` }}
-                />
-                
-                {/* Volume Popup */}
-                <AnimatePresence>
-                  {(isHoveringVolume || isDraggingVolume) && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10, scale: 0.8 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.8 }}
-                      className="absolute -top-8 bg-surface border border-border text-text-high text-[10px] font-mono px-2 py-1 rounded shadow-lg pointer-events-none"
-                      style={{ left: `calc(${volume * 100}% - 16px)` }}
-                    >
-                      {Math.round(volume * 100)}%
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
           </div>
         </motion.div>
       )}

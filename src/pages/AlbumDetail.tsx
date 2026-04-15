@@ -5,6 +5,7 @@ import { Play, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/lib/supabase';
 import { TrackDuration } from '@/components/ui/TrackDuration';
+import { saveForOffline } from '@/lib/utils';
 
 export function AlbumDetail() {
   const { id } = useParams();
@@ -12,8 +13,13 @@ export function AlbumDetail() {
   const { setCurrentTrack, setIsPlaying, setQueue, addToQueue, playNext_track } = useStore();
   const [album, setAlbum] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [isSynopsisExpanded, setIsSynopsisExpanded] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [queueFeedback, setQueueFeedback] = useState<string | null>(null);
+
+  const showFeedback = (msg: string) => {
+    setQueueFeedback(msg);
+    setTimeout(() => setQueueFeedback(null), 2000);
+  };
 
   useEffect(() => {
     const closeMenu = () => setOpenMenuId(null);
@@ -62,13 +68,6 @@ export function AlbumDetail() {
     }
     fetchAlbum();
   }, [id]);
-
-  const [queueFeedback, setQueueFeedback] = useState<string | null>(null);
-
-  const showFeedback = (msg: string) => {
-    setQueueFeedback(msg);
-    setTimeout(() => setQueueFeedback(null), 2000);
-  };
 
   const handlePlayAlbum = () => {
     if (!album) return;
@@ -223,33 +222,6 @@ export function AlbumDetail() {
               Tocar Álbum Completo
             </button>
           </div>
-          
-          {album.description && (
-            <div className="w-full bg-surface/20 p-6 md:p-8 r-md border border-border/30 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-1 h-full bg-primary/40" />
-              <h3 className="font-sc text-xl text-text-high mb-4 tracking-wide">O Arco Psicológico</h3>
-              <div className="relative">
-                <div className={`text-text-mid font-sans leading-relaxed transition-all duration-300 ${isSynopsisExpanded ? '' : 'line-clamp-4'}`}>
-                  {album.description.split('\n').map((paragraph, idx) => (
-                    paragraph.trim() ? <p key={idx} className="mb-4 last:mb-0">{paragraph}</p> : null
-                  ))}
-                </div>
-                {!isSynopsisExpanded && (
-                  <div className="absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-[#0d0d1a] to-transparent pointer-events-none" />
-                )}
-              </div>
-              <button 
-                onClick={() => setIsSynopsisExpanded(!isSynopsisExpanded)}
-                className="mt-4 flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors font-medium"
-              >
-                {isSynopsisExpanded ? (
-                  <>Ver menos <ChevronUp size={16} /></>
-                ) : (
-                  <>Ler sinopse completa <ChevronDown size={16} /></>
-                )}
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Tracklist */}
@@ -320,6 +292,18 @@ export function AlbumDetail() {
                         className="w-full text-left px-4 py-2.5 text-sm text-text-mid hover:text-text-high hover:bg-overlay transition-colors"
                       >
                         Adicionar à fila
+                      </button>
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          setOpenMenuId(null);
+                          const success = await saveForOffline(track.audioUrl);
+                          if (track.coverUrl) await saveForOffline(track.coverUrl);
+                          showFeedback(success ? 'Salvo para ouvir offline' : 'Erro ao salvar');
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-text-mid hover:text-text-high hover:bg-overlay transition-colors"
+                      >
+                        Salvar Offline
                       </button>
                     </div>
                   </>

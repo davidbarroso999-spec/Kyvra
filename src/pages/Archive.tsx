@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, Play, Pause } from 'lucide-react';
 import { useStore } from '@/store/useStore';
-import { cn } from '@/lib/utils';
+import { cn, saveForOffline } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { TrackDuration } from '@/components/ui/TrackDuration';
 
@@ -289,6 +289,18 @@ export function Archive() {
                           className="w-full text-left px-4 py-2.5 text-sm text-text-mid hover:text-text-high hover:bg-overlay transition-colors"
                         >
                           Adicionar à fila
+                        </button>
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            setOpenMenuId(null);
+                            const success = await saveForOffline(track.audioUrl);
+                            if (track.coverUrl) await saveForOffline(track.coverUrl);
+                            showFeedback(success ? 'Salvo para ouvir offline' : 'Erro ao salvar');
+                          }}
+                          className="w-full text-left px-4 py-2.5 text-sm text-text-mid hover:text-text-high hover:bg-overlay transition-colors"
+                        >
+                          Salvar Offline
                         </button>
                       </div>
                     </>
