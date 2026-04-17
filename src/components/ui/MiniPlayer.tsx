@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Volume2, Volume1, VolumeX, Sparkles, Loader2, AlignLeft, ListMusic, X, GripVertical, Share, Heart, SlidersHorizontal, Moon } from 'lucide-react';
+import { motion, AnimatePresence, Reorder } from 'motion/react';
+import { Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Volume2, Volume1, VolumeX, Sparkles, Loader2, AlignLeft, ListMusic, X, GripVertical, Share, Heart, SlidersHorizontal, Moon, ChevronDown } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { TrackDuration } from '@/components/ui/TrackDuration';
@@ -13,7 +13,7 @@ export function MiniPlayer() {
   const {
     currentTrack, isPlaying, setIsPlaying, playNext, playPrevious,
     volume, isShuffle, repeatMode, toggleShuffle, toggleRepeat,
-    queue, removeFromQueue, clearQueue, setCurrentTrack, playHistory
+    queue, shuffledQueue, setQueue, updateQueueOrder, removeFromQueue, clearQueue, setCurrentTrack, playHistory
   } = useStore();
   const audioRef = useRef<HTMLAudioElement>(null);
   const [progress, setProgress] = useState(0);
@@ -29,50 +29,13 @@ export function MiniPlayer() {
   const volumeBarRef = useRef<HTMLDivElement>(null);
 
   // Swipe gesture states
-  const touchStartX = useRef<number>(0);
-  const touchStartY = useRef<number>(0);
-  const [isDraggingDown, setIsDraggingDown] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
 
   // Seek hover states
   const [seekHoverTime, setSeekHoverTime] = useState<string | null>(null);
   const [seekHoverX, setSeekHoverX] = useState(0);
   const progressBarRef = useRef<HTMLDivElement>(null);
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    const deltaY = e.touches[0].clientY - touchStartY.current;
-    // Só ativa drag para baixo (fechamento)
-    if (deltaY > 0) {
-      setIsDraggingDown(true);
-      setDragOffset(Math.min(deltaY, 200)); // Limita o arraste
-    }
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
-    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
-
-    // Swipe para baixo > 80px: fecha o player
-    if (deltaY > 80 && Math.abs(deltaX) < 50) {
-      setIsExpanded(false);
-    }
-    // Swipe para esquerda > 60px: próxima música
-    else if (deltaX < -60 && Math.abs(deltaY) < 40) {
-      handleNext();
-    }
-    // Swipe para direita > 60px: música anterior
-    else if (deltaX > 60 && Math.abs(deltaY) < 40) {
-      handlePrev();
-    }
-
-    setIsDraggingDown(false);
-    setDragOffset(0);
-  };
+  const scrollableRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Reset explanation and lyrics view when track changes
@@ -120,18 +83,57 @@ export function MiniPlayer() {
       navigator.mediaSession.setActionHandler('pause', () => setIsPlaying(false));
       navigator.mediaSession.setActionHandler('previoustrack', () => handlePrev());
       navigator.mediaSession.setActionHandler('nexttrack', () => handleNext());
-      navigator.mediaSession.setActionHandler('seekbackward', (details) => {
-        if (audioRef.current) {
-          audioRef.current.currentTime = Math.max(audioRef.current.currentTime - (details.seekOffset || 10), 0);
-        }
-      });
-      navigator.mediaSession.setActionHandler('seekforward', (details) => {
-        if (audioRef.current) {
-          audioRef.current.currentTime = Math.min(audioRef.current.currentTime + (details.seekOffset || 10), audioRef.current.duration);
-        }
-      });
+      
+      try {
+        navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+          if (audioRef.current) {
+            audioRef.current.currentTime = Math.max(audioRef.current.currentTime - (details.seekOffset || 10), 0);
+          }
+        });
+        navigator.mediaSession.setActionHandler('seekforward', (details) => {
+          if (audioRef.current) {
+            audioRef.current.currentTime = Math.min(audioRef.current.currentTime + (details.seekOffset || 10), audioRef.current.duration);
+          }
+        });
+      } catch (e) {
+        // Some browsers don't support seek actions
+      }
     }
   }, [currentTrack, isPlaying]);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+    }
+  }, [volume]);
+
+  const handleDragEnd = (_: any, info: any) => {
+    // Se arrastou pra baixo mais de 100px ou em alta velocidade
+    if (info.offset.y > 100 || info.velocity.y > 400) {
+      setIsExpanded(false);
+    }
+    setDragOffset(0);
+  };
+
+  const handleShare = async () => {
+    if (!currentTrack) return;
+    const shareData = {
+      title: 'Kyvra — ' + currentTrack.title,
+      text: `Ouvindo ${currentTrack.title} de ${currentTrack.artist} no Kyvra. Fragmentos de um universo sombrio.`,
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        alert('Link copiado para a área de transferência!');
+      }
+    } catch (err) {
+      console.error('Error sharing:', err);
+    }
+  };
 
   useEffect(() => {
     if (audioRef.current) {
@@ -418,40 +420,86 @@ export function MiniPlayer() {
       {/* Expanded Player Overlay */}
       {isExpanded && (
         <motion.div
-          initial={{ y: '100vh' }}
+          initial={{ y: '100%' }}
           animate={{ y: 0 }}
-          exit={{ y: '100vh' }}
+          exit={{ y: '100%' }}
+          drag="y"
+          dragDirectionLock
+          dragConstraints={{ top: 0, bottom: 0 }}
+          dragElastic={{ top: 0, bottom: 0.5 }}
+          onDragEnd={handleDragEnd}
           transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-          className="fixed inset-0 z-[2000] bg-void/95 flex flex-col"
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
+          className="fixed inset-0 z-[2000] bg-void/98 flex flex-col"
           style={{
-            transform: isDraggingDown ? `translateY(${dragOffset}px)` : undefined,
-            transition: isDraggingDown ? 'none' : undefined,
             paddingTop: 'env(safe-area-inset-top)',
             paddingBottom: 'env(safe-area-inset-bottom)'
           }}
         >
-          {/* Indicador de swipe — visível apenas no mobile */}
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 w-10 h-1 bg-border rounded-full md:hidden z-50" />
+          {/* Header/Handle Arrastável - Área de Toque Principal para Fechar */}
+          <div className="absolute top-0 left-0 right-0 h-20 z-[2001] cursor-grab active:cursor-grabbing" />
+          
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 w-10 h-1 bg-border rounded-full z-[2002] pointer-events-none" />
 
-          {/* Blurred Background */}
+          {/* Background Overlay */}
+          <div className="absolute inset-0 bg-void opacity-50 z-0 pointer-events-none" />
           <div 
-            className="absolute inset-0 bg-[#1a1a1a] pointer-events-none"
+            className="absolute inset-0 opacity-10 pointer-events-none"
+            style={{ 
+              backgroundImage: `url(${currentTrack.coverUrl})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              filter: 'blur(100px) saturate(2)'
+            }}
           />
 
-          <div className="relative z-10 flex-1 flex flex-col p-6 max-w-md mx-auto w-full h-full">
-            {/* Top Bar */}
-            <div className="flex items-center justify-between w-full mb-6 mt-2">
-              <div className="w-8" /> {/* Spacer */}
-              <div className="text-xs font-sc tracking-widest text-text-mid">TOCANDO AGORA</div>
-              <button 
-                onClick={() => setIsExpanded(false)}
-                className="w-8 h-8 flex items-center justify-center text-text-mid hover:text-text-high"
-              >
-                <span className="text-xl">↓</span>
-              </button>
+          <div className="relative z-10 flex-1 flex flex-col p-6 max-w-lg mx-auto w-full h-full overflow-hidden">
+            {/* Top Bar - Área de Toque Superior Aumentada */}
+            <div className="flex items-center justify-between w-full mb-4 md:mb-8 mt-4 md:mt-0 select-none relative z-[2003]">
+              <div className="flex-1 flex justify-start">
+                {showQueue || showLyrics ? (
+                  <button 
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => { 
+                      e.stopPropagation();
+                      setShowQueue(false); 
+                      setShowLyrics(false); 
+                    }}
+                    className="w-16 h-16 -ml-4 flex items-center justify-center text-text-mid hover:text-text-high bg-transparent rounded-full transition-colors active:scale-95 touch-none"
+                    aria-label="Voltar para o Player"
+                  >
+                    <div className="w-10 h-10 flex items-center justify-center bg-surface/30 rounded-full">
+                      <ChevronDown size={24} />
+                    </div>
+                  </button>
+                ) : (
+                  <div className="w-16" />
+                )}
+              </div>
+
+              <div className="text-[10px] font-sc tracking-[0.3em] text-text-low text-center flex-[2] pointer-events-none">
+                {showQueue ? 'FILA DE REPRODUÇÃO' : showLyrics ? 'ARQUIVO DE LETRAS' : 'FREQUÊNCIA ATUAL'}
+              </div>
+
+              <div className="flex-1 flex justify-end">
+                <button 
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (showQueue || showLyrics) {
+                      setShowQueue(false);
+                      setShowLyrics(false);
+                    } else {
+                      setIsExpanded(false);
+                    }
+                  }}
+                  className="w-16 h-16 -mr-4 flex items-center justify-center text-text-mid hover:text-text-high bg-transparent rounded-full transition-colors active:scale-95 touch-none"
+                  aria-label="Fechar"
+                >
+                  <div className="w-10 h-10 flex items-center justify-center bg-surface/30 rounded-full">
+                    <X size={22} />
+                  </div>
+                </button>
+              </div>
             </div>
 
             <AnimatePresence mode="wait">
@@ -459,13 +507,13 @@ export function MiniPlayer() {
                 /* VIEW DA FILA */
                 <motion.div
                   key="queue"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="flex flex-col w-full flex-1 min-h-0 mt-16 mb-8"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="flex flex-col w-full flex-1 min-h-0 relative z-[2004]"
+                  onPointerDown={e => e.stopPropagation()} 
                 >
                   <div className="w-full text-center mb-4 shrink-0">
-                    <h2 className="text-xl font-display text-text-high">Fila de Reprodução</h2>
                     <p className="text-xs text-text-low font-mono mt-1">{queue.length} faixas</p>
                   </div>
 
@@ -476,20 +524,30 @@ export function MiniPlayer() {
                         <p className="font-sc text-xs tracking-widest text-text-low">FILA VAZIA</p>
                       </div>
                     ) : (
-                      <div className="flex flex-col gap-1 px-2">
-                        {queue.map((track, index) => {
+                      <Reorder.Group 
+                        axis="y" 
+                        values={isShuffle ? shuffledQueue : queue} 
+                        onReorder={updateQueueOrder} 
+                        className="flex flex-col gap-1 px-2"
+                      >
+                        {(isShuffle ? shuffledQueue : queue).map((track, index) => {
                           const isCurrent = track.id === currentTrack?.id;
                           return (
-                            <motion.div
+                            <Reorder.Item
                               key={track.id}
-                              layout
+                              value={track}
                               className={cn(
-                                "flex items-center gap-3 p-3 rounded-lg transition-colors group",
+                                "flex items-center gap-3 p-3 rounded-lg transition-colors group cursor-grab active:cursor-grabbing",
                                 isCurrent
                                   ? "bg-primary/10 border border-primary/20"
                                   : "hover:bg-overlay"
                               )}
                             >
+                              {/* Drag Handle */}
+                              <div className="w-5 text-center shrink-0 text-text-low opacity-0 group-hover:opacity-100 transition-opacity">
+                                <GripVertical size={16} />
+                              </div>
+
                               {/* Número ou indicador de tocando */}
                               <div className="w-5 text-center shrink-0">
                                 {isCurrent ? (
@@ -518,7 +576,7 @@ export function MiniPlayer() {
                               <img
                                 src={track.coverUrl}
                                 alt={track.title}
-                                className="w-10 h-10 rounded object-cover shrink-0"
+                                className="w-10 h-10 rounded object-cover shrink-0 pointer-events-none"
                                 referrerPolicy="no-referrer"
                               />
 
@@ -545,10 +603,10 @@ export function MiniPlayer() {
                                   <X size={14} />
                                 </button>
                               )}
-                            </motion.div>
+                            </Reorder.Item>
                           );
                         })}
-                      </div>
+                      </Reorder.Group>
                     )}
                   </div>
 
@@ -571,7 +629,7 @@ export function MiniPlayer() {
                   className="flex flex-col w-full flex-1"
                 >
                   {/* Album Art */}
-                  <div className="w-full aspect-square rounded-md overflow-hidden mb-8 shadow-2xl shrink-0">
+                  <div className="w-full aspect-square max-h-[360px] rounded-lg overflow-hidden mb-6 md:mb-10 shadow-[0_40px_80px_rgba(0,0,0,0.6)] shrink-0 self-center">
                     <img 
                       src={currentTrack.coverUrl} 
                       alt="Cover" 
@@ -581,85 +639,97 @@ export function MiniPlayer() {
                   </div>
 
                   {/* Title & Actions */}
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex flex-col overflow-hidden pr-4">
-                      <h2 className="text-2xl font-bold text-text-high mb-1 truncate">{currentTrack.title}</h2>
-                      <p className="text-text-mid text-sm truncate">{currentTrack.artist}</p>
+                  <div className="flex items-center justify-between mb-8">
+                    <div className="flex flex-col overflow-hidden pr-4 flex-1">
+                      <h2 className="text-2xl md:text-3xl font-display text-text-high mb-1 truncate">{currentTrack.title}</h2>
+                      <p className="text-primary text-xs md:text-sm tracking-[0.1em] font-sc truncate opacity-80 uppercase">{currentTrack.artist}</p>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
-                      <button className="w-10 h-10 rounded-full bg-text-high flex items-center justify-center text-void hover:scale-105 transition-transform">
+                      <button 
+                        onClick={handleShare}
+                        className="w-12 h-12 rounded-full glass flex items-center justify-center text-text-high hover:scale-105 transition-transform border border-border/50"
+                      >
                         <Share size={18} />
                       </button>
                     </div>
                   </div>
 
                   {/* Progress */}
-                  <div className="flex flex-col mb-8">
-                    <div className="w-full cursor-pointer py-2 -my-2" ref={progressBarRef} onClick={handleSeek}>
-                      <div className="h-2 bg-surface rounded-full relative">
-                        <div className="absolute top-0 left-0 h-full bg-text-high rounded-full" style={{ width: `${progress}%` }} />
-                        <div className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-text-high rounded-full shadow-md" style={{ left: `calc(${progress}% - 6px)` }} />
+                  <div className="flex flex-col mb-10">
+                    <div className="w-full cursor-pointer py-4 -my-4 group" ref={progressBarRef} onClick={handleSeek}>
+                      <div className="h-1.5 bg-surface/50 rounded-full relative overflow-hidden group-hover:h-2 transition-all">
+                        <div className="absolute top-0 left-0 h-full bg-primary rounded-full" style={{ width: `${progress}%` }} />
                       </div>
+                      <div className="absolute w-3 h-3 bg-primary rounded-full shadow-[0_0_10px_var(--glow-purple)] opacity-0 group-hover:opacity-100 transition-opacity" style={{ left: `calc(${progress}% - 6px)`, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                     </div>
-                    <div className="flex justify-between mt-2 font-mono text-xs text-text-mid">
+                    <div className="flex justify-between mt-3 font-mono text-[10px] text-text-low tracking-widest">
                       <span>{currentTime}</span>
                       <TrackDuration audioUrl={currentTrack.audioUrl} defaultDuration={currentTrack.duration} />
                     </div>
                   </div>
 
                   {/* Main Controls */}
-                  <div className="flex items-center justify-center gap-6 mb-8">
-                    <button onClick={handlePrev} className="w-14 h-14 rounded-full bg-surface flex items-center justify-center text-text-high hover:bg-border transition-colors">
-                      <SkipBack size={24} />
+                  <div className="flex items-center justify-evenly gap-4 mb-10">
+                    <button onClick={handlePrev} className="w-14 h-14 rounded-full border border-border/30 flex items-center justify-center text-text-high hover:bg-surface/50 transition-colors">
+                      <SkipBack size={20} className="fill-current" />
                     </button>
                     <button 
                       onClick={() => setIsPlaying(!isPlaying)}
-                      className="h-14 px-8 rounded-full bg-text-high flex items-center justify-center gap-2 text-void font-bold text-lg min-w-[140px] hover:scale-105 transition-transform"
+                      className="w-20 h-20 rounded-full bg-primary flex items-center justify-center text-void shadow-[0_0_40px_var(--glow-purple)] hover:scale-105 transition-transform"
                     >
-                      {isPlaying ? <Pause size={20} /> : <Play size={20} className="ml-1" />}
-                      {isPlaying ? 'Pause' : 'Play'}
+                      {isPlaying ? <Pause size={32} className="fill-current" /> : <Play size={32} className="ml-1 fill-current" />}
                     </button>
-                    <button onClick={handleNext} className="w-14 h-14 rounded-full bg-surface flex items-center justify-center text-text-high hover:bg-border transition-colors">
-                      <SkipForward size={24} />
+                    <button onClick={handleNext} className="w-14 h-14 rounded-full border border-border/30 flex items-center justify-center text-text-high hover:bg-surface/50 transition-colors">
+                      <SkipForward size={20} className="fill-current" />
                     </button>
                   </div>
 
-                  {/* Bottom Controls */}
-                  <div className="flex items-center justify-between mt-auto">
-                    <button onClick={() => { setShowQueue(!showQueue); setShowLyrics(false); }} className="w-12 h-12 rounded-md border border-border flex items-center justify-center text-text-high hover:bg-surface transition-colors">
+                  {/* Bottom Strip Actions */}
+                  <div className="grid grid-cols-5 gap-2 mt-auto pb-4">
+                    <button onClick={() => { setShowQueue(!showQueue); setShowLyrics(false); }} className={cn("flex flex-col items-center gap-1 py-2 rounded-lg transition-all", showQueue ? "text-primary" : "text-text-low hover:text-text-high")}>
                       <ListMusic size={20} />
+                      <span className="text-[8px] font-sc tracking-widest">FILA</span>
                     </button>
-                    <button onClick={() => { setShowLyrics(!showLyrics); setShowQueue(false); }} className="w-12 h-12 rounded-md border border-border flex items-center justify-center text-text-high hover:bg-surface transition-colors">
-                      <Moon size={20} />
+                    <button onClick={() => { setShowLyrics(!showLyrics); setShowQueue(false); }} className={cn("flex flex-col items-center gap-1 py-2 rounded-lg transition-all", showLyrics ? "text-primary" : "text-text-low hover:text-text-high")}>
+                      <AlignLeft size={20} />
+                      <span className="text-[8px] font-sc tracking-widest">LETRA</span>
                     </button>
-                    <button onClick={toggleShuffle} className={cn("w-12 h-12 rounded-md border flex items-center justify-center transition-colors", isShuffle ? "border-primary text-primary bg-primary/10" : "border-border text-text-high hover:bg-surface")}>
+                    <button onClick={toggleShuffle} className={cn("flex flex-col items-center gap-1 py-2 rounded-lg transition-all", isShuffle ? "text-primary" : "text-text-low hover:text-text-high")}>
                       <Shuffle size={20} />
+                      <span className="text-[8px] font-sc tracking-widest">SHUFFLE</span>
                     </button>
-                    <button className="w-12 h-12 rounded-md border border-border flex items-center justify-center text-text-high hover:bg-surface transition-colors">
+                    <button onClick={toggleRepeat} className={cn("flex flex-col items-center gap-1 py-2 rounded-lg transition-all", repeatMode !== 'off' ? "text-primary" : "text-text-low hover:text-text-high")}>
+                      <Repeat size={20} className={cn(repeatMode === 'one' && "stroke-[3px]")} />
+                      <span className="text-[8px] font-sc tracking-widest">{repeatMode === 'one' ? 'UM' : 'REPETIR'}</span>
+                    </button>
+                    <button 
+                      onClick={() => alert('Parâmetros dimensionais bloqueados. O Arquivista ainda não liberou o controle de frequências.')}
+                      className="flex flex-col items-center gap-1 py-2 rounded-lg text-text-low hover:text-text-high"
+                    >
                       <SlidersHorizontal size={20} />
-                    </button>
-                    <button onClick={toggleRepeat} className={cn("w-12 h-12 rounded-md border flex items-center justify-center transition-colors", repeatMode !== 'off' ? "border-primary text-primary bg-primary/10" : "border-border text-text-high hover:bg-surface")}>
-                      <Repeat size={20} />
+                      <span className="text-[8px] font-sc tracking-widest">EFEITOS</span>
                     </button>
                   </div>
                 </motion.div>
               ) : (
                 <motion.div 
                   key="lyrics"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="flex flex-col items-center w-full flex-1 min-h-0 mt-16 mb-8"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="flex flex-col w-full flex-1 min-h-0"
+                  onPointerDown={e => e.stopPropagation()}
                 >
-                  <div className="w-full text-center mb-6 shrink-0">
-                    <h2 className="text-2xl font-display text-text-high">{currentTrack.title}</h2>
+                  <div className="w-full text-center mb-6 shrink-0 mt-4">
+                    <h2 className="text-xl md:text-2xl font-display text-text-high leading-tight">{currentTrack.title}</h2>
+                    <p className="text-primary/60 text-[10px] tracking-[0.2em] uppercase mt-1">{currentTrack.artist}</p>
                   </div>
                   
-                  <div className="w-full flex-1 overflow-y-auto scrollbar-hide text-center px-2 pb-8">
-                    <div className="space-y-12 mb-12">
+                  <div className="w-full flex-1 overflow-y-auto scrollbar-hide text-center px-4 pb-20 mask-fade-vertical">
+                    <div className="space-y-12 py-8">
                       {currentTrack.lyrics.split('\n\n').map((stanza, sIdx) => (
                         <div key={sIdx} className="group relative">
-                          <p className="text-text-high text-lg leading-relaxed whitespace-pre-line font-medium">
+                          <p className="text-text-high text-lg md:text-xl leading-relaxed whitespace-pre-line font-medium opacity-90 hover:opacity-100 transition-opacity">
                             {stanza}
                           </p>
                         </div>

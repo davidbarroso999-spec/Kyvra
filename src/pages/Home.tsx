@@ -5,11 +5,10 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useStore } from '@/store/useStore';
 import { Play } from 'lucide-react';
+import { FeaturedSlider } from '@/components/ui/FeaturedSlider';
 
 export function Home() {
   const [featuredTracks, setFeaturedTracks] = useState<any[]>([]);
-  const [activeFeaturedIndex, setActiveFeaturedIndex] = useState(0);
-  const [isSynopsisExpanded, setIsSynopsisExpanded] = useState(false);
   const { setCurrentTrack, setIsPlaying, setQueue } = useStore();
 
   useEffect(() => {
@@ -98,14 +97,6 @@ export function Home() {
     fetchFeatured();
   }, []);
 
-  const handlePlayTrack = (track: any) => {
-    setQueue([track]);
-    setCurrentTrack(track);
-    setIsPlaying(true);
-  };
-
-  const currentFeatured = featuredTracks[activeFeaturedIndex];
-
   return (
     <div className="w-full">
       {/* Hero Section */}
@@ -166,93 +157,16 @@ export function Home() {
         </motion.div>
       </section>
 
-      {/* Featured Track Card Section */}
-      {featuredTracks.length > 0 && currentFeatured && (
-        <section className="py-24 px-6 relative flex items-center justify-center overflow-hidden bg-deep">
-          <div className="max-w-5xl mx-auto relative z-10 w-full">
-            <AnimatePresence mode="wait">
-              <motion.div 
-                key={currentFeatured.id}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.5, ease: "easeInOut" }}
-                className="glass p-8 md:p-12 r-md flex flex-col md:flex-row gap-8 md:gap-12 items-center relative"
-              >
-              <div className="w-full md:w-1/3 shrink-0 relative group overflow-hidden r-md">
-                <img 
-                  src={currentFeatured.coverUrl} 
-                  alt={currentFeatured.title} 
-                  className="w-full aspect-square object-cover"
-                  referrerPolicy="no-referrer"
-                />
-                <button 
-                  onClick={(e) => { e.stopPropagation(); handlePlayTrack(currentFeatured); }}
-                  className="play-reveal"
-                >
-                  <span className="font-sc text-[10px] tracking-[0.2em] text-text-mid">REPRODUZIR</span>
-                  <span className="play-reveal-icon">
-                    <Play size={14} className="ml-0.5" />
-                  </span>
-                </button>
-              </div>
-              
-              <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left">
-                <span className="font-sc text-xs tracking-[0.3em] text-primary mb-4 block">DESTAQUE DO ARQUIVO</span>
-                <h2 className="text-4xl md:text-5xl font-display text-text-high mb-2">{currentFeatured.title}</h2>
-                <p className="text-text-mid font-mono text-sm mb-6">{currentFeatured.artist} • {currentFeatured.albumTitle}</p>
-                
-                {currentFeatured.synopsis && (
-                  <div className="w-full relative mt-2 mb-6">
-                    <div className={`prose prose-invert max-w-none transition-all duration-300 ${isSynopsisExpanded ? '' : 'line-clamp-3'}`}>
-                      <p className="text-text-mid text-sm md:text-base leading-relaxed italic border-l-2 border-primary/30 pl-4 py-2 text-left">
-                        {currentFeatured.synopsis}
-                      </p>
-                    </div>
-                    {!isSynopsisExpanded && (
-                      <div className="absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-glass to-transparent pointer-events-none" />
-                    )}
-                    <button 
-                      onClick={() => setIsSynopsisExpanded(!isSynopsisExpanded)}
-                      className="mt-2 flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors font-medium"
-                    >
-                      {isSynopsisExpanded ? 'Ver menos' : 'Ler sinopse completa'}
-                    </button>
-                  </div>
-                )}
-                
-                <button 
-                  onClick={() => handlePlayTrack(currentFeatured)}
-                  className="mt-8 px-8 py-3 border border-border text-text-high font-sans font-medium rounded-[4px] hover:bg-overlay transition-colors duration-300 flex items-center gap-2 group"
-                >
-                  <Play size={16} className="text-primary group-hover:scale-110 transition-transform" />
-                  Ouvir Agora
-                </button>
-              </div>
-
-              {/* Navigation Dots */}
-              {featuredTracks.length > 1 && (
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                  {featuredTracks.map((_, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => {
-                        setActiveFeaturedIndex(idx);
-                        setIsSynopsisExpanded(false);
-                      }}
-                      className={cn(
-                        "w-2 h-2 rounded-full transition-all",
-                        idx === activeFeaturedIndex ? "bg-primary w-6" : "bg-border hover:bg-primary/50"
-                      )}
-                    />
-                  ))}
-                </div>
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      </section>
-    )}
+      {/* Seção de Destaques com Slider */}
+      {featuredTracks.length > 0 && (
+        <section className="py-20 relative">
+          {/* fundo sutil */}
+          <div className="absolute inset-0 bg-deep" />
+          <div className="relative z-10">
+            <FeaturedSlider tracks={featuredTracks} />
+          </div>
+        </section>
+      )}
 
       {/* Citação Poética — Editorial */}
       <section className="py-24 md:py-32 px-6 relative overflow-hidden">

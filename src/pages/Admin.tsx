@@ -592,6 +592,8 @@ export function Admin() {
     setAlbumSuccess('');
     console.log('Iniciando publicação do álbum:', albumTitle);
 
+    const uploadedFiles: { bucket: string, path: string }[] = [];
+    
     try {
       // 0. Calcular tamanho total para o progresso
       const totalBytes = albumCover.size + validTracks.reduce((acc, t) => acc + (t.file?.size || 0), 0);
@@ -602,9 +604,6 @@ export function Admin() {
         const totalLoaded = Array.from(loadedBytesMap.values()).reduce((a, b) => a + b, 0);
         setUploadProgress(Math.round((totalLoaded / totalBytes) * 100));
       };
-
-      // Array para rastrear arquivos enviados e reverter em caso de erro
-      const uploadedFiles: { bucket: string, path: string }[] = [];
 
       // 1. Upload da Capa e das Faixas em paralelo
       console.log('Iniciando uploads em paralelo...');

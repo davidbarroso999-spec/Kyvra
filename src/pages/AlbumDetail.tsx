@@ -181,29 +181,29 @@ export function AlbumDetail() {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-void z-10" />
         
-        <div className="relative z-20 flex flex-col md:flex-row items-center md:items-end gap-8 max-w-5xl mx-auto px-6 w-full mt-20">
+        <div className="relative z-20 flex flex-col items-center md:items-end md:flex-row gap-6 md:gap-8 max-w-5xl mx-auto px-6 w-full mt-24 mb-6 md:mb-0">
           <motion.img 
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
             src={album.coverUrl} 
             alt={album.title} 
             loading="lazy"
-            className="w-64 h-64 md:w-80 md:h-80 object-cover r-md shadow-[0_30px_60px_rgba(0,0,0,0.8)]"
+            className="w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 object-cover r-md shadow-[0_30px_60px_rgba(0,0,0,0.8)]"
             referrerPolicy="no-referrer"
           />
           <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="text-center md:text-left flex-1"
+            className="text-center md:text-left flex-1 w-full"
           >
-            <span className="font-sc text-sm tracking-[0.2em] text-primary mb-2 block">ÁLBUM</span>
-            <h1 className="text-5xl md:text-7xl mb-4">{album.title}</h1>
-            <div className="flex items-center justify-center md:justify-start gap-4 text-text-mid font-sans">
-              <span>{album.artist}</span>
-              <span className="w-1 h-1 rounded-full bg-border" />
+            <span className="font-sc text-[10px] sm:text-xs tracking-[0.3em] text-primary mb-2 block uppercase">ÁLBUM</span>
+            <h1 className="text-3xl sm:text-5xl md:text-7xl mb-4 font-display leading-[1.1]">{album.title}</h1>
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-4 gap-y-2 text-text-low font-sans text-sm">
+              <span className="text-text-high">{album.artist}</span>
+              <span className="hidden sm:inline w-1 h-1 rounded-full bg-border" />
               <span>{album.year}</span>
-              <span className="w-1 h-1 rounded-full bg-border" />
+              <span className="hidden sm:inline w-1 h-1 rounded-full bg-border" />
               <span>{album.tracks.length} faixas</span>
             </div>
           </motion.div>
@@ -235,24 +235,24 @@ export function AlbumDetail() {
               <span className="w-6 text-right font-mono text-text-low text-sm group-hover:text-primary">
                 {index + 1}
               </span>
-              <div className="flex-1 flex flex-col">
-                <h3 className="font-medium text-text-high group-hover:text-primary transition-colors">{track.title}</h3>
+              <div className="flex-1 flex flex-col min-w-0">
+                <h3 className="font-medium text-text-high group-hover:text-primary transition-colors truncate">{track.title}</h3>
               </div>
               <span className="font-mono text-sm text-text-low">
                 <TrackDuration audioUrl={track.audioUrl} defaultDuration={track.duration} />
               </span>
 
-              {/* Botão de menu — aparece no hover */}
+              {/* Botão de menu */}
               <div className="relative">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     setOpenMenuId(openMenuId === track.id ? null : track.id);
                   }}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity p-2 text-text-low hover:text-primary rounded"
+                  className="p-2 text-text-low hover:text-primary rounded md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                 >
                   {/* Ícone de três pontinhos vertical */}
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
                     <circle cx="8" cy="3" r="1.5"/>
                     <circle cx="8" cy="8" r="1.5"/>
                     <circle cx="8" cy="13" r="1.5"/>

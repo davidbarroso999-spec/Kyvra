@@ -239,17 +239,17 @@ export function Archive() {
                   <TrackDuration audioUrl={track.audioUrl} defaultDuration={track.duration} />
                 </div>
 
-                {/* Botão de menu — aparece no hover */}
+                {/* Botão de menu */}
                 <div className="relative">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       setOpenMenuId(openMenuId === track.id ? null : track.id);
                     }}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity p-2 text-text-low hover:text-primary rounded"
+                    className="p-2 text-text-low hover:text-primary rounded md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                   >
                     {/* Ícone de três pontinhos vertical */}
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
                       <circle cx="8" cy="3" r="1.5"/>
                       <circle cx="8" cy="8" r="1.5"/>
                       <circle cx="8" cy="13" r="1.5"/>

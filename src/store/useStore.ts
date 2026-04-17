@@ -43,7 +43,7 @@ interface AppState {
   addToQueue: (track: Track) => void;            // Adiciona ao final da fila sem interromper
   playNext_track: (track: Track) => void;        // Insere logo após a música atual
   removeFromQueue: (trackId: string) => void;    // Remove uma faixa específica da fila
-  reorderQueue: (fromIndex: number, toIndex: number) => void; // Reordena arrastando
+  updateQueueOrder: (newOrder: Track[]) => void; // Reordena arrastando
   clearQueue: () => void;                        // Limpa a fila (mantém a música atual)
 }
 
@@ -86,11 +86,22 @@ export const useStore = create<AppState>()(
 
       setIsPlaying: (isPlaying) => set({ isPlaying }),
 
-      setQueue: (queue) => {
-        // Ao definir uma nova fila, gera também a versão embaralhada imediatamente.
-        // Isso garante que o shuffle esteja pronto sem delay quando for ativado.
-        const shuffled = shuffleArray(queue);
-        set({ queue, shuffledQueue: shuffled });
+      setQueue: (newQueue) => {
+        const { isShuffle, currentTrack } = get();
+        
+        // Se o shuffle estiver ativo, precisamos atualizar a shuffledQueue respeitando a nova ordem da queue
+        // mas mantendo o shuffle funcional.
+        if (isShuffle) {
+          // Mantém a música atual no topo no shuffle se ela estiver na nova fila
+          const withoutCurrent = newQueue.filter(t => t.id !== currentTrack?.id);
+          const shuffled = shuffleArray(withoutCurrent);
+          const newShuffledQueue = currentTrack && newQueue.find(t => t.id === currentTrack.id) 
+            ? [currentTrack, ...shuffled] 
+            : shuffled;
+          set({ queue: newQueue, shuffledQueue: newShuffledQueue });
+        } else {
+          set({ queue: newQueue, shuffledQueue: shuffleArray(newQueue) });
+        }
       },
 
       setVolume: (volume) => set({ volume }),
@@ -229,13 +240,13 @@ export const useStore = create<AppState>()(
         set({ queue: newQueue, shuffledQueue: shuffleArray(newQueue) });
       },
 
-      reorderQueue: (fromIndex, toIndex) => {
-        const { queue } = get();
-        const newQueue = [...queue];
-        const [moved] = newQueue.splice(fromIndex, 1);
-        newQueue.splice(toIndex, 0, moved);
-        set({ queue: newQueue });
-        // Nota: não reembaralha ao reordenar — respeita a intenção do usuário
+      updateQueueOrder: (newOrder) => {
+        const { isShuffle } = get();
+        if (isShuffle) {
+          set({ shuffledQueue: newOrder });
+        } else {
+          set({ queue: newOrder });
+        }
       },
 
       clearQueue: () => {
