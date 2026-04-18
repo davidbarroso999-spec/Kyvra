@@ -130,7 +130,11 @@ export function MiniPlayer() {
         await navigator.clipboard.writeText(window.location.href);
         alert('Link copiado para a área de transferência!');
       }
-    } catch (err) {
+    } catch (err: any) {
+      if (err.name === 'AbortError' || err.message?.toLowerCase().includes('share canceled')) {
+        // O usuário apenas fechou o menu de compartilhamento sem compartilhar. Não é um erro.
+        return;
+      }
       console.error('Error sharing:', err);
     }
   };
