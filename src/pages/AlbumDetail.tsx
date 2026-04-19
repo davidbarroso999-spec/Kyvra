@@ -6,6 +6,7 @@ import { useStore } from '@/store/useStore';
 import { supabase } from '@/lib/supabase';
 import { TrackDuration } from '@/components/ui/TrackDuration';
 import { saveForOffline } from '@/lib/utils';
+import { KyvraButton } from '@/components/ui/KyvraButton';
 
 export function AlbumDetail() {
   const { id } = useParams();
@@ -244,13 +245,16 @@ export function AlbumDetail() {
       <div className="max-w-5xl mx-auto px-6 mt-12">
         <div className="flex flex-col gap-8 mb-12">
           <div>
-            <button 
+            <KyvraButton 
               onClick={handlePlayAlbum}
-              className="flex items-center justify-center sm:justify-start gap-3 px-8 py-4 bg-primary text-void font-sans font-medium r-sm shadow-[0_0_30px_var(--glow-purple)] w-full sm:w-auto btn-primary-hover"
+              variant="album"
+              ledColor="red"
+              showLed
+              className="flex items-center justify-center sm:justify-start gap-3 px-8 py-4 w-full sm:w-auto bg-primary text-void rounded-xl shadow-[0_0_30px_var(--glow-purple)]"
             >
               <Play size={20} className="fill-current" />
               Tocar Álbum Completo
-            </button>
+            </KyvraButton>
           </div>
         </div>
 

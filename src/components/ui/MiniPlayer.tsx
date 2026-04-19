@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, Reorder } from 'motion/react';
-import { Play, Pause, SkipBack, SkipForward, Repeat, Repeat1, Shuffle, Volume2, Volume1, VolumeX, Sparkles, Loader2, AlignLeft, ListMusic, X, GripVertical, Share, Heart, SlidersHorizontal, Moon, ChevronDown, MoreVertical, Download } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Repeat, Repeat1, Shuffle, Volume2, Volume1, VolumeX, AlignLeft, ListMusic, X, GripVertical, Share, Heart, SlidersHorizontal, Moon, ChevronDown, MoreVertical, Download } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { TrackDuration } from '@/components/ui/TrackDuration';
-import { getAI, MODELS, generateText } from '@/lib/ai';
+import { KyvraButton } from './KyvraButton';
 
 export function MiniPlayer() {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -18,9 +18,6 @@ export function MiniPlayer() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState('0:00');
-  
-  const [lyricsExplanation, setLyricsExplanation] = useState<string | null>(null);
-  const [isExplaining, setIsExplaining] = useState(false);
 
   // Volume states
   const [isHoveringVolume, setIsHoveringVolume] = useState(false);
@@ -39,6 +36,10 @@ export function MiniPlayer() {
   const [seekHoverX, setSeekHoverX] = useState(0);
   const progressBarRef = useRef<HTMLDivElement>(null);
   const scrollableRef = useRef<HTMLDivElement>(null);
+  const lyricsScrollRef = useRef<HTMLDivElement>(null);
+
+  const cleanLyrics = currentTrack?.lyrics?.replace(/\[\d{2}:\d{2}(?:\.\d{2,3})?\]/g, '').trim() || '';
+  const lyricsLines = cleanLyrics.split('\n').filter(l => l.trim().length > 0);
 
   const handleDownload = () => {
     if (!currentTrack || !currentTrack.audioUrl) return;
@@ -52,8 +53,7 @@ export function MiniPlayer() {
   };
 
   useEffect(() => {
-    // Reset explanation and lyrics view when track changes
-    setLyricsExplanation(null);
+    // Reset lyrics view when track changes
     setShowLyrics(false);
     
     // Reset time when track changes
@@ -271,47 +271,6 @@ export function MiniPlayer() {
       const bounds = e.currentTarget.getBoundingClientRect();
       const percent = (e.clientX - bounds.left) / bounds.width;
       audioRef.current.currentTime = percent * audioRef.current.duration;
-    }
-  };
-
-  const handleExplainLyrics = async () => {
-    const textToAnalyze = currentTrack?.lyrics;
-    if (!textToAnalyze) return;
-    
-    setIsExplaining(true);
-    
-    const prompt = `Você é o Arquivista de Kyvra. Sua missão é decifrar a letra da música "${currentTrack.title}" do artista "${currentTrack.artist}" sob a ótica do Arco Psicológico de Kyvra.
-
-      FILOSOFIA KYVRA (O Arco Psicológico):
-      1. ✨ Fascínio: O amor é visto como salvação sobrenatural, mas as almas não se tocam, apenas especulam.
-      2. 🔥 Entrega: Perda de identidade e mergulho espiritual completo.
-      3. 🌑 Obsessão: O amor vira vício, ciúme e dependência dolorosa.
-      4. 🩸 Ruína: A percepção de que o amor destrói, mas a escolha consciente pelo abismo em vez do vazio.
-      5. 🕯️ Consciência: O entendimento da dor sem arrependimento, abraçando a destruição com um toque de narcisismo.
-
-      ESTÉTICA: Gótica, íntima e dramática (estilo Evanescence/Black Veil Brides).
-
-      Analise esta letra: "${textToAnalyze}"
-      
-      Sua missão:
-      1. Identifique em qual estágio do arco esta música se encontra.
-      2. Explique o significado de forma visceral e direta.
-      3. Conecte com o diferencial de Kyvra: o abraço à destruição e o ego do eu lírico.
-      4. Compare com uma obra histórica/cultural que transmita essa mesma "beleza trágica".
-      
-      REGRAS CRÍTICAS: 
-      - NÃO use asteriscos (*) ou (**).
-      - Use no máximo 2 parágrafos curtos.`;
-
-    try {
-      const explanation = await generateText(prompt);
-      setLyricsExplanation(explanation);
-    } catch (err) {
-      console.error("Erro ao gerar explicação da letra:", err);
-      const errorMsg = "As vozes do passado estão inaudíveis no momento. Verifique a configuração da IA.";
-      setLyricsExplanation(errorMsg);
-    } finally {
-      setIsExplaining(false);
     }
   };
 
@@ -611,81 +570,93 @@ export function MiniPlayer() {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
-                  className="flex flex-col w-full flex-1"
+                  className="flex flex-col w-full flex-1 justify-between min-h-0 py-2 sm:py-4"
                 >
-                  {/* Album Art */}
-                  <div className="w-full aspect-square max-h-[360px] rounded-lg overflow-hidden mb-6 md:mb-10 shadow-[0_40px_80px_rgba(0,0,0,0.6)] shrink-0 self-center">
-                    <img 
-                      src={currentTrack.coverUrl} 
-                      alt="Cover" 
-                      className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
-                  </div>
-
-                  {/* Title & Actions */}
-                  <div className="flex items-center justify-between mb-8">
-                    <div className="flex flex-col overflow-hidden pr-4 flex-1">
-                      <h2 className="text-2xl md:text-3xl font-display text-text-high mb-1 truncate">{currentTrack.title}</h2>
-                      <p className="text-primary text-xs md:text-sm tracking-[0.1em] font-sc truncate opacity-80 uppercase">{currentTrack.artist}</p>
+                  <div className="flex-1 flex items-center justify-center min-h-0 mb-4 sm:mb-8">
+                    {/* Album Art */}
+                    <div className="w-full max-w-[min(100%,360px)] aspect-square rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_40px_80px_rgba(0,0,0,0.6)] shrink-0">
+                      <img 
+                        src={currentTrack.coverUrl} 
+                        alt="Cover" 
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
                     </div>
                   </div>
 
-                  {/* Progress */}
-                  <div className="flex flex-col mb-10">
-                    <div className="w-full cursor-pointer py-4 -my-4 group" ref={progressBarRef} onClick={handleSeek}>
-                      <div className="h-1.5 bg-surface/50 rounded-full relative overflow-hidden group-hover:h-2 transition-all">
-                        <div className="absolute top-0 left-0 h-full bg-primary rounded-full" style={{ width: `${progress}%` }} />
+                  <div className="flex flex-col shrink-0">
+                    {/* Title & Actions */}
+                    <div className="flex items-center justify-between mb-4 sm:mb-6">
+                      <div className="flex flex-col overflow-hidden pr-4 flex-1">
+                        <h2 className="text-2xl md:text-3xl font-display text-text-high mb-1 truncate">{currentTrack.title}</h2>
+                        <p className="text-primary text-xs md:text-sm tracking-[0.1em] font-sc truncate opacity-80 uppercase">{currentTrack.artist}</p>
                       </div>
-                      <div className="absolute w-3 h-3 bg-primary rounded-full shadow-[0_0_10px_var(--glow-purple)] opacity-0 group-hover:opacity-100 transition-opacity" style={{ left: `calc(${progress}% - 6px)`, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                     </div>
-                    <div className="flex justify-between mt-3 font-mono text-[10px] text-text-low tracking-widest">
-                      <span>{currentTime}</span>
-                      <TrackDuration audioUrl={currentTrack.audioUrl} defaultDuration={currentTrack.duration} />
+
+                    {/* Progress */}
+                    <div className="flex flex-col mb-6 sm:mb-8">
+                      <div className="w-full cursor-pointer py-4 -my-4 group" ref={progressBarRef} onClick={handleSeek}>
+                        <div className="h-1.5 bg-surface/50 rounded-full relative overflow-hidden group-hover:h-2 transition-all">
+                          <div className="absolute top-0 left-0 h-full bg-primary rounded-full" style={{ width: `${progress}%` }} />
+                        </div>
+                        <div className="absolute w-3 h-3 bg-primary rounded-full shadow-[0_0_10px_var(--glow-purple)] opacity-0 group-hover:opacity-100 transition-opacity" style={{ left: `calc(${progress}% - 6px)`, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                      </div>
+                      <div className="flex justify-between mt-3 font-mono text-[10px] text-text-low tracking-widest">
+                        <span>{currentTime}</span>
+                        <TrackDuration audioUrl={currentTrack.audioUrl} defaultDuration={currentTrack.duration} />
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Main Controls */}
-                  <div className="flex items-center justify-evenly gap-4 mb-10">
-                    <button onClick={handlePrev} className="w-14 h-14 rounded-full border border-border/30 flex items-center justify-center text-text-high hover:bg-surface/50 transition-colors">
-                      <SkipBack size={20} className="fill-current" />
-                    </button>
-                    <button 
-                      onClick={() => setIsPlaying(!isPlaying)}
-                      className="w-20 h-20 rounded-full bg-primary flex items-center justify-center text-void shadow-[0_0_40px_var(--glow-purple)] hover:scale-105 transition-transform"
-                    >
-                      {isPlaying ? <Pause size={32} className="fill-current" /> : <Play size={32} className="ml-1 fill-current" />}
-                    </button>
-                    <button onClick={handleNext} className="w-14 h-14 rounded-full border border-border/30 flex items-center justify-center text-text-high hover:bg-surface/50 transition-colors">
-                      <SkipForward size={20} className="fill-current" />
-                    </button>
-                  </div>
+                    {/* Main Controls */}
+                    <div className="flex items-center justify-center gap-6 sm:gap-8 mb-6 sm:mb-10">
+                      <KyvraButton 
+                        onClick={handlePrev} 
+                        variant="player"
+                        className="w-14 h-14 rounded-full text-text-high"
+                      >
+                        <SkipBack size={20} className="fill-current" />
+                      </KyvraButton>
+                      <KyvraButton 
+                        onClick={() => setIsPlaying(!isPlaying)}
+                        variant="player"
+                        showLed
+                        isActive={isPlaying}
+                        ledColor="red"
+                        className={cn(
+                          "w-20 h-20 rounded-full",
+                          isPlaying ? "text-primary bg-primary/10 border-primary/50" : "text-void bg-primary"
+                        )}
+                      >
+                        {isPlaying ? <Pause size={32} className="fill-current" /> : <Play size={32} className="ml-1 fill-current" />}
+                      </KyvraButton>
+                      <KyvraButton 
+                        onClick={handleNext} 
+                        variant="player"
+                        className="w-14 h-14 rounded-full text-text-high"
+                      >
+                        <SkipForward size={20} className="fill-current" />
+                      </KyvraButton>
+                    </div>
 
-                  {/* Bottom Strip Actions */}
-                  <div className="grid grid-cols-5 gap-2 mt-auto pb-4">
-                    <button onClick={() => { setShowQueue(!showQueue); setShowLyrics(false); }} className={cn("flex flex-col items-center gap-1 py-2 rounded-lg transition-all", showQueue ? "text-primary" : "text-text-low hover:text-text-high")}>
-                      <ListMusic size={20} />
-                      <span className="text-[8px] font-sc tracking-widest">FILA</span>
-                    </button>
-                    <button onClick={() => { setShowLyrics(!showLyrics); setShowQueue(false); }} className={cn("flex flex-col items-center gap-1 py-2 rounded-lg transition-all", showLyrics ? "text-primary" : "text-text-low hover:text-text-high")}>
-                      <AlignLeft size={20} />
-                      <span className="text-[8px] font-sc tracking-widest">LETRA</span>
-                    </button>
-                    <button onClick={toggleShuffle} className={cn("flex flex-col items-center gap-1 py-2 rounded-lg transition-all", isShuffle ? "text-primary" : "text-text-low hover:text-text-high")}>
-                      <Shuffle size={20} />
-                      <span className="text-[8px] font-sc tracking-widest">SHUFFLE</span>
-                    </button>
-                    <button onClick={toggleRepeat} className={cn("flex flex-col items-center gap-1 py-2 rounded-lg transition-all", repeatMode !== 'off' ? "text-primary" : "text-text-low hover:text-text-high")}>
-                      {repeatMode === 'one' ? <Repeat1 size={20} className="stroke-[3px]" /> : <Repeat size={20} />}
-                      <span className="text-[8px] font-sc tracking-widest">{repeatMode === 'one' ? 'UM' : 'REPETIR'}</span>
-                    </button>
-                    <button 
-                      onClick={() => alert('Parâmetros dimensionais bloqueados. O Arquivista ainda não liberou o controle de frequências.')}
-                      className="flex flex-col items-center gap-1 py-2 rounded-lg text-text-low hover:text-text-high"
-                    >
-                      <SlidersHorizontal size={20} />
-                      <span className="text-[8px] font-sc tracking-widest">EFEITOS</span>
-                    </button>
+                    {/* Bottom Strip Actions */}
+                    <div className="grid grid-cols-4 gap-2 pb-2">
+                      <button onClick={() => { setShowQueue(!showQueue); setShowLyrics(false); }} className={cn("flex flex-col items-center gap-1 py-2 rounded-lg transition-all", showQueue ? "text-primary" : "text-text-low hover:text-text-high")}>
+                        <ListMusic size={20} />
+                        <span className="text-[8px] font-sc tracking-widest">FILA</span>
+                      </button>
+                      <button onClick={() => { setShowLyrics(!showLyrics); setShowQueue(false); }} className={cn("flex flex-col items-center gap-1 py-2 rounded-lg transition-all", showLyrics ? "text-primary" : "text-text-low hover:text-text-high")}>
+                        <AlignLeft size={20} />
+                        <span className="text-[8px] font-sc tracking-widest">LETRA</span>
+                      </button>
+                      <button onClick={toggleShuffle} className={cn("flex flex-col items-center gap-1 py-2 rounded-lg transition-all", isShuffle ? "text-primary" : "text-text-low hover:text-text-high")}>
+                        <Shuffle size={20} />
+                        <span className="text-[8px] font-sc tracking-widest">SHUFFLE</span>
+                      </button>
+                      <button onClick={toggleRepeat} className={cn("flex flex-col items-center gap-1 py-2 rounded-lg transition-all", repeatMode !== 'off' ? "text-primary" : "text-text-low hover:text-text-high")}>
+                        {repeatMode === 'one' ? <Repeat1 size={20} className="stroke-[3px]" /> : <Repeat size={20} />}
+                        <span className="text-[8px] font-sc tracking-widest">{repeatMode === 'one' ? 'UM' : 'REPETIR'}</span>
+                      </button>
+                    </div>
                   </div>
                 </motion.div>
               ) : (
@@ -702,45 +673,23 @@ export function MiniPlayer() {
                     <p className="text-primary/60 text-[10px] tracking-[0.2em] uppercase mt-1">{currentTrack.artist}</p>
                   </div>
                   
-                  <div className="w-full flex-1 overflow-y-auto scrollbar-hide text-center px-4 pb-20 mask-fade-vertical">
-                    <div className="space-y-12 py-8">
-                      {currentTrack.lyrics.split('\n\n').map((stanza, sIdx) => (
-                        <div key={sIdx} className="group relative">
-                          <p className="text-text-high text-lg md:text-xl leading-relaxed whitespace-pre-line font-medium opacity-90 hover:opacity-100 transition-opacity">
-                            {stanza}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                    
-                    {!lyricsExplanation && (
-                      <button
-                        onClick={() => handleExplainLyrics()}
-                        disabled={isExplaining}
-                        className="mx-auto flex items-center gap-2 px-6 py-3 bg-surface border border-primary/30 text-primary rounded-full hover:bg-primary/10 transition-colors text-sm font-medium mb-8"
-                      >
-                        {isExplaining ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-                        Decifrar Obra Completa
-                      </button>
-                    )}
-
-                    <AnimatePresence>
-                      {lyricsExplanation && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          className="w-full bg-primary/5 border border-primary/20 r-md p-6 text-left mb-8"
-                        >
-                          <div className="flex items-center gap-2 text-primary mb-4">
-                            <Sparkles size={18} />
-                            <h4 className="font-display text-lg">Visão do Arquivista</h4>
+                  <div 
+                    ref={lyricsScrollRef}
+                    className="w-full flex-1 overflow-y-auto scrollbar-hide text-center px-4 pb-32 mask-fade-vertical pt-8"
+                  >
+                    {lyricsLines.length > 0 ? (
+                      <div className="space-y-6">
+                        {lyricsLines.map((line, idx) => (
+                          <div key={idx} className="w-full flex items-center justify-center min-h-[2rem]">
+                            <p className="text-lg sm:text-xl md:text-2xl font-display font-medium text-text-high opacity-80 hover:opacity-100 transition-opacity text-balance lg:whitespace-nowrap leading-tight mx-auto">
+                              {line}
+                            </p>
                           </div>
-                          <p className="text-text-mid text-sm leading-relaxed italic whitespace-pre-line">
-                            {lyricsExplanation}
-                          </p>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-text-low font-sc tracking-widest text-sm mt-10 opacity-50">Não há letras disponíveis.</p>
+                    )}
                   </div>
                 </motion.div>
               )}
