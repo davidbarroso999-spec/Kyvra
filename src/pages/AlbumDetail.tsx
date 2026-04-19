@@ -104,15 +104,16 @@ export function AlbumDetail() {
   };
 
   const handleShareTrack = async (track: any) => {
+    const shareUrl = `https://descubrakyvra.vercel.app${window.location.pathname}${window.location.search}`;
     try {
       if (navigator.share) {
         await navigator.share({
           title: `Kyvra — ${track.title}`,
           text: `Ouvindo ${track.title} de ${track.artist || album?.artist} no Kyvra. Fragmentos de um universo sombrio.`,
-          url: window.location.href,
+          url: shareUrl,
         });
       } else {
-        await navigator.clipboard.writeText(window.location.href);
+        await navigator.clipboard.writeText(shareUrl);
         showFeedback('Link copiado para a área de transferência');
       }
     } catch (error: any) {
