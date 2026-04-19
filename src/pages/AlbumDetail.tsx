@@ -103,6 +103,35 @@ export function AlbumDetail() {
     setIsPlaying(true);
   };
 
+  const handleShareTrack = async (track: any) => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `Kyvra — ${track.title}`,
+          text: `Ouvindo ${track.title} de ${track.artist || album?.artist} no Kyvra. Fragmentos de um universo sombrio.`,
+          url: window.location.href,
+        });
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        showFeedback('Link copiado para a área de transferência');
+      }
+    } catch (error: any) {
+      if (error.name !== 'AbortError') {
+        console.error('Error sharing:', error);
+      }
+    }
+  };
+
+  const handleDownloadTrack = (track: any) => {
+    if (!track.audioUrl) return;
+    const a = document.createElement('a');
+    a.href = track.audioUrl;
+    a.download = `${track.title} - ${track.artist || album?.artist}.mp3`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
   if (loading) {
     return (
       <div className="w-full min-h-screen pb-32">
@@ -304,6 +333,26 @@ export function AlbumDetail() {
                         className="w-full text-left px-4 py-2.5 text-sm text-text-mid hover:text-text-high hover:bg-overlay transition-colors"
                       >
                         Salvar Offline
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenMenuId(null);
+                          handleDownloadTrack(track);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-text-mid hover:text-text-high hover:bg-overlay transition-colors"
+                      >
+                        Baixar Áudio
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenMenuId(null);
+                          handleShareTrack(track);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-text-mid hover:text-text-high hover:bg-overlay transition-colors"
+                      >
+                        Compartilhar
                       </button>
                     </div>
                   </>

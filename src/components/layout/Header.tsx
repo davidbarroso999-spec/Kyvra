@@ -56,12 +56,6 @@ export function Header() {
           isScrolled ? 'py-3 glass' : 'py-6 bg-transparent'
         )}
       >
-        {/* Reading Progress Bar */}
-        <motion.div
-          className="absolute top-0 left-0 right-0 h-[2px] bg-primary origin-left z-50"
-          style={{ scaleX }}
-        />
-        
         <div className="max-w-7xl mx-auto px-4 md:px-6 flex items-center justify-between mt-[2px]">
           <Link to="/" className="font-display text-xl md:text-2xl tracking-[0.1em] text-text-high z-50 relative">
             KYVRA
@@ -123,12 +117,14 @@ export function Header() {
               O ARQUIVISTA
             </Link>
 
-            <button
-              className="md:hidden text-text-high"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            >
-              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
+            {!isMobileMenuOpen && (
+              <button
+                className="md:hidden text-text-high"
+                onClick={() => setIsMobileMenuOpen(true)}
+              >
+                <Menu size={24} />
+              </button>
+            )}
           </div>
         </div>
       </header>

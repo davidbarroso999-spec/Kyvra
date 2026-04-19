@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, Reorder } from 'motion/react';
-import { Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Volume2, Volume1, VolumeX, Sparkles, Loader2, AlignLeft, ListMusic, X, GripVertical, Share, Heart, SlidersHorizontal, Moon, ChevronDown } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Repeat, Repeat1, Shuffle, Volume2, Volume1, VolumeX, Sparkles, Loader2, AlignLeft, ListMusic, X, GripVertical, Share, Heart, SlidersHorizontal, Moon, ChevronDown, MoreVertical, Download } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { TrackDuration } from '@/components/ui/TrackDuration';
@@ -31,11 +31,25 @@ export function MiniPlayer() {
   // Swipe gesture states
   const [dragOffset, setDragOffset] = useState(0);
 
+  // Options menu state
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+
   // Seek hover states
   const [seekHoverTime, setSeekHoverTime] = useState<string | null>(null);
   const [seekHoverX, setSeekHoverX] = useState(0);
   const progressBarRef = useRef<HTMLDivElement>(null);
   const scrollableRef = useRef<HTMLDivElement>(null);
+
+  const handleDownload = () => {
+    if (!currentTrack || !currentTrack.audioUrl) return;
+    const a = document.createElement('a');
+    a.href = currentTrack.audioUrl;
+    a.download = `${currentTrack.title} - ${currentTrack.artist}.mp3`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setShowOptionsMenu(false);
+  };
 
   useEffect(() => {
     // Reset explanation and lyrics view when track changes
@@ -113,30 +127,6 @@ export function MiniPlayer() {
       setIsExpanded(false);
     }
     setDragOffset(0);
-  };
-
-  const handleShare = async () => {
-    if (!currentTrack) return;
-    const shareData = {
-      title: 'Kyvra — ' + currentTrack.title,
-      text: `Ouvindo ${currentTrack.title} de ${currentTrack.artist} no Kyvra. Fragmentos de um universo sombrio.`,
-      url: window.location.href,
-    };
-
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-      } else {
-        await navigator.clipboard.writeText(window.location.href);
-        alert('Link copiado para a área de transferência!');
-      }
-    } catch (err: any) {
-      if (err.name === 'AbortError' || err.message?.toLowerCase().includes('share canceled')) {
-        // O usuário apenas fechou o menu de compartilhamento sem compartilhar. Não é um erro.
-        return;
-      }
-      console.error('Error sharing:', err);
-    }
   };
 
   useEffect(() => {
@@ -456,7 +446,14 @@ export function MiniPlayer() {
             }}
           />
 
-          <div className="relative z-10 flex-1 flex flex-col p-6 max-w-lg mx-auto w-full h-full overflow-hidden">
+          <div 
+            className="relative z-10 flex-1 flex flex-col p-6 max-w-lg mx-auto w-full h-full overflow-hidden"
+            onPointerDown={(e) => {
+              if (showOptionsMenu) {
+                setShowOptionsMenu(false);
+              }
+            }}
+          >
             {/* Top Bar - Área de Toque Superior Aumentada */}
             <div className="flex items-center justify-between w-full mb-4 md:mb-8 mt-4 md:mt-0 select-none relative z-[2003]">
               <div className="flex-1 flex justify-start">
@@ -485,24 +482,8 @@ export function MiniPlayer() {
               </div>
 
               <div className="flex-1 flex justify-end">
-                <button 
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (showQueue || showLyrics) {
-                      setShowQueue(false);
-                      setShowLyrics(false);
-                    } else {
-                      setIsExpanded(false);
-                    }
-                  }}
-                  className="w-16 h-16 -mr-4 flex items-center justify-center text-text-mid hover:text-text-high bg-transparent rounded-full transition-colors active:scale-95 touch-none"
-                  aria-label="Fechar"
-                >
-                  <div className="w-10 h-10 flex items-center justify-center bg-surface/30 rounded-full">
-                    <X size={22} />
-                  </div>
-                </button>
+                {/* Removed X button to keep interface cleaner and match mobile patterns (swipe down to close or use back button) */}
+                <div className="w-16" />
               </div>
             </div>
 
@@ -648,14 +629,6 @@ export function MiniPlayer() {
                       <h2 className="text-2xl md:text-3xl font-display text-text-high mb-1 truncate">{currentTrack.title}</h2>
                       <p className="text-primary text-xs md:text-sm tracking-[0.1em] font-sc truncate opacity-80 uppercase">{currentTrack.artist}</p>
                     </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <button 
-                        onClick={handleShare}
-                        className="w-12 h-12 rounded-full glass flex items-center justify-center text-text-high hover:scale-105 transition-transform border border-border/50"
-                      >
-                        <Share size={18} />
-                      </button>
-                    </div>
                   </div>
 
                   {/* Progress */}
@@ -703,7 +676,7 @@ export function MiniPlayer() {
                       <span className="text-[8px] font-sc tracking-widest">SHUFFLE</span>
                     </button>
                     <button onClick={toggleRepeat} className={cn("flex flex-col items-center gap-1 py-2 rounded-lg transition-all", repeatMode !== 'off' ? "text-primary" : "text-text-low hover:text-text-high")}>
-                      <Repeat size={20} className={cn(repeatMode === 'one' && "stroke-[3px]")} />
+                      {repeatMode === 'one' ? <Repeat1 size={20} className="stroke-[3px]" /> : <Repeat size={20} />}
                       <span className="text-[8px] font-sc tracking-widest">{repeatMode === 'one' ? 'UM' : 'REPETIR'}</span>
                     </button>
                     <button 
