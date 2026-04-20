@@ -2,15 +2,18 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, Reorder } from 'motion/react';
 import { Play, Pause, SkipBack, SkipForward, Repeat, Repeat1, Shuffle, Volume2, Volume1, VolumeX, AlignLeft, ListMusic, X, GripVertical, Share, Heart, SlidersHorizontal, Moon, ChevronDown, MoreVertical, Download, WifiOff } from 'lucide-react';
 import { useStore } from '@/store/useStore';
-import { cn, isSavedOffline } from '@/lib/utils';
+import { cn, isSavedOffline, getOfflineUrl } from '@/lib/utils';
 import { TrackDuration } from '@/components/ui/TrackDuration';
 import { KyvraButton } from './KyvraButton';
+import { Capacitor } from '@capacitor/core';
+import { CapacitorMusicControls } from 'capacitor-music-controls-plugin';
 
 export function MiniPlayer() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showLyrics, setShowLyrics] = useState(false);
   const [showQueue, setShowQueue] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
+  const [actualAudioUrl, setActualAudioUrl] = useState<string>('');
 
   const {
     currentTrack, isPlaying, setIsPlaying, playNext, playPrevious,
@@ -23,13 +26,22 @@ export function MiniPlayer() {
       if (currentTrack?.audioUrl) {
         const saved = await isSavedOffline(currentTrack.audioUrl);
         setIsOffline(saved);
+        setActualAudioUrl(await getOfflineUrl(currentTrack.audioUrl));
+      } else {
+        setIsOffline(false);
+        setActualAudioUrl('');
       }
     };
     checkOffline();
   }, [currentTrack?.id]);
   const audioRef = useRef<HTMLAudioElement>(null);
-  const [progress, setProgress] = useState(0);
-  const [currentTime, setCurrentTime] = useState('0:00');
+  
+  // Use refs instead of state for performance (prevents 4x/sec re-renders of the entire player & queue)
+  const [currentTime, setCurrentTime] = useState('0:00'); // only used for initial render
+  const progressFillRef = useRef<HTMLDivElement>(null);
+  const compactProgressFillRef = useRef<HTMLDivElement>(null);
+  const timeDisplayRef = useRef<HTMLSpanElement>(null);
+  const progressCircleRef = useRef<HTMLDivElement>(null);
 
   // Volume states
   const [isHoveringVolume, setIsHoveringVolume] = useState(false);
@@ -71,8 +83,10 @@ export function MiniPlayer() {
     // Reset time when track changes
     if (audioRef.current) {
       audioRef.current.currentTime = 0;
-      setProgress(0);
-      setCurrentTime('0:00');
+      if (progressFillRef.current) progressFillRef.current.style.width = '0%';
+      if (compactProgressFillRef.current) compactProgressFillRef.current.style.width = '0%';
+      if (progressCircleRef.current) progressCircleRef.current.style.left = 'calc(0% - 6px)';
+      if (timeDisplayRef.current) timeDisplayRef.current.innerText = '0:00';
     }
   }, [currentTrack?.id]);
 
@@ -93,9 +107,57 @@ export function MiniPlayer() {
     }
   }, [isPlaying, currentTrack]);
 
-  // Media Session API for mobile lock screen controls
+  // Media Session API & Native Music Controls
   useEffect(() => {
-    if ('mediaSession' in navigator && currentTrack) {
+    if (!currentTrack) return;
+
+    if (Capacitor.isNativePlatform()) {
+      // Native Lockscreen / Notification Controls
+      CapacitorMusicControls.create({
+        track: currentTrack.title,
+        artist: currentTrack.artist || 'Kyvra',
+        album: currentTrack.albumTitle || 'Kyvra',
+        cover: currentTrack.coverUrl || '',
+        isPlaying: isPlaying,
+        dismissable: false, // keep it running
+        hasPrev: true,
+        hasNext: true,
+        hasClose: false,
+        playIcon: 'media_play',
+        pauseIcon: 'media_pause',
+        prevIcon: 'media_prev',
+        nextIcon: 'media_next',
+        closeIcon: 'media_close',
+        notificationIcon: 'notification'
+      }).then(() => {
+        CapacitorMusicControls.addListener('controlsNotification', (info: any) => {
+          if (!info) return;
+          const message = info.message;
+          switch(message) {
+            case 'music-controls-next':
+              handleNext();
+              break;
+            case 'music-controls-previous':
+              handlePrev();
+              break;
+            case 'music-controls-pause':
+              setIsPlaying(false);
+              if (audioRef.current) audioRef.current.pause();
+              break;
+            case 'music-controls-play':
+              setIsPlaying(true);
+              if (audioRef.current) audioRef.current.play();
+              break;
+            case 'music-controls-destroy':
+              setIsPlaying(false);
+              if (audioRef.current) audioRef.current.pause();
+              break;
+          }
+        });
+      }).catch(console.error);
+
+    } else if ('mediaSession' in navigator) {
+      // Web Media Session fallback
       navigator.mediaSession.metadata = new MediaMetadata({
         title: currentTrack.title,
         artist: currentTrack.artist || 'Kyvra',
@@ -105,8 +167,8 @@ export function MiniPlayer() {
         ]
       });
 
-      navigator.mediaSession.setActionHandler('play', () => setIsPlaying(true));
-      navigator.mediaSession.setActionHandler('pause', () => setIsPlaying(false));
+      navigator.mediaSession.setActionHandler('play', () => { setIsPlaying(true); if(audioRef.current) audioRef.current.play(); });
+      navigator.mediaSession.setActionHandler('pause', () => { setIsPlaying(false); if(audioRef.current) audioRef.current.pause(); });
       navigator.mediaSession.setActionHandler('previoustrack', () => handlePrev());
       navigator.mediaSession.setActionHandler('nexttrack', () => handleNext());
       
@@ -122,10 +184,24 @@ export function MiniPlayer() {
           }
         });
       } catch (e) {
-        // Some browsers don't support seek actions
+        // Ignored
       }
     }
-  }, [currentTrack, isPlaying]);
+
+    return () => {
+      if (Capacitor.isNativePlatform()) {
+        CapacitorMusicControls.destroy().catch(console.error);
+        CapacitorMusicControls.removeAllListeners();
+      }
+    };
+  }, [currentTrack]); // Don't trigger on isPlaying change, handled separately below
+
+  // Sync isPlaying state to Native Controls
+  useEffect(() => {
+    if (Capacitor.isNativePlatform() && currentTrack) {
+      CapacitorMusicControls.updateIsPlaying({ isPlaying }).catch(console.error);
+    }
+  }, [isPlaying]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -269,12 +345,18 @@ export function MiniPlayer() {
       const current = audioRef.current.currentTime;
       const duration = audioRef.current.duration;
       if (duration > 0) {
-        setProgress((current / duration) * 100);
+        const p = (current / duration) * 100;
+        if (progressFillRef.current) progressFillRef.current.style.width = `${p}%`;
+        if (compactProgressFillRef.current) compactProgressFillRef.current.style.width = `${p}%`;
+        if (progressCircleRef.current) progressCircleRef.current.style.left = `calc(${p}% - 6px)`;
       }
       
       const minutes = Math.floor(current / 60);
       const seconds = Math.floor(current % 60);
-      setCurrentTime(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+      const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      if (timeDisplayRef.current && timeDisplayRef.current.innerText !== timeStr) {
+        timeDisplayRef.current.innerText = timeStr;
+      }
     }
   };
 
@@ -337,10 +419,10 @@ export function MiniPlayer() {
 
   return (
     <>
-      {currentTrack.audioUrl && (
+      {actualAudioUrl && (
         <audio 
           ref={audioRef} 
-          src={currentTrack.audioUrl} 
+          src={actualAudioUrl} 
           onTimeUpdate={handleTimeUpdate}
           onEnded={handleEnded}
         />
@@ -378,7 +460,7 @@ export function MiniPlayer() {
         </div>
         {/* Progress Bar (Visual only for compact) */}
         <div className="absolute bottom-0 left-0 w-full h-[2px] bg-border overflow-hidden" style={{ borderBottomLeftRadius: 'var(--radius-md)', borderBottomRightRadius: 'var(--radius-md)' }}>
-          <div className="h-full bg-primary" style={{ width: `${progress}%` }} />
+          <div ref={compactProgressFillRef} className="h-full bg-primary" style={{ width: '0%' }} />
         </div>
       </motion.div>
 
@@ -614,12 +696,12 @@ export function MiniPlayer() {
                     <div className="flex flex-col mb-6 sm:mb-8">
                       <div className="w-full cursor-pointer py-4 -my-4 group" ref={progressBarRef} onClick={handleSeek}>
                         <div className="h-1.5 bg-surface/50 rounded-full relative overflow-hidden group-hover:h-2 transition-all">
-                          <div className="absolute top-0 left-0 h-full bg-primary rounded-full" style={{ width: `${progress}%` }} />
+                          <div ref={progressFillRef} className="absolute top-0 left-0 h-full bg-primary rounded-full transition-[width] duration-75" style={{ width: '0%' }} />
                         </div>
-                        <div className="absolute w-3 h-3 bg-primary rounded-full shadow-[0_0_10px_var(--glow-purple)] opacity-0 group-hover:opacity-100 transition-opacity" style={{ left: `calc(${progress}% - 6px)`, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                        <div ref={progressCircleRef} className="absolute w-3 h-3 bg-primary rounded-full shadow-[0_0_10px_var(--glow-purple)] opacity-0 group-hover:opacity-100 transition-opacity" style={{ left: 'calc(0% - 6px)', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                       </div>
                       <div className="flex justify-between mt-3 font-mono text-[10px] text-text-low tracking-widest">
-                        <span>{currentTime}</span>
+                        <span ref={timeDisplayRef}>0:00</span>
                         <TrackDuration audioUrl={currentTrack.audioUrl} defaultDuration={currentTrack.duration} />
                       </div>
                     </div>

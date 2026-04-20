@@ -1,1 +1,10 @@
-[]
+[
+	{
+		"pkg": "@capacitor/filesystem",
+		"classpath": "com.capacitorjs.plugins.filesystem.FilesystemPlugin"
+	},
+	{
+		"pkg": "capacitor-music-controls-plugin",
+		"classpath": "com.ingageco.capacitormusiccontrols.CapacitorMusicControls"
+	}
+]

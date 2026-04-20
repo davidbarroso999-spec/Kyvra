@@ -67,7 +67,7 @@ if (!self.define) {
     });
   };
 }
-define(['./workbox-fa6cb374'], (function (workbox) { 'use strict';
+define(['./workbox-21a80088'], (function (workbox) { 'use strict';
 
   self.skipWaiting();
   workbox.clientsClaim();
@@ -79,15 +79,15 @@ define(['./workbox-fa6cb374'], (function (workbox) { 'use strict';
    */
   workbox.precacheAndRoute([{
     "url": "index.html",
-    "revision": "e2271c90dc2ff297b7257ca73273dafc"
+    "revision": "8ff72c959f7de2cbbe20a96cd4fd0fe3"
   }, {
     "url": "assets/workbox-window.prod.es5-BIl4cyR9.js",
     "revision": null
   }, {
-    "url": "assets/index-mw5ablas.css",
+    "url": "assets/index-BtU5E8vF.js",
     "revision": null
   }, {
-    "url": "assets/index-ByAekpSO.js",
+    "url": "assets/index-14S5blng.css",
     "revision": null
   }, {
     "url": "manifest.webmanifest",
@@ -113,11 +113,20 @@ define(['./workbox-fa6cb374'], (function (workbox) { 'use strict';
       statuses: [0, 200]
     })]
   }), 'GET');
-  workbox.registerRoute(/^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/public\/.*/i, new workbox.StaleWhileRevalidate({
+  workbox.registerRoute(/^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/public\/.*/i, new workbox.CacheFirst({
     "cacheName": "supabase-storage-cache",
     plugins: [new workbox.ExpirationPlugin({
+      maxEntries: 200,
+      maxAgeSeconds: 5184000
+    }), new workbox.CacheableResponsePlugin({
+      statuses: [0, 200]
+    })]
+  }), 'GET');
+  workbox.registerRoute(/^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i, new workbox.NetworkFirst({
+    "cacheName": "supabase-api-cache",
+    plugins: [new workbox.ExpirationPlugin({
       maxEntries: 100,
-      maxAgeSeconds: 2592000
+      maxAgeSeconds: 86400
     }), new workbox.CacheableResponsePlugin({
       statuses: [0, 200]
     })]
