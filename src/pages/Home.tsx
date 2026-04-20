@@ -14,11 +14,14 @@ export function Home() {
   useEffect(() => {
     async function fetchFeatured() {
       // 1. Get featured track IDs (try JSON first, then fallback)
-      const { data: settings } = await supabase
+      const { data: settingsList } = await supabase
         .from('lore_chapters')
         .select('content')
         .eq('title', '__FEATURED_TRACKS_JSON__')
-        .single();
+        .order('id', { ascending: false })
+        .limit(1);
+      
+      const settings = settingsList?.[0];
       
       let trackIds: string[] = [];
       if (settings && settings.content) {
@@ -30,11 +33,13 @@ export function Home() {
       }
 
       if (trackIds.length === 0) {
-        const { data: oldSettings } = await supabase
+        const { data: oldSettingsList } = await supabase
           .from('lore_chapters')
           .select('content')
           .eq('title', '__FEATURED_TRACK__')
-          .single();
+          .order('id', { ascending: false })
+          .limit(1);
+        const oldSettings = oldSettingsList?.[0];
         if (oldSettings && oldSettings.content) {
           trackIds = [oldSettings.content];
         }

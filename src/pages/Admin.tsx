@@ -88,7 +88,7 @@ export function Admin() {
       .order('created_at', { ascending: false });
     
     if (!error && data) {
-      setLoreChaptersList(data);
+      setLoreChaptersList(data.filter(c => c.title && !c.title.startsWith('__')));
     }
   };
 
@@ -305,12 +305,14 @@ export function Admin() {
   };
 
   const fetchFeaturedTracks = async () => {
-    const { data } = await supabase
+    const { data: dataList } = await supabase
       .from('lore_chapters')
       .select('content')
       .eq('title', '__FEATURED_TRACKS_JSON__')
-      .single();
+      .order('id', { ascending: false })
+      .limit(1);
     
+    const data = dataList?.[0];
     if (data && data.content) {
       try {
         const ids = JSON.parse(data.content);
@@ -321,11 +323,13 @@ export function Admin() {
       } catch (e) { console.error(e); }
     }
 
-    const { data: oldData } = await supabase
+    const { data: oldDataList } = await supabase
       .from('lore_chapters')
       .select('content')
       .eq('title', '__FEATURED_TRACK__')
-      .single();
+      .order('id', { ascending: false })
+      .limit(1);
+    const oldData = oldDataList?.[0];
     if (oldData) setFeaturedTrackIds([oldData.content]);
   };
 
@@ -339,11 +343,14 @@ export function Admin() {
       const jsonContent = JSON.stringify(featuredTrackIds);
       
       // 1. Save the JSON array of featured tracks
-      const { data: existing } = await supabase
+      const { data: existingList } = await supabase
         .from('lore_chapters')
         .select('id')
         .eq('title', '__FEATURED_TRACKS_JSON__')
-        .single();
+        .order('id', { ascending: false })
+        .limit(1);
+      
+      const existing = existingList?.[0];
 
       if (existing) {
         await supabase
@@ -361,11 +368,14 @@ export function Admin() {
       }
 
       // 2. Compatibility: Update the old single featured track entry with the first one
-      const { data: oldExisting } = await supabase
+      const { data: oldExistingList } = await supabase
         .from('lore_chapters')
         .select('id')
         .eq('title', '__FEATURED_TRACK__')
-        .single();
+        .order('id', { ascending: false })
+        .limit(1);
+      
+      const oldExisting = oldExistingList?.[0];
       
       if (oldExisting) {
         await supabase.from('lore_chapters').update({ content: featuredTrackIds[0] }).eq('id', oldExisting.id);
@@ -380,11 +390,14 @@ export function Admin() {
       // 3. Generate synopses for each track if they don't exist
       for (const trackId of featuredTrackIds) {
         const synopsisTitle = `__SYNOPSIS_${trackId}__`;
-        const { data: existingSyn } = await supabase
+        const { data: existingSynList } = await supabase
           .from('lore_chapters')
           .select('id')
           .eq('title', synopsisTitle)
-          .single();
+          .order('id', { ascending: false })
+          .limit(1);
+        
+        const existingSyn = existingSynList?.[0];
 
         if (!existingSyn) {
           const { data: trackData } = await supabase

@@ -22,7 +22,7 @@ export function Lore() {
       }
 
       if (data) {
-        setChapters(data.filter(c => c.chapter_number >= 0));
+        setChapters(data.filter(c => c.title && !c.title.startsWith('__')));
       }
       setLoading(false);
     }
