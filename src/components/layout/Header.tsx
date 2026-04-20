@@ -53,7 +53,7 @@ export function Header() {
       <header
         className={cn(
           'fixed top-0 left-0 w-full z-50 transition-all duration-500',
-          isScrolled ? 'py-3 glass' : 'py-6 bg-transparent'
+          isScrolled ? 'py-3 glass-premium m-4 w-[calc(100%-2rem)] r-md' : 'py-6 bg-transparent'
         )}
       >
         <div className="max-w-7xl mx-auto px-4 md:px-6 flex items-center justify-between mt-[2px]">

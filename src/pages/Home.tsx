@@ -106,21 +106,28 @@ export function Home() {
     <div className="w-full">
       {/* Hero Section */}
       <section className="relative h-[100dvh] flex items-center justify-center px-6 overflow-hidden">
-        <div className="relative z-10 flex flex-col items-center text-center max-w-4xl mx-auto mt-16">
-          <motion.h1 
+        {/* Camadas Atmosféricas */}
+        <div className="absolute inset-0 z-0">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[140%] opacity-20 blur-[120px] bg-[radial-gradient(circle,var(--primary)_0%,transparent_70%)]" />
+        </div>
+
+        <div className="relative z-10 flex flex-col items-center text-center max-w-5xl mx-auto mt-16">
+          <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-            className="text-6xl sm:text-7xl md:text-[120px] leading-[0.95] tracking-[-0.02em] text-gradient mb-6"
+            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
           >
-            KYVRA
-          </motion.h1>
+            <span className="label-micro block mb-6 animate-pulse">SETOR DE ARQUIVO KYVRA // 2026</span>
+            <h1 className="display-large text-gradient mb-8">
+              KYVRA
+            </h1>
+          </motion.div>
           
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 1, delay: 0.4 }}
-            className="font-sc text-sm sm:text-base md:text-xl tracking-[0.2em] text-text-high mb-8 px-4"
+            transition={{ duration: 1.5, delay: 0.6 }}
+            className="label-secondary mb-10 px-4"
           >
             FRAGMENTOS DE UM UNIVERSO SOMBRIO
           </motion.p>
@@ -128,25 +135,25 @@ export function Home() {
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.6 }}
-            className="font-sans font-light text-text-mid text-sm sm:text-base md:text-lg max-w-[280px] sm:max-w-[320px] leading-[1.75] mb-12 px-4"
+            transition={{ duration: 1, delay: 0.8 }}
+            className="font-sans font-light text-text-mid text-base md:text-xl max-w-xl leading-relaxed mb-12 px-4 italic"
           >
-            Uma jornada sonora através de camadas esquecidas do tempo e do espaço.
+            "Onde a luz falha e o som se torna o único guia através do abismo consciente."
           </motion.p>
           
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.8 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 w-full px-6"
+            transition={{ duration: 1, delay: 1 }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-6 w-full px-6"
           >
-            <Link to="/arquivo" className="w-full sm:w-auto px-8 py-4 bg-primary text-void font-sans font-medium r-sm shadow-[0_0_40px_var(--glow-purple)] btn-primary-hover text-center">
+            <Link to="/arquivo" className="w-full sm:w-auto px-10 py-5 bg-primary text-void font-sans font-bold r-sm shadow-[0_0_60px_var(--glow-purple)] btn-primary-hover text-center uppercase tracking-widest text-xs">
               Explorar o Arquivo
             </Link>
 
-            <Link to="/cosmogonia" className="flex items-center gap-2 text-text-mid hover:text-primary transition-colors font-sans font-medium group mt-4 sm:mt-0">
+            <Link to="/cosmogonia" className="flex items-center gap-3 text-text-mid hover:text-primary transition-all font-sans font-medium group mt-4 sm:mt-0 active:scale-95">
+              <span className="w-8 h-[1px] bg-text-low group-hover:w-12 group-hover:bg-primary transition-all" />
               A Cosmogonia 
-              <span className="group-hover:translate-x-1 transition-transform">→</span>
             </Link>
           </motion.div>
         </div>
