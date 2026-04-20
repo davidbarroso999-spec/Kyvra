@@ -13,7 +13,8 @@
     "chmod:gradlew": "chmod +x android/gradlew",
     "build:apk": "cd android && ./gradlew assembleDebug",
     "cap:sync": "npx cap sync",
-    "cap:open": "npx cap open android"
+    "cap:open": "npx cap open android",
+    "postinstall": "sed -i 's/jcenter()/mavenCentral()/g' node_modules/capacitor-music-controls-plugin/android/build.gradle || true"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.0",
