@@ -30,8 +30,12 @@ jobs:
       - name: Sincronizar com Android (Capacitor)
         run: npx cap sync android
 
-      - name: Dar permissão ao Gradle
-        run: chmod +x android/gradlew
+      - name: Recriar Gradle Wrapper (Corrigir JAR Corrompido)
+        working-directory: ./android
+        run: |
+          rm -f gradle/wrapper/gradle-wrapper.jar
+          gradle wrapper --gradle-version 8.14.3
+          chmod +x gradlew
 
       - name: Compilar APK (Debug)
         working-directory: ./android
