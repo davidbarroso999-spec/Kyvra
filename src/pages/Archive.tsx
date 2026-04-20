@@ -323,12 +323,20 @@ export function Archive() {
                         <button
                           onClick={async (e) => {
                             e.stopPropagation();
-                            setOpenMenuId(null);
+                            const target = e.currentTarget;
+                            target.disabled = true;
+                            const originalText = target.innerText;
+                            target.innerText = 'Salvando...';
+                            
                             const success = await saveForOffline(track.audioUrl);
                             if (track.coverUrl) await saveForOffline(track.coverUrl);
-                            showFeedback(success ? 'Salvo para ouvir offline' : 'Erro ao salvar');
+                            
+                            target.innerText = success ? 'Salvo Offline ✓' : 'Erro ao salvar';
+                            showFeedback(success ? 'Fragmento sincronizado com o drive local' : 'Falha na sincronização offline');
+                            
+                            setOpenMenuId(null);
                           }}
-                          className="w-full text-left px-4 py-2.5 text-sm text-text-mid hover:text-text-high hover:bg-overlay transition-colors"
+                          className="w-full text-left px-4 py-2.5 text-sm text-text-mid hover:text-text-high hover:bg-overlay transition-colors disabled:opacity-50"
                         >
                           Salvar Offline
                         </button>

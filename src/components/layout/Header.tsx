@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, useScroll, useSpring } from 'motion/react';
 import { useStore, Theme } from '@/store/useStore';
-import { Menu, X, Moon, Sun, Droplet, Leaf, Waves, Sunset, Square } from 'lucide-react';
+import { Menu, X, Moon, Sun, Droplet, Leaf, Waves, Sunset, Square, DownloadCloud, RefreshCw, CheckCircle, Smartphone } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { syncEverythingForOffline, OfflineProgress } from '@/lib/offlineManager';
 
 const themes: { id: Theme; icon: React.ReactNode; label: string }[] = [
   { id: 'abissal', icon: <Moon size={14} />, label: 'Abissal' },
@@ -25,8 +26,28 @@ export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
+  const [syncProgress, setSyncProgress] = useState<OfflineProgress | null>(null);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle');
   const { theme, setTheme } = useStore();
   const location = useLocation();
+
+  const handleOfflineSync = async () => {
+    setSyncStatus('syncing');
+    const success = await syncEverythingForOffline((progress) => {
+      setSyncProgress(progress);
+    });
+    
+    if (success) {
+      setSyncStatus('done');
+      setTimeout(() => {
+        setSyncStatus('idle');
+        setSyncProgress(null);
+      }, 3000);
+    } else {
+      setSyncStatus('error');
+      setTimeout(() => setSyncStatus('idle'), 3000);
+    }
+  };
 
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, {
@@ -80,6 +101,32 @@ export function Header() {
 
           {/* Actions */}
           <div className="flex items-center gap-4 z-50 relative">
+            {/* Sync Offline Button */}
+            <div className="relative flex items-center">
+              <button
+                onClick={handleOfflineSync}
+                disabled={syncStatus === 'syncing'}
+                className={cn(
+                  "p-2 rounded-full transition-all duration-300 flex items-center gap-2",
+                  syncStatus === 'syncing' ? "bg-primary/20 text-primary px-3" : "hover:bg-overlay text-text-mid hover:text-primary"
+                )}
+                title="Salvar App para uso Offline"
+              >
+                {syncStatus === 'syncing' ? (
+                  <>
+                    <RefreshCw size={14} className="animate-spin" />
+                    <span className="text-[10px] font-mono font-bold">
+                      {syncProgress ? Math.round((syncProgress.current / syncProgress.total) * 100) : 0}%
+                    </span>
+                  </>
+                ) : syncStatus === 'done' ? (
+                  <CheckCircle size={16} className="text-accent" />
+                ) : (
+                  <DownloadCloud size={18} />
+                )}
+              </button>
+            </div>
+
             <div className="relative">
               <button
                 onClick={() => setIsThemeMenuOpen(!isThemeMenuOpen)}

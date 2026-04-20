@@ -4,7 +4,6 @@ const config: CapacitorConfig = {
   appId: 'com.kyvra.app',
   appName: 'Kyvra',
   webDir: 'dist',
-  bundledWebRuntime: false,
   server: {
     androidScheme: 'https'
   }

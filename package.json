@@ -10,6 +10,8 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "start": "node dist/server.js",
+    "chmod:gradlew": "chmod +x android/gradlew",
+    "build:apk": "cd android && ./gradlew assembleDebug",
     "cap:sync": "npx cap sync",
     "cap:open": "npx cap open android"
   },
@@ -24,6 +26,7 @@
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
     "gsap": "^3.15.0",
+    "idb": "^8.0.3",
     "jsmediatags": "^3.9.7",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",

@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, Reorder } from 'motion/react';
-import { Play, Pause, SkipBack, SkipForward, Repeat, Repeat1, Shuffle, Volume2, Volume1, VolumeX, AlignLeft, ListMusic, X, GripVertical, Share, Heart, SlidersHorizontal, Moon, ChevronDown, MoreVertical, Download } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Repeat, Repeat1, Shuffle, Volume2, Volume1, VolumeX, AlignLeft, ListMusic, X, GripVertical, Share, Heart, SlidersHorizontal, Moon, ChevronDown, MoreVertical, Download, WifiOff } from 'lucide-react';
 import { useStore } from '@/store/useStore';
-import { cn } from '@/lib/utils';
+import { cn, isSavedOffline } from '@/lib/utils';
 import { TrackDuration } from '@/components/ui/TrackDuration';
 import { KyvraButton } from './KyvraButton';
 
@@ -10,11 +10,23 @@ export function MiniPlayer() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showLyrics, setShowLyrics] = useState(false);
   const [showQueue, setShowQueue] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
+
   const {
     currentTrack, isPlaying, setIsPlaying, playNext, playPrevious,
     volume, isShuffle, repeatMode, toggleShuffle, toggleRepeat,
     queue, shuffledQueue, setQueue, updateQueueOrder, removeFromQueue, clearQueue, setCurrentTrack, playHistory
   } = useStore();
+
+  useEffect(() => {
+    const checkOffline = async () => {
+      if (currentTrack?.audioUrl) {
+        const saved = await isSavedOffline(currentTrack.audioUrl);
+        setIsOffline(saved);
+      }
+    };
+    checkOffline();
+  }, [currentTrack?.id]);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState('0:00');
@@ -588,7 +600,12 @@ export function MiniPlayer() {
                     {/* Title & Actions */}
                     <div className="flex items-center justify-between mb-4 sm:mb-6">
                       <div className="flex flex-col overflow-hidden pr-4 flex-1">
-                        <h2 className="text-2xl md:text-3xl font-display text-text-high mb-1 truncate">{currentTrack.title}</h2>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h2 className="text-2xl md:text-3xl font-display text-text-high truncate">{currentTrack.title}</h2>
+                          {isOffline && (
+                            <WifiOff size={14} className="text-primary opacity-50" title="Disponível Offline" />
+                          )}
+                        </div>
                         <p className="text-primary text-xs md:text-sm tracking-[0.1em] font-sc truncate opacity-80 uppercase">{currentTrack.artist}</p>
                       </div>
                     </div>
