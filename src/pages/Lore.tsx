@@ -2,14 +2,13 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '@/lib/supabase';
 import { getAI, MODELS, generateText } from '@/lib/ai';
-import { Sparkles, Loader2 } from 'lucide-react';
+import { Sparkles, Loader2, BookOpen, Calendar, ChevronDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export function Lore() {
   const [chapters, setChapters] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [explanations, setExplanations] = useState<Record<number, string>>({});
-  const [paragraphExplanations, setParagraphExplanations] = useState<Record<string, string>>({});
-  const [loadingExplanations, setLoadingExplanations] = useState<Record<string, boolean>>({}); // key: chapterId or `${chapterId}-${pIndex}`
+  const [expandedChapterId, setExpandedChapterId] = useState<number | null>(null);
 
   useEffect(() => {
     async function fetchLore() {
@@ -30,198 +29,127 @@ export function Lore() {
     fetchLore();
   }, []);
 
-  const handleExplainLore = async (chapter: any, text?: string, pIndex?: number) => {
-    const textToAnalyze = text || chapter.content;
-    const key = pIndex !== undefined ? `${chapter.id}-${pIndex}` : `${chapter.id}`;
-    
-    // Only return early if we have a successful explanation (not an error message)
-    if (pIndex !== undefined && paragraphExplanations[key] && !paragraphExplanations[key].includes("inaudíveis") && !paragraphExplanations[key].includes("configurada")) return;
-    if (pIndex === undefined && explanations[chapter.id] && !explanations[chapter.id].includes("inaudíveis") && !explanations[chapter.id].includes("configurada")) return;
-
-    setLoadingExplanations(prev => ({ ...prev, [key]: true }));
-
-    const prompt = `Você é o Cronista de Kyvra. Sua missão é explicar este trecho da história "${chapter.title}" sob a ótica do Arco Psicológico de Kyvra.
-
-      FILOSOFIA KYVRA (O Arco Psicológico):
-      1. ✨ Fascínio: O amor é visto como salvação sobrenatural, mas as almas não se tocam, apenas especulam.
-      2. 🔥 Entrega: Perda de identidade e mergulho espiritual completo.
-      3. 🌑 Obsessão: O amor vira vício, ciúme e dependência dolorosa.
-      4. 🩸 Ruína: A percepção de que o amor destrói, mas a escolha consciente pelo abismo em vez do vazio.
-      5. 🕯️ Consciência: O entendimento da dor sem arrependimento, abraçando a destruição com um toque de narcisismo.
-
-      ESTÉTICA: Gótica, íntima e dramática (estilo Evanescence/Black Veil Brides).
-
-      Analise este trecho: "${textToAnalyze}"
-      
-      Sua missão:
-      1. Identifique em qual estágio do arco este momento se encontra.
-      2. Explique o que está acontecendo de forma visceral e clara.
-      3. Conecte com o diferencial de Kyvra: o abraço à destruição e o ego do eu lírico.
-      4. Compare com uma obra histórica/cultural real que transmita essa mesma sensação.
-      
-      REGRAS CRÍTICAS: 
-      - NÃO use asteriscos (*) ou (**).
-      - Use no máximo 2 parágrafos curtos.`;
-
-    try {
-      const explanation = await generateText(prompt, MODELS.TEXT);
-      if (pIndex !== undefined) {
-        setParagraphExplanations(prev => ({ ...prev, [key]: explanation }));
-      } else {
-        setExplanations(prev => ({ ...prev, [chapter.id]: explanation }));
-      }
-    } catch (err) {
-      console.error("Erro ao gerar explicação:", err);
-      const errorMsg = "As brumas do tempo obscurecem esta interpretação. Verifique a conexão com a IA.";
-      if (pIndex !== undefined) {
-        setParagraphExplanations(prev => ({ ...prev, [key]: errorMsg }));
-      } else {
-        setExplanations(prev => ({ ...prev, [chapter.id]: errorMsg }));
-      }
-    } finally {
-      setLoadingExplanations(prev => ({ ...prev, [key]: false }));
-    }
-  };
-
   return (
-    <div className="w-full pt-32 px-6 pb-32 max-w-4xl mx-auto">
+    <div className="w-full pt-32 px-6 pb-32 max-w-3xl mx-auto">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-16 flex items-end justify-between border-b border-border pb-8"
+        className="mb-12 flex flex-col items-center justify-center text-center"
       >
-        <div>
-          <span className="font-sc text-[11px] tracking-[0.3em] text-primary block mb-3">COSMOGONIA DE KYVRA</span>
-          <h1 className="text-5xl md:text-7xl leading-none">A História</h1>
+        <div className="flex items-center gap-3 text-text-high mb-2">
+          <BookOpen className="text-primary" size={28} />
+          <h1 className="text-2xl tracking-widest font-display uppercase shrink-0">Linha do Tempo</h1>
         </div>
-        <span className="font-mono text-xs text-text-low pb-2 hidden md:block">
-          {chapters.length} {chapters.length === 1 ? 'capítulo' : 'capítulos'}
-        </span>
       </motion.div>
 
       {loading ? (
-        <div className="flex justify-center text-primary">Decifrando os arquivos antigos...</div>
+        <div className="flex flex-col items-center justify-center py-20 text-primary">
+          <Loader2 size={32} className="animate-spin mb-4" />
+          <span className="font-sc tracking-widest text-sm">Decifrando Arquivos...</span>
+        </div>
       ) : chapters.length === 0 ? (
-        <div className="text-center text-text-low">Nenhum fragmento de história foi encontrado.</div>
+        <div className="text-center text-text-low py-12 border border-border/50 rounded-xl bg-void/50">
+          Nenhum fragmento de história foi encontrado.
+        </div>
       ) : (
-        <div className="relative">
-          {/* Timeline Line (Desktop) */}
-          <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-[1px] bg-gradient-to-b from-primary to-secondary shadow-[0_0_8px_var(--primary)] -translate-x-1/2" />
+        <div className="flex flex-col gap-6 relative z-10 w-full mx-auto">
+          {chapters.map((chapter) => {
+            const isExpanded = expandedChapterId === chapter.id;
 
-          <div className="flex flex-col gap-24">
-            {chapters.map((chapter, index) => {
-              const isEven = index % 2 === 0;
-              return (
-                <div 
-                  key={chapter.id}
-                  className={`relative flex flex-col md:flex-row gap-8 md:gap-16 ${isEven ? 'md:flex-row-reverse' : ''}`}
-                >
-                  {/* Timeline Node */}
-                  <div className="hidden md:block absolute left-1/2 top-8 w-3 h-3 rounded-full border border-primary bg-void shadow-[0_0_10px_var(--primary)] -translate-x-1/2 z-10" />
+            return (
+              <motion.div 
+                layout
+                key={chapter.id}
+                onClick={() => setExpandedChapterId(isExpanded ? null : chapter.id)}
+                className={cn(
+                  "relative bg-void border rounded-xl p-6 cursor-pointer overflow-hidden transition-colors origin-top",
+                  isExpanded ? "border-primary" : "border-border/50 hover:border-primary/50"
+                )}
+                style={{ borderRadius: '12px' }}
+              >
+                {/* Background Glow for active state */}
+                {isExpanded && (
+                  <motion.div
+                    layoutId={`glow-${chapter.id}`}
+                    className="absolute inset-0 bg-primary/[0.03] pointer-events-none"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  />
+                )}
 
-                  {/* Content */}
-                  <div className={`flex-1 ${isEven ? 'md:text-right' : 'md:text-left'}`}>
-                    <span className="font-sc text-[11px] tracking-[0.2em] text-primary mb-2 block">
-                      {chapter.timeline_date || `Capítulo ${chapter.chapter_number}`}
-                    </span>
-                    <h2 className="text-3xl md:text-4xl mb-6">{chapter.title}</h2>
+                <motion.div layout className="relative z-10 space-y-3">
+                  <div className="flex flex-col gap-2">
+                    <motion.div layout className="flex items-center gap-2 text-primary font-medium text-sm">
+                      <Calendar size={14} className="shrink-0" />
+                      <span>{chapter.timeline_date || `Capítulo ${chapter.chapter_number}`}</span>
+                    </motion.div>
                     
-                    {chapter.image_url && (
-                      <div className={`mb-8 flex ${isEven ? 'justify-end' : 'justify-start'}`}>
-                        <img 
-                          src={chapter.image_url} 
-                          alt={chapter.title}
-                          className="w-full max-w-md r-md shadow-[0_10px_30px_rgba(0,0,0,0.5)] border border-border/50 object-cover aspect-video"
-                          referrerPolicy="no-referrer"
-                        />
-                      </div>
-                    )}
-
-                    <div className="prose prose-invert max-w-none">
-                      <div className="space-y-8 mb-8">
-                        {chapter.content.split('\n\n').map((paragraph, pIdx) => (
-                          <div key={pIdx} className="group relative">
-                            <p className="font-sans font-light text-[17px] leading-[1.9] text-text-mid whitespace-pre-line">
-                              {paragraph}
-                            </p>
-                            
-                            <div className={`mt-4 flex flex-col ${isEven ? 'items-end' : 'items-start'}`}>
-                              {!paragraphExplanations[`${chapter.id}-${pIdx}`] && (
-                                <button 
-                                  onClick={() => handleExplainLore(chapter, paragraph, pIdx)}
-                                  disabled={loadingExplanations[`${chapter.id}-${pIdx}`]}
-                                  className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-primary/60 hover:text-primary disabled:opacity-50"
-                                >
-                                  {loadingExplanations[`${chapter.id}-${pIdx}`] ? (
-                                    <Loader2 size={10} className="animate-spin" />
-                                  ) : (
-                                    <Sparkles size={10} />
-                                  )}
-                                  Decifrar Parágrafo
-                                </button>
-                              )}
-
-                              <AnimatePresence>
-                                {paragraphExplanations[`${chapter.id}-${pIdx}`] && (
-                                  <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="w-full bg-primary/5 border border-primary/10 r-md p-4 mt-2 text-left"
-                                  >
-                                    <p className="text-text-mid text-xs leading-relaxed italic">
-                                      {paragraphExplanations[`${chapter.id}-${pIdx}`]}
-                                    </p>
-                                  </motion.div>
-                                )}
-                              </AnimatePresence>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      
-                      <div className={`flex flex-col gap-4 mt-8 ${isEven ? 'items-end' : 'items-start'}`}>
-                        {!explanations[chapter.id] && (
-                          <button
-                            onClick={() => handleExplainLore(chapter)}
-                            disabled={loadingExplanations[`${chapter.id}`]}
-                            className="flex items-center gap-2 px-4 py-2 bg-surface border border-primary/30 text-primary rounded-full hover:bg-primary/10 transition-colors text-sm font-medium"
-                          >
-                            {loadingExplanations[`${chapter.id}`] ? (
-                              <Loader2 size={16} className="animate-spin" />
-                            ) : (
-                              <Sparkles size={16} />
-                            )}
-                            Decifrar Capítulo Completo
-                          </button>
-                        )}
-
-                        <AnimatePresence>
-                          {explanations[chapter.id] && (
-                            <motion.div
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: 'auto' }}
-                              className="w-full bg-primary/5 border border-primary/20 r-md p-6 mt-4 text-left"
-                            >
-                              <div className="flex items-center gap-2 text-primary mb-3">
-                                <Sparkles size={18} />
-                                <h4 className="font-display text-lg">Visão do Arquivista</h4>
-                              </div>
-                              <p className="text-text-mid text-sm leading-relaxed italic whitespace-pre-line">
-                                {explanations[chapter.id]}
-                              </p>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    </div>
+                    <motion.h2 layout className="text-xl sm:text-2xl font-display text-text-high uppercase leading-tight font-light">
+                      {chapter.title}
+                    </motion.h2>
                   </div>
                   
-                  {/* Empty space for the other side of the timeline */}
-                  <div className="hidden md:block flex-1" />
-                </div>
-              );
-            })}
-          </div>
+                  {!isExpanded && (
+                    <motion.p 
+                      layout
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="text-text-mid text-sm leading-relaxed line-clamp-2"
+                    >
+                      {chapter.content}
+                    </motion.p>
+                  )}
+                </motion.div>
+
+                <AnimatePresence>
+                  {isExpanded && (
+                    <motion.div
+                      layout
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="relative z-10 mt-6"
+                    >
+                      {chapter.image_url && (
+                        <div className="mb-6 rounded-lg overflow-hidden border border-border/50 shadow-lg">
+                          <img 
+                            src={chapter.image_url} 
+                            alt={chapter.title}
+                            className="w-full object-cover aspect-video"
+                            referrerPolicy="no-referrer"
+                          />
+                        </div>
+                      )}
+
+                      <div className="prose prose-invert max-w-none">
+                        <div className="space-y-6">
+                          {chapter.content.split('\n\n').map((paragraph: string, pIdx: number) => (
+                            <p key={pIdx} className="font-sans font-light text-base sm:text-[17px] leading-[1.9] text-text-mid whitespace-pre-line">
+                              {paragraph}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="mt-8 flex justify-center pb-2">
+                        <button 
+                          className="flex items-center justify-center p-2 rounded-full border border-border text-text-low hover:text-text-high hover:border-primary/50 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedChapterId(null);
+                          }}
+                        >
+                          <ChevronDown size={20} className="rotate-180" />
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            );
+          })}
         </div>
       )}
     </div>

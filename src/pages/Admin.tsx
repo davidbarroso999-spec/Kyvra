@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Upload, Lock, X, Plus, Sparkles, CheckCircle2, Edit3, Save, Trash2, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
+import { Upload, Lock, X, Plus, Sparkles, CheckCircle2, Edit3, Save, Trash2, ChevronDown, ChevronUp, RefreshCw, Edit2, Book, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getAI, MODELS, generateText, generateMultimodal } from '@/lib/ai';
 import { supabase } from '@/lib/supabase';
@@ -21,6 +21,12 @@ export function Admin() {
   const [isGeneratingSynopses, setIsGeneratingSynopses] = useState(false);
   const [albumSuccess, setAlbumSuccess] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
+
+  // Lore State
+  const [loreChaptersList, setLoreChaptersList] = useState<any[]>([]);
+  const [loreView, setLoreView] = useState<'list' | 'form'>('list');
+  const [editingLoreId, setEditingLoreId] = useState<number | null>(null);
+  const [isDeletingLore, setIsDeletingLore] = useState<number | null>(null);
 
   const [loreChapter, setLoreChapter] = useState('');
   const [loreTimeline, setLoreTimeline] = useState('');
@@ -70,7 +76,21 @@ export function Admin() {
     if (isAuthenticated && activeTab === 'acervo') {
       fetchAllAlbums();
     }
+    if (isAuthenticated && activeTab === 'lore') {
+      fetchLoreChapters();
+    }
   }, [isAuthenticated, activeTab]);
+
+  const fetchLoreChapters = async () => {
+    const { data, error } = await supabase
+      .from('lore_chapters')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (!error && data) {
+      setLoreChaptersList(data);
+    }
+  };
 
   const fetchAllAlbums = async () => {
     const { data, error } = await supabase
@@ -546,24 +566,44 @@ export function Admin() {
         imageUrl = publicUrlData.publicUrl;
       }
 
-      // Inserir no banco de dados
-      const { error: dbError } = await supabase.from('lore_chapters').insert({
+      // Inserir ou atualizar no banco de dados
+      const payload: any = {
         chapter_number: loreChapter,
         title: loreTitle,
         timeline_date: loreTimeline,
         content: loreContent,
-        image_url: imageUrl
-      });
+      };
 
-      if (dbError) throw dbError;
+      if (imageUrl) {
+        payload.image_url = imageUrl;
+      }
 
-      setLoreSuccess('Capítulo registrado no cosmos com sucesso!');
+      if (editingLoreId) {
+        const { error: dbError } = await supabase
+          .from('lore_chapters')
+          .update(payload)
+          .eq('id', editingLoreId);
+        
+        if (dbError) throw dbError;
+        setLoreSuccess('Capítulo atualizado com sucesso!');
+      } else {
+        const { error: dbError } = await supabase
+          .from('lore_chapters')
+          .insert(payload);
+        
+        if (dbError) throw dbError;
+        setLoreSuccess('Capítulo registrado no cosmos com sucesso!');
+      }
+
       setLoreTitle('');
       setLoreContent('');
       setLoreChapter('');
       setLoreTimeline('');
       setGeneratedImage(null);
       setLoreImageFile(null);
+      setEditingLoreId(null);
+      setLoreView('list');
+      fetchLoreChapters();
       
       setTimeout(() => setLoreSuccess(''), 5000);
     } catch (err: any) {
@@ -572,6 +612,50 @@ export function Admin() {
     } finally {
       setIsPublishingLore(false);
     }
+  };
+
+  const handleDeleteLore = async (loreId: number) => {
+    if (!window.confirm('Tem certeza que deseja excluir este capítulo da Lore? Esta ação é irreversível.')) return;
+    
+    setIsDeletingLore(loreId);
+    setError('');
+    
+    try {
+      const chapter = loreChaptersList.find(c => c.id === loreId);
+      
+      const { error: dbError } = await supabase
+        .from('lore_chapters')
+        .delete()
+        .eq('id', loreId);
+      
+      if (dbError) throw dbError;
+
+      if (chapter?.image_url) {
+        const coverName = chapter.image_url.split('/').pop();
+        if (coverName) await supabase.storage.from('kyvra_images').remove([coverName]);
+      }
+
+      setLoreSuccess('Capítulo excluído com sucesso.');
+      setLoreChaptersList(loreChaptersList.filter(c => c.id !== loreId));
+      setTimeout(() => setLoreSuccess(''), 3000);
+    } catch (err: any) {
+      console.error('Erro ao excluir lore:', err);
+      setError('Falha ao excluir capítulo: ' + err.message);
+    } finally {
+      setIsDeletingLore(null);
+    }
+  };
+
+  const handleEditLore = (chapter: any) => {
+    setLoreTitle(chapter.title || '');
+    setLoreContent(chapter.content || '');
+    setLoreChapter(chapter.chapter_number || '');
+    setLoreTimeline(chapter.timeline_date || '');
+    setEditingLoreId(chapter.id);
+    setLoreView('form');
+    setGeneratedImage(null);
+    setLoreImageFile(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handlePublishAlbum = async () => {
@@ -1339,9 +1423,88 @@ export function Admin() {
           )}
         </div>
       ) : activeTab === 'lore' ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="md:col-span-2 glass p-6 rounded-xl">
-            <h2 className="text-xl mb-6">Adicionar Capítulo da Cosmogonia</h2>
+        <div className="w-full">
+          {loreView === 'list' ? (
+            <div className="flex flex-col space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-display text-text-high uppercase tracking-widest">Capítulos da Lore</h2>
+                <button
+                  onClick={() => {
+                    setEditingLoreId(null);
+                    setLoreTitle('');
+                    setLoreContent('');
+                    setLoreChapter('');
+                    setLoreTimeline('');
+                    setGeneratedImage(null);
+                    setLoreImageFile(null);
+                    setLoreView('form');
+                  }}
+                  className="flex items-center gap-2 px-6 py-3 bg-primary text-void rounded-xl font-medium hover:bg-primary/90 transition-all shadow-lg"
+                >
+                  <Book size={18} />
+                  <span>Novo Capítulo</span>
+                </button>
+              </div>
+
+              <div className="grid gap-4 mt-6">
+                {loreChaptersList.length === 0 ? (
+                  <div className="text-center text-text-low py-12 border border-border rounded-xl">
+                    Nenhum capítulo encontrado no cosmos.
+                  </div>
+                ) : (
+                  loreChaptersList.map((chapter) => (
+                    <div key={chapter.id} className="relative bg-void border border-border/50 rounded-xl p-6 transition-colors hover:border-border">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="space-y-3">
+                          <p className="text-primary text-sm font-medium tracking-wide">
+                            {chapter.timeline_date || `Capítulo ${chapter.chapter_number}`}
+                          </p>
+                          <h3 className="text-xl font-display text-text-high leading-tight uppercase">
+                            {chapter.title}
+                          </h3>
+                          <p className="text-text-mid text-sm line-clamp-2">
+                            {chapter.content}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <button
+                            onClick={() => handleEditLore(chapter)}
+                            className="text-primary/70 hover:text-primary transition-colors"
+                            title="Editar Capítulo"
+                          >
+                            <Edit2 size={20} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteLore(chapter.id)}
+                            disabled={isDeletingLore === chapter.id}
+                            className="text-red-400/70 hover:text-red-400 transition-colors"
+                            title="Excluir Capítulo"
+                          >
+                            {isDeletingLore === chapter.id ? (
+                              <Loader2 size={20} className="animate-spin" />
+                            ) : (
+                              <Trash2 size={20} />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+              <div className="md:col-span-3 mb-2 flex items-center justify-between">
+                <h2 className="text-xl">{editingLoreId ? 'Editar Capítulo' : 'Adicionar Capítulo da Cosmogonia'}</h2>
+                <button 
+                  onClick={() => setLoreView('list')}
+                  className="px-4 py-2 border border-border rounded text-sm hover:bg-surface transition-colors"
+                >
+                  Voltar para Lista
+                </button>
+              </div>
+              <div className="md:col-span-2 glass p-6 rounded-xl">
             
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1455,6 +1618,8 @@ export function Admin() {
               </button>
             </div>
           </div>
+            </div>
+          )}
         </div>
       ) : activeTab === 'editar_letras' ? (
         <div className="glass p-6 rounded-xl">
