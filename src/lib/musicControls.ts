@@ -42,7 +42,7 @@ export function createMusicControls(options: MusicControlsOptions) {
     prevIcon: 'media_prev',
     nextIcon: 'media_next',
     closeIcon: 'media_close',
-    notificationIcon: 'notification',
+    notificationIcon: '',
   }, () => {}, () => {});
 }
 

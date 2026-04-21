@@ -49,7 +49,7 @@ export function MiniPlayer() {
   useEffect(() => {
     updateMusicControlsState(isPlaying);
     // Also sync the native audio element
-    if (audioRef.current) {
+    if (audioRef.current && actualAudioUrl) {
       if (isPlaying) {
         const playPromise = audioRef.current.play();
         if (playPromise !== undefined) {
@@ -63,7 +63,7 @@ export function MiniPlayer() {
         audioRef.current.pause();
       }
     }
-  }, [isPlaying]);
+  }, [isPlaying, actualAudioUrl]);
 
   useEffect(() => {
     const checkOffline = async () => {
@@ -354,8 +354,14 @@ export function MiniPlayer() {
         <audio 
           ref={audioRef} 
           src={actualAudioUrl} 
+          autoPlay={isPlaying}
           onTimeUpdate={handleTimeUpdate}
           onEnded={handleEnded}
+          onCanPlay={() => {
+            if (isPlaying && audioRef.current) {
+              audioRef.current.play().catch(() => {});
+            }
+          }}
         />
       )}
       
