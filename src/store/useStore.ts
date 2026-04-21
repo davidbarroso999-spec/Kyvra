@@ -88,19 +88,17 @@ export const useStore = create<AppState>()(
 
       setQueue: (newQueue) => {
         const { isShuffle, currentTrack } = get();
-        
-        // Se o shuffle estiver ativo, precisamos atualizar a shuffledQueue respeitando a nova ordem da queue
-        // mas mantendo o shuffle funcional.
         if (isShuffle) {
-          // Mantém a música atual no topo no shuffle se ela estiver na nova fila
           const withoutCurrent = newQueue.filter(t => t.id !== currentTrack?.id);
           const shuffled = shuffleArray(withoutCurrent);
-          const newShuffledQueue = currentTrack && newQueue.find(t => t.id === currentTrack.id) 
-            ? [currentTrack, ...shuffled] 
+          const newShuffledQueue = currentTrack && newQueue.find(t => t.id === currentTrack.id)
+            ? [currentTrack, ...shuffled]
             : shuffled;
           set({ queue: newQueue, shuffledQueue: newShuffledQueue });
         } else {
-          set({ queue: newQueue, shuffledQueue: shuffleArray(newQueue) });
+          // Quando shuffle está OFF, não precisa recalcular a shuffledQueue
+          // Ela só será gerada quando o usuário ativar o shuffle
+          set({ queue: newQueue });
         }
       },
 

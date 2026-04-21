@@ -6,7 +6,12 @@ import { cn, isSavedOffline, getOfflineUrl } from '@/lib/utils';
 import { TrackDuration } from '@/components/ui/TrackDuration';
 import { KyvraButton } from './KyvraButton';
 import { Capacitor } from '@capacitor/core';
-import { CapacitorMusicControls } from 'capacitor-music-controls-plugin';
+import {
+  createMusicControls,
+  updateMusicControlsState,
+  registerMusicControlsListeners,
+  destroyMusicControls,
+} from '@/lib/musicControls';
 
 export function MiniPlayer() {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -20,6 +25,45 @@ export function MiniPlayer() {
     volume, isShuffle, repeatMode, toggleShuffle, toggleRepeat,
     queue, shuffledQueue, setQueue, updateQueueOrder, removeFromQueue, clearQueue, setCurrentTrack, playHistory
   } = useStore();
+
+  useEffect(() => {
+    registerMusicControlsListeners({
+      onPlay:     () => setIsPlaying(true),
+      onPause:    () => setIsPlaying(false),
+      onNext:     () => playNext(),
+      onPrevious: () => playPrevious(),
+      onStop:     () => { setIsPlaying(false); destroyMusicControls(); },
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!currentTrack) return;
+    createMusicControls({
+      title: currentTrack.title,
+      artist: currentTrack.artist || 'Kyvra',
+      cover: currentTrack.coverUrl,
+      isPlaying,
+    });
+  }, [currentTrack]);
+
+  useEffect(() => {
+    updateMusicControlsState(isPlaying);
+    // Also sync the native audio element
+    if (audioRef.current) {
+      if (isPlaying) {
+        const playPromise = audioRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(e => {
+            if (e.name !== 'AbortError') {
+              console.error("Error playing audio:", e);
+            }
+          });
+        }
+      } else {
+        audioRef.current.pause();
+      }
+    }
+  }, [isPlaying]);
 
   useEffect(() => {
     const checkOffline = async () => {
@@ -89,119 +133,6 @@ export function MiniPlayer() {
       if (timeDisplayRef.current) timeDisplayRef.current.innerText = '0:00';
     }
   }, [currentTrack?.id]);
-
-  useEffect(() => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        const playPromise = audioRef.current.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(e => {
-            if (e.name !== 'AbortError') {
-              console.error("Error playing audio:", e);
-            }
-          });
-        }
-      } else {
-        audioRef.current.pause();
-      }
-    }
-  }, [isPlaying, currentTrack]);
-
-  // Media Session API & Native Music Controls
-  useEffect(() => {
-    if (!currentTrack) return;
-
-    if (Capacitor.isNativePlatform()) {
-      // Native Lockscreen / Notification Controls
-      CapacitorMusicControls.create({
-        track: currentTrack.title,
-        artist: currentTrack.artist || 'Kyvra',
-        album: currentTrack.albumTitle || 'Kyvra',
-        cover: currentTrack.coverUrl || '',
-        isPlaying: isPlaying,
-        dismissable: false, // keep it running
-        hasPrev: true,
-        hasNext: true,
-        hasClose: false,
-        playIcon: 'media_play',
-        pauseIcon: 'media_pause',
-        prevIcon: 'media_prev',
-        nextIcon: 'media_next',
-        closeIcon: 'media_close',
-        notificationIcon: 'notification'
-      }).then(() => {
-        CapacitorMusicControls.addListener('controlsNotification', (info: any) => {
-          if (!info) return;
-          const message = info.message;
-          switch(message) {
-            case 'music-controls-next':
-              handleNext();
-              break;
-            case 'music-controls-previous':
-              handlePrev();
-              break;
-            case 'music-controls-pause':
-              setIsPlaying(false);
-              if (audioRef.current) audioRef.current.pause();
-              break;
-            case 'music-controls-play':
-              setIsPlaying(true);
-              if (audioRef.current) audioRef.current.play();
-              break;
-            case 'music-controls-destroy':
-              setIsPlaying(false);
-              if (audioRef.current) audioRef.current.pause();
-              break;
-          }
-        });
-      }).catch(console.error);
-
-    } else if ('mediaSession' in navigator) {
-      // Web Media Session fallback
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: currentTrack.title,
-        artist: currentTrack.artist || 'Kyvra',
-        album: currentTrack.albumTitle || 'Kyvra',
-        artwork: [
-          { src: currentTrack.coverUrl || '', sizes: '512x512', type: 'image/jpeg' }
-        ]
-      });
-
-      navigator.mediaSession.setActionHandler('play', () => { setIsPlaying(true); if(audioRef.current) audioRef.current.play(); });
-      navigator.mediaSession.setActionHandler('pause', () => { setIsPlaying(false); if(audioRef.current) audioRef.current.pause(); });
-      navigator.mediaSession.setActionHandler('previoustrack', () => handlePrev());
-      navigator.mediaSession.setActionHandler('nexttrack', () => handleNext());
-      
-      try {
-        navigator.mediaSession.setActionHandler('seekbackward', (details) => {
-          if (audioRef.current) {
-            audioRef.current.currentTime = Math.max(audioRef.current.currentTime - (details.seekOffset || 10), 0);
-          }
-        });
-        navigator.mediaSession.setActionHandler('seekforward', (details) => {
-          if (audioRef.current) {
-            audioRef.current.currentTime = Math.min(audioRef.current.currentTime + (details.seekOffset || 10), audioRef.current.duration);
-          }
-        });
-      } catch (e) {
-        // Ignored
-      }
-    }
-
-    return () => {
-      if (Capacitor.isNativePlatform()) {
-        CapacitorMusicControls.destroy().catch(console.error);
-        CapacitorMusicControls.removeAllListeners();
-      }
-    };
-  }, [currentTrack]); // Don't trigger on isPlaying change, handled separately below
-
-  // Sync isPlaying state to Native Controls
-  useEffect(() => {
-    if (Capacitor.isNativePlatform() && currentTrack) {
-      CapacitorMusicControls.updateIsPlaying({ isPlaying }).catch(console.error);
-    }
-  }, [isPlaying]);
 
   useEffect(() => {
     if (audioRef.current) {
