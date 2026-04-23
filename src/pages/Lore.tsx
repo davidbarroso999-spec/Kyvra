@@ -56,7 +56,7 @@ export function Lore() {
             Nenhuma memória foi recuperada do arquivo central.
           </div>
         ) : (
-          <div className="flex flex-col lg:flex-row w-full h-auto min-h-[85vh] gap-3 lg:gap-4 pb-10">
+          <div className="flex flex-col w-full h-auto min-h-[85vh] gap-4 pb-10">
             {chapters.map((chapter, index) => (
               <motion.div
                 key={chapter.id}
@@ -79,8 +79,8 @@ export function Lore() {
                 className={cn(
                   "group relative overflow-hidden transition-[flex,background-color] duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] r-md flex flex-col translate-z-0",
                   expandedId === chapter.id 
-                    ? "flex-none lg:flex-[10] shadow-[0_8px_30px_rgba(0,0,0,0.5)] cursor-default glass-premium" 
-                    : "flex-none lg:flex-[1] min-h-[140px] lg:min-h-[0px] glass hover:border-primary/40 shadow-sm cursor-pointer"
+                    ? "flex-none h-auto shadow-[0_8px_30px_rgba(0,0,0,0.5)] cursor-default glass-premium" 
+                    : "flex-[1] min-h-[140px] lg:min-h-[180px] glass hover:border-primary/40 shadow-sm cursor-pointer"
                 )}
               >
                 {/* Image Background */}
@@ -107,10 +107,10 @@ export function Lore() {
 
                 {/* Content Overlay */}
                 <div className={cn(
-                  "relative z-10 w-full p-4 lg:p-8 flex flex-col transition-all duration-500",
+                  "relative z-10 w-full p-4 lg:p-10 flex flex-col transition-all duration-500",
                   expandedId === chapter.id 
                     ? "justify-start h-auto overflow-visible" 
-                    : "justify-center items-center lg:items-start lg:justify-end h-full overflow-hidden"
+                    : "justify-end items-start h-full overflow-hidden"
                 )}>
                   
                   <div 
@@ -118,7 +118,7 @@ export function Lore() {
                       "flex transition-all duration-500 w-full relative",
                       expandedId === chapter.id 
                         ? "flex-col mb-8 items-start cursor-pointer group/header hover:opacity-80" 
-                        : "flex-row lg:flex-col items-center lg:items-start justify-center lg:justify-end gap-3 lg:gap-2"
+                        : "flex-col md:flex-row items-start md:items-end justify-start gap-2 md:gap-6"
                     )}
                     onClick={(e) => {
                       if (expandedId === chapter.id) {
@@ -142,10 +142,10 @@ export function Lore() {
                     </span>
 
                     <h2 className={cn(
-                      "font-display leading-[1.1] tracking-tight text-text-high transition-transform duration-500 m-0",
+                      "font-display leading-[1.1] tracking-tight text-text-high transition-all duration-500 m-0",
                       expandedId === chapter.id 
                         ? "text-4xl md:text-5xl lg:text-7xl mt-4" 
-                        : "text-lg md:text-xl lg:text-2xl lg:w-full lg:whitespace-normal line-clamp-1 lg:line-clamp-2 text-center lg:text-left"
+                        : "text-2xl md:text-4xl lg:text-5xl lg:w-full line-clamp-1 text-left"
                     )}>
                       {chapter.title}
                     </h2>
@@ -158,7 +158,7 @@ export function Lore() {
                     )}
                   >
                     <div className="overflow-hidden">
-                      <div className="w-[85vw] max-w-6xl lg:w-[60vw] xl:w-[1000px] pb-4 pt-2">
+                      <div className="w-full max-w-6xl mx-auto pb-4 pt-2">
                         <div className="h-[1px] w-12 bg-primary/40 mb-10" />
                         <div className="flex flex-col-reverse lg:grid lg:grid-cols-12 gap-8 lg:gap-16">
                           <div className="lg:col-span-7 prose prose-invert max-w-none">
