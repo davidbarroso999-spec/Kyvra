@@ -12,27 +12,10 @@ import { AlbumDetail } from './pages/AlbumDetail';
 import { Lore } from './pages/Lore';
 import { Admin } from './pages/Admin';
 import { useStore } from './store/useStore';
-import React, { useEffect } from 'react';
-import { Capacitor } from '@capacitor/core';
+import React from 'react';
 
 export default function App() {
   const { theme } = useStore();
-
-  useEffect(() => {
-    async function requestNotificationPermission() {
-      if (!Capacitor.isNativePlatform()) return;
-      try {
-        const { LocalNotifications } = await import('@capacitor/local-notifications');
-        const perm = await LocalNotifications.checkPermissions();
-        if (perm.display !== 'granted') {
-          await LocalNotifications.requestPermissions();
-        }
-      } catch (e) {
-        // Plugin não disponível — sem problema, prossegue normalmente
-      }
-    }
-    requestNotificationPermission();
-  }, []);
 
   React.useEffect(() => {
     // Apply theme to document

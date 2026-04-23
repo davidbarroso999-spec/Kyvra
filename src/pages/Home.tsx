@@ -145,14 +145,13 @@ export function Home() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, delay: 1 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-6 w-full px-6"
+            className="flex flex-row items-center justify-center gap-4 w-full px-2 max-w-sm mx-auto pb-20"
           >
-            <Link to="/arquivo" className="w-full sm:w-auto px-10 py-5 bg-primary text-void font-sans font-bold r-sm shadow-[0_0_60px_var(--glow-purple)] btn-primary-hover text-center uppercase tracking-widest text-xs">
-              Explorar o Arquivo
+            <Link to="/arquivo" className="btn-uiverse text-[10px] sm:text-xs text-center flex-1 px-2 py-3 sm:px-6 sm:py-4">
+              Explorar
             </Link>
 
-            <Link to="/cosmogonia" className="flex items-center gap-3 text-text-mid hover:text-primary transition-all font-sans font-medium group mt-4 sm:mt-0 active:scale-95">
-              <span className="w-8 h-[1px] bg-text-low group-hover:w-12 group-hover:bg-primary transition-all" />
+            <Link to="/cosmogonia" className="btn-uiverse text-[10px] sm:text-xs text-center flex-1 px-2 py-3 sm:px-6 sm:py-4" style={{ background: 'transparent', border: '1px solid var(--border)', boxShadow: 'none' }}>
               A Cosmogonia 
             </Link>
           </motion.div>
@@ -202,7 +201,7 @@ export function Home() {
         <div className="max-w-4xl mx-auto relative z-10">
           {/* Label acima */}
           <span className="font-sc text-[10px] tracking-[0.3em] text-primary/60 block mb-8">
-            FRAGMENTO I
+            I
           </span>
           
           {/* Citação alinhada à esquerda */}

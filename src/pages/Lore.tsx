@@ -56,27 +56,38 @@ export function Lore() {
             Nenhuma memória foi recuperada do arquivo central.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="flex flex-col lg:flex-row w-full h-auto min-h-[85vh] gap-3 lg:gap-4 pb-10">
             {chapters.map((chapter, index) => (
               <motion.div
                 key={chapter.id}
+                id={`chapter-${chapter.id}`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                layoutId={`card-${chapter.id}`}
-                onClick={() => setExpandedId(expandedId === chapter.id ? null : chapter.id)}
+                onClick={() => {
+                  if (expandedId !== chapter.id) {
+                    setExpandedId(chapter.id);
+                    setTimeout(() => {
+                      const el = document.getElementById(`chapter-${chapter.id}`);
+                      if (el) {
+                        const y = el.getBoundingClientRect().top + window.scrollY - 100;
+                        window.scrollTo({ top: y, behavior: 'smooth' });
+                      }
+                    }, 50);
+                  }
+                }}
                 className={cn(
-                  "group relative overflow-hidden transition-all duration-700 cursor-pointer r-md",
+                  "group relative overflow-hidden transition-[flex,background-color] duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] r-md flex flex-col translate-z-0",
                   expandedId === chapter.id 
-                    ? "col-span-full md:col-span-2 lg:col-span-3 h-auto glass-premium p-8 md:p-12 mb-8" 
-                    : "aspect-[3/4] glass hover:border-primary/40 hover:shadow-[0_0_60px_rgba(167,139,250,0.1)]"
+                    ? "flex-none lg:flex-[10] shadow-[0_8px_30px_rgba(0,0,0,0.5)] cursor-default glass-premium" 
+                    : "flex-none lg:flex-[1] min-h-[140px] lg:min-h-[0px] glass hover:border-primary/40 shadow-sm cursor-pointer"
                 )}
               >
                 {/* Image Background */}
                 {chapter.image_url && (
                   <div className={cn(
-                    "absolute inset-0 z-0 transition-all duration-1000",
-                    expandedId === chapter.id ? "opacity-20 blur-2xl" : "opacity-30 group-hover:opacity-50 scale-110 group-hover:scale-100"
+                    "absolute inset-0 z-0 transition-all duration-700",
+                    expandedId === chapter.id ? "opacity-20 blur-2xl" : "opacity-30 group-hover:opacity-60 scale-110 group-hover:scale-100"
                   )}>
                     <img 
                       src={chapter.image_url} 
@@ -88,35 +99,68 @@ export function Lore() {
                   </div>
                 )}
 
+                {/* Uiverse-style pseudo layer (glow opacity on hover) */}
+                <div className={cn(
+                  "absolute inset-0 bg-white/5 z-0 transition-opacity duration-500 pointer-events-none",
+                  expandedId === chapter.id ? "opacity-0" : "opacity-0 group-hover:opacity-100"
+                )} />
+
                 {/* Content Overlay */}
                 <div className={cn(
-                  "relative z-10 h-full flex flex-col",
-                  expandedId === chapter.id ? "justify-start" : "justify-end p-8"
+                  "relative z-10 w-full p-4 lg:p-8 flex flex-col transition-all duration-500",
+                  expandedId === chapter.id 
+                    ? "justify-start h-auto overflow-visible" 
+                    : "justify-center items-center lg:items-start lg:justify-end h-full overflow-hidden"
                 )}>
-                  <div className="flex items-center justify-between mb-6">
-                    <span className="label-micro text-primary">FRAGMENTO {chapter.chapter_number || index + 1}</span>
-                    {chapter.timeline_date && (
-                      <span className="label-secondary opacity-40">{chapter.timeline_date}</span>
+                  
+                  <div 
+                    className={cn(
+                      "flex transition-all duration-500 w-full relative",
+                      expandedId === chapter.id 
+                        ? "flex-col mb-8 items-start cursor-pointer group/header hover:opacity-80" 
+                        : "flex-row lg:flex-col items-center lg:items-start justify-center lg:justify-end gap-3 lg:gap-2"
                     )}
+                    onClick={(e) => {
+                      if (expandedId === chapter.id) {
+                        e.stopPropagation();
+                        setExpandedId(null);
+                        setTimeout(() => {
+                          const el = document.getElementById(`chapter-${chapter.id}`);
+                          if (el) {
+                            const y = el.getBoundingClientRect().top + window.scrollY - 100;
+                            window.scrollTo({ top: y, behavior: 'smooth' });
+                          }
+                        }, 50);
+                      }
+                    }}
+                  >
+                    <span className={cn(
+                      "label-micro tracking-[0.2em] transition-all duration-500 shrink-0",
+                      expandedId === chapter.id ? "text-primary" : "text-accent group-hover:text-primary"
+                    )}>
+                      {chapter.chapter_number || index + 1}
+                    </span>
+
+                    <h2 className={cn(
+                      "font-display leading-[1.1] tracking-tight text-text-high transition-transform duration-500 m-0",
+                      expandedId === chapter.id 
+                        ? "text-4xl md:text-5xl lg:text-7xl mt-4" 
+                        : "text-lg md:text-xl lg:text-2xl lg:w-full lg:whitespace-normal line-clamp-1 lg:line-clamp-2 text-center lg:text-left"
+                    )}>
+                      {chapter.title}
+                    </h2>
                   </div>
 
-                  <h2 className={cn(
-                    "font-display leading-[1.1] tracking-tight text-text-high transition-all mb-6",
-                    expandedId === chapter.id ? "text-4xl md:text-7xl max-w-4xl" : "text-2xl md:text-3xl"
-                  )}>
-                    {chapter.title}
-                  </h2>
-
-                  <AnimatePresence mode="wait">
-                    {expandedId === chapter.id ? (
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className="max-w-6xl"
-                      >
+                  <div 
+                    className={cn(
+                      "grid transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] w-full",
+                      expandedId === chapter.id ? "grid-rows-[1fr] opacity-100 mt-2" : "grid-rows-[0fr] opacity-0"
+                    )}
+                  >
+                    <div className="overflow-hidden">
+                      <div className="w-[85vw] max-w-6xl lg:w-[60vw] xl:w-[1000px] pb-4 pt-2">
                         <div className="h-[1px] w-12 bg-primary/40 mb-10" />
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
+                        <div className="flex flex-col-reverse lg:grid lg:grid-cols-12 gap-8 lg:gap-16">
                           <div className="lg:col-span-7 prose prose-invert max-w-none">
                             <div className="space-y-8">
                               {chapter.content.split('\n\n').map((para: string, i: number) => (
@@ -128,18 +172,18 @@ export function Lore() {
                           </div>
                           
                           {chapter.image_url && (
-                            <div className="lg:col-span-5 relative hidden lg:block">
+                            <div className="lg:col-span-5 relative sm:block">
                               <motion.div
-                                initial={{ opacity: 0, scale: 0.95, rotate: 2 }}
-                                animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                                transition={{ delay: 0.2, duration: 0.8 }}
-                                className="sticky top-40"
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={expandedId === chapter.id ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.95 }}
+                                transition={{ delay: 0.1, duration: 0.6 }}
+                                className="lg:sticky lg:top-0 pb-6 lg:pb-10"
                               >
                                 <img 
                                   src={chapter.image_url} 
                                   alt={chapter.title}
                                   referrerPolicy="no-referrer" 
-                                  className="w-full aspect-[4/5] object-cover r-md shadow-[0_40px_100px_rgba(0,0,0,0.8)] border border-border/10 transition-transform duration-700"
+                                  className="w-full h-auto max-h-[80vh] object-contain object-top r-md shadow-[0_40px_100px_rgba(0,0,0,0.8)] border border-border/10"
                                 />
                                 <div className="absolute -inset-4 bg-primary/5 blur-3xl rounded-full -z-10 animate-pulse" />
                               </motion.div>
@@ -148,23 +192,25 @@ export function Lore() {
                         </div>
                         
                         <button 
-                          onClick={(e) => { e.stopPropagation(); setExpandedId(null); }}
-                          className="mt-16 label-micro group/btn flex items-center gap-4 hover:text-primary transition-all pr-8"
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            setExpandedId(null); 
+                            setTimeout(() => {
+                              const el = document.getElementById(`chapter-${chapter.id}`);
+                              if (el) {
+                                const y = el.getBoundingClientRect().top + window.scrollY - 100;
+                                window.scrollTo({ top: y, behavior: 'smooth' });
+                              }
+                            }, 50);
+                          }}
+                          className="mt-16 mb-8 label-micro group/btn flex items-center gap-4 hover:text-primary transition-all pr-8 cursor-pointer"
                         >
                           <span className="w-8 h-[1px] bg-text-low group-hover/btn:w-12 group-hover/btn:bg-primary transition-all" />
                           FECHAR REGISTRO
                         </button>
-                      </motion.div>
-                    ) : (
-                      <motion.p 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="text-text-mid line-clamp-2 text-sm md:text-base font-sans font-light italic opacity-60 group-hover:opacity-100 transition-opacity"
-                      >
-                        {chapter.content.substring(0, 100)}...
-                      </motion.p>
-                    )}
-                  </AnimatePresence>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             ))}

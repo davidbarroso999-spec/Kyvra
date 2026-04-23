@@ -5,13 +5,6 @@ import { useStore } from '@/store/useStore';
 import { cn, isSavedOffline, getOfflineUrl } from '@/lib/utils';
 import { TrackDuration } from '@/components/ui/TrackDuration';
 import { KyvraButton } from './KyvraButton';
-import { Capacitor } from '@capacitor/core';
-import {
-  createMusicControls,
-  updateMusicControlsState,
-  registerMusicControlsListeners,
-  destroyMusicControls,
-} from '@/lib/musicControls';
 
 export function MiniPlayer() {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -27,28 +20,42 @@ export function MiniPlayer() {
   } = useStore();
 
   useEffect(() => {
-    registerMusicControlsListeners({
-      onPlay:     () => setIsPlaying(true),
-      onPause:    () => setIsPlaying(false),
-      onNext:     () => playNext(),
-      onPrevious: () => playPrevious(),
-      onStop:     () => { setIsPlaying(false); destroyMusicControls(); },
-    });
-  }, []);
-
-  useEffect(() => {
     if (!currentTrack) return;
-    createMusicControls({
-      title: currentTrack.title,
-      artist: currentTrack.artist || 'Kyvra',
-      cover: currentTrack.coverUrl,
-      isPlaying,
-    });
+    
+    // Web Media Session API
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: currentTrack.title,
+        artist: currentTrack.artist || 'Kyvra',
+        album: currentTrack.albumTitle || 'Kyvra',
+        artwork: [
+          { src: currentTrack.coverUrl || '', sizes: '512x512', type: 'image/jpeg' }
+        ]
+      });
+
+      navigator.mediaSession.setActionHandler('play', () => { setIsPlaying(true); });
+      navigator.mediaSession.setActionHandler('pause', () => { setIsPlaying(false); });
+      navigator.mediaSession.setActionHandler('previoustrack', () => handlePrev());
+      navigator.mediaSession.setActionHandler('nexttrack', () => handleNext());
+      
+      try {
+        navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+          if (audioRef.current) {
+            audioRef.current.currentTime = Math.max(audioRef.current.currentTime - (details.seekOffset || 10), 0);
+          }
+        });
+        navigator.mediaSession.setActionHandler('seekforward', (details) => {
+          if (audioRef.current) {
+            audioRef.current.currentTime = Math.min(audioRef.current.currentTime + (details.seekOffset || 10), audioRef.current.duration);
+          }
+        });
+      } catch (e) {
+        // Ignored
+      }
+    }
   }, [currentTrack]);
 
   useEffect(() => {
-    updateMusicControlsState(isPlaying);
-    // Also sync the native audio element
     if (audioRef.current && actualAudioUrl) {
       if (isPlaying) {
         const playPromise = audioRef.current.play();

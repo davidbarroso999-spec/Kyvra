@@ -68,10 +68,10 @@ export default defineConfig(({mode}) => {
               urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/public\/.*/i,
               handler: 'CacheFirst',
               options: {
-                cacheName: 'supabase-storage-cache',
+                cacheName: 'kyvra-audio-cache',
                 expiration: {
                   maxEntries: 200,
-                  maxAgeSeconds: 60 * 60 * 24 * 60
+                  maxAgeSeconds: 60 * 60 * 24 * 60 // 60 days
                 },
                 cacheableResponse: {
                   statuses: [0, 200]
