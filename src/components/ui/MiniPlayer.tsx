@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, Reorder } from 'motion/react';
-import { Play, Pause, SkipBack, SkipForward, Repeat, Repeat1, Shuffle, Volume2, Volume1, VolumeX, AlignLeft, ListMusic, X, GripVertical, Share, Heart, SlidersHorizontal, Moon, ChevronDown, MoreVertical, Download, WifiOff } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Repeat, Repeat1, Shuffle, Volume2, Volume1, VolumeX, AlignLeft, ListMusic, X, GripVertical, Share, Heart, SlidersHorizontal, Moon, ChevronDown, ChevronLeft, MoreVertical, Download, WifiOff } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { cn, isSavedOffline, getOfflineUrl } from '@/lib/utils';
 import { TrackDuration } from '@/components/ui/TrackDuration';
@@ -454,24 +454,24 @@ export function MiniPlayer() {
             {/* Top Bar - Área de Toque Superior Aumentada */}
             <div className="flex items-center justify-between w-full mb-4 md:mb-8 mt-4 md:mt-0 select-none relative z-[2003]">
               <div className="flex-1 flex justify-start">
-                {showQueue || showLyrics ? (
-                  <button 
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onClick={(e) => { 
-                      e.stopPropagation();
+                <button 
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => { 
+                    e.stopPropagation();
+                    if (showQueue || showLyrics) {
                       setShowQueue(false); 
                       setShowLyrics(false); 
-                    }}
-                    className="w-16 h-16 -ml-4 flex items-center justify-center text-text-mid hover:text-text-high bg-transparent rounded-full transition-colors active:scale-95 touch-none"
-                    aria-label="Voltar para o Player"
-                  >
-                    <div className="w-10 h-10 flex items-center justify-center bg-surface/30 rounded-full">
-                      <ChevronDown size={24} />
-                    </div>
-                  </button>
-                ) : (
-                  <div className="w-16" />
-                )}
+                    } else {
+                      setIsExpanded(false);
+                    }
+                  }}
+                  className="w-16 h-16 -ml-4 flex items-center justify-center text-text-mid hover:text-text-high bg-transparent rounded-full transition-colors active:scale-95 touch-none group"
+                  aria-label={showQueue || showLyrics ? "Voltar para o Player" : "Minimizar Player"}
+                >
+                  <div className="w-10 h-10 flex items-center justify-center bg-surface/30 rounded-full group-hover:bg-primary/20 group-hover:text-primary transition-colors">
+                    {showQueue || showLyrics ? <ChevronLeft size={24} /> : <ChevronDown size={24} />}
+                  </div>
+                </button>
               </div>
 
               <div className="text-[10px] font-sc tracking-[0.3em] text-text-low text-center flex-[2] pointer-events-none">
@@ -479,7 +479,7 @@ export function MiniPlayer() {
               </div>
 
               <div className="flex-1 flex justify-end">
-                {/* Removed X button to keep interface cleaner and match mobile patterns (swipe down to close or use back button) */}
+                {/* Placeholder para balanceamento de layout flex da Top Bar */}
                 <div className="w-16" />
               </div>
             </div>

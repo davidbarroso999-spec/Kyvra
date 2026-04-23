@@ -160,8 +160,27 @@ export function Lore() {
                     <div className="overflow-hidden">
                       <div className="w-full max-w-6xl mx-auto pb-4 pt-2">
                         <div className="h-[1px] w-12 bg-primary/40 mb-10" />
-                        <div className="flex flex-col-reverse lg:grid lg:grid-cols-12 gap-8 lg:gap-16">
-                          <div className="lg:col-span-7 prose prose-invert max-w-none">
+                        <div className="flex flex-col gap-10 lg:gap-14">
+                          {chapter.image_url && (
+                            <div className="w-full relative">
+                              <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={expandedId === chapter.id ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+                                transition={{ delay: 0.1, duration: 0.6 }}
+                                className="w-full"
+                              >
+                                <img 
+                                  src={chapter.image_url} 
+                                  alt={chapter.title}
+                                  referrerPolicy="no-referrer" 
+                                  className="w-full h-auto max-h-[70vh] object-contain object-left r-md shadow-[0_40px_100px_rgba(0,0,0,0.8)] border border-border/10"
+                                />
+                                <div className="absolute -inset-4 bg-primary/5 blur-3xl rounded-full -z-10 animate-pulse" />
+                              </motion.div>
+                            </div>
+                          )}
+
+                          <div className="w-full max-w-4xl lg:max-w-5xl prose prose-invert">
                             <div className="space-y-8">
                               {chapter.content.split('\n\n').map((para: string, i: number) => (
                                 <p key={i} className="font-sans font-light text-text-mid text-lg md:text-xl leading-relaxed italic opacity-90 first-letter:text-4xl first-letter:font-display first-letter:text-primary first-letter:mr-2">
@@ -170,25 +189,6 @@ export function Lore() {
                               ))}
                             </div>
                           </div>
-                          
-                          {chapter.image_url && (
-                            <div className="lg:col-span-5 relative sm:block">
-                              <motion.div
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={expandedId === chapter.id ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.95 }}
-                                transition={{ delay: 0.1, duration: 0.6 }}
-                                className="lg:sticky lg:top-0 pb-6 lg:pb-10"
-                              >
-                                <img 
-                                  src={chapter.image_url} 
-                                  alt={chapter.title}
-                                  referrerPolicy="no-referrer" 
-                                  className="w-full h-auto max-h-[80vh] object-contain object-top r-md shadow-[0_40px_100px_rgba(0,0,0,0.8)] border border-border/10"
-                                />
-                                <div className="absolute -inset-4 bg-primary/5 blur-3xl rounded-full -z-10 animate-pulse" />
-                              </motion.div>
-                            </div>
-                          )}
                         </div>
                         
                         <button 
