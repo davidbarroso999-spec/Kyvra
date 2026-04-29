@@ -629,7 +629,7 @@ export function MiniPlayer() {
                         <div className="flex items-center gap-2 mb-1">
                           <h2 className="text-2xl md:text-3xl font-display text-text-high truncate">{currentTrack.title}</h2>
                           {isOffline && (
-                            <WifiOff size={14} className="text-primary opacity-50" title="Disponível Offline" />
+                            <WifiOff size={14} className="text-primary opacity-50" />
                           )}
                         </div>
                         <p className="text-primary text-xs md:text-sm tracking-[0.1em] font-sc truncate opacity-80 uppercase">{currentTrack.artist}</p>

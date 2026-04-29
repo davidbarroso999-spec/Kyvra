@@ -109,7 +109,7 @@ export function Lore() {
                 <div className={cn(
                   "relative z-10 w-full p-4 lg:p-10 flex flex-col transition-all duration-500",
                   expandedId === chapter.id 
-                    ? "justify-start h-auto overflow-visible" 
+                    ? "justify-start h-auto overflow-visible items-center text-center" 
                     : "justify-end items-start h-full overflow-hidden"
                 )}>
                   
@@ -117,7 +117,7 @@ export function Lore() {
                     className={cn(
                       "flex transition-all duration-500 w-full relative",
                       expandedId === chapter.id 
-                        ? "flex-col mb-8 items-start cursor-pointer group/header hover:opacity-80" 
+                        ? "flex-col mb-10 items-center cursor-pointer group/header hover:opacity-80" 
                         : "flex-col md:flex-row items-start md:items-end justify-start gap-2 md:gap-6"
                     )}
                     onClick={(e) => {
@@ -135,17 +135,17 @@ export function Lore() {
                     }}
                   >
                     <span className={cn(
-                      "label-micro tracking-[0.2em] transition-all duration-500 shrink-0",
-                      expandedId === chapter.id ? "text-primary" : "text-accent group-hover:text-primary"
+                      "label-micro tracking-[0.3em] transition-all duration-500 shrink-0",
+                      expandedId === chapter.id ? "text-primary text-sm mb-2" : "text-accent group-hover:text-primary"
                     )}>
                       {chapter.chapter_number || index + 1}
                     </span>
 
                     <h2 className={cn(
-                      "font-display leading-[1.1] tracking-tight text-text-high transition-all duration-500 m-0",
+                      "font-display leading-[1.1] tracking-tight text-text-high transition-all duration-500 m-0 [text-wrap:balance]",
                       expandedId === chapter.id 
-                        ? "text-4xl md:text-5xl lg:text-7xl mt-4" 
-                        : "text-2xl md:text-4xl lg:text-5xl lg:w-full line-clamp-1 text-left"
+                        ? "text-4xl md:text-6xl lg:text-8xl mt-2 max-w-4xl mx-auto" 
+                        : "text-xl md:text-3xl lg:text-4xl lg:w-full line-clamp-2 text-left"
                     )}>
                       {chapter.title}
                     </h2>
@@ -158,32 +158,32 @@ export function Lore() {
                     )}
                   >
                     <div className="overflow-hidden">
-                      <div className="w-full max-w-6xl mx-auto pb-4 pt-2">
-                        <div className="h-[1px] w-12 bg-primary/40 mb-10" />
-                        <div className="flex flex-col gap-10 lg:gap-14">
+                      <div className="w-full max-w-6xl mx-auto pb-4 pt-2 flex flex-col items-center">
+                        <div className="h-[1px] w-12 bg-primary/40 mb-10 mx-auto" />
+                        <div className="flex flex-col gap-10 lg:gap-16 w-full items-center">
                           {chapter.image_url && (
-                            <div className="w-full relative">
+                            <div className="w-full relative flex justify-center">
                               <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={expandedId === chapter.id ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
                                 transition={{ delay: 0.1, duration: 0.6 }}
-                                className="w-full"
+                                className="w-full max-w-5xl"
                               >
                                 <img 
                                   src={chapter.image_url} 
                                   alt={chapter.title}
                                   referrerPolicy="no-referrer" 
-                                  className="w-full h-auto max-h-[70vh] object-contain object-left r-md shadow-[0_40px_100px_rgba(0,0,0,0.8)] border border-border/10"
+                                  className="w-full h-auto max-h-[75vh] object-contain object-center r-md shadow-[0_40px_100px_rgba(0,0,0,0.8)] border border-border/10"
                                 />
                                 <div className="absolute -inset-4 bg-primary/5 blur-3xl rounded-full -z-10 animate-pulse" />
                               </motion.div>
                             </div>
                           )}
 
-                          <div className="w-full max-w-4xl lg:max-w-5xl prose prose-invert">
+                          <div className="w-full max-w-3xl prose prose-invert text-left">
                             <div className="space-y-8">
                               {chapter.content.split('\n\n').map((para: string, i: number) => (
-                                <p key={i} className="font-sans font-light text-text-mid text-lg md:text-xl leading-relaxed italic opacity-90 first-letter:text-4xl first-letter:font-display first-letter:text-primary first-letter:mr-2">
+                                <p key={i} className="font-sans font-light text-text-mid text-lg md:text-xl md:text-center lg:text-left leading-relaxed italic opacity-90 first-letter:text-4xl first-letter:font-display first-letter:text-primary first-letter:mr-2">
                                   {para}
                                 </p>
                               ))}
@@ -203,9 +203,9 @@ export function Lore() {
                               }
                             }, 50);
                           }}
-                          className="mt-16 mb-8 label-micro group/btn flex items-center gap-4 hover:text-primary transition-all pr-8 cursor-pointer"
+                          className="mt-20 mb-8 label-micro group/btn flex items-center gap-4 hover:text-primary transition-all pr-8 cursor-pointer mx-auto"
                         >
-                          <span className="w-8 h-[1px] bg-text-low group-hover/btn:w-12 group-hover/btn:bg-primary transition-all" />
+                          <span className="w-12 h-[1px] bg-text-low group-hover/btn:w-16 group-hover/btn:bg-primary transition-all" />
                           FECHAR REGISTRO
                         </button>
                       </div>
