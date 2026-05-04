@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Play, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
 import { useStore } from '@/store/useStore';
-import { supabase } from '@/lib/supabase';
+import { getAlbumWithTracks } from '@/lib/apiCache';
 import { TrackDuration } from '@/components/ui/TrackDuration';
 import { saveForOffline } from '@/lib/utils';
 import { KyvraButton } from '@/components/ui/KyvraButton';
@@ -32,14 +32,7 @@ export function AlbumDetail() {
     async function fetchAlbum() {
       if (!id) return;
       
-      const { data, error } = await supabase
-        .from('albums')
-        .select(`
-          *,
-          tracks (*)
-        `)
-        .eq('id', id)
-        .single();
+      const { data, error } = await getAlbumWithTracks(id);
 
       if (!error && data) {
         // Sort tracks by track_number

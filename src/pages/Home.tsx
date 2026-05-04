@@ -2,11 +2,10 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
+import { getFeaturedTracksSettings, getTracksByIds, getTrackSynopses } from '@/lib/apiCache';
 import { useStore } from '@/store/useStore';
 import { Play } from 'lucide-react';
 import { FeaturedSlider } from '@/components/ui/FeaturedSlider';
-import { ThreeAbstractBackground } from '@/components/ui/ThreeAbstractBackground';
 
 export function Home() {
   const [featuredTracks, setFeaturedTracks] = useState<any[]>([]);
@@ -21,50 +20,11 @@ export function Home() {
 
   useEffect(() => {
     async function fetchFeatured() {
-      // 1. Get featured track IDs (try JSON first, then fallback)
-      const { data: settingsList } = await supabase
-        .from('lore_chapters')
-        .select('content')
-        .eq('title', '__FEATURED_TRACKS_JSON__')
-        .order('id', { ascending: false })
-        .limit(1);
+      const { data: trackIds } = await getFeaturedTracksSettings();
       
-      const settings = settingsList?.[0];
-      
-      let trackIds: string[] = [];
-      if (settings && settings.content) {
-        try {
-          trackIds = JSON.parse(settings.content);
-        } catch (e) {
-          console.error("Error parsing featured tracks JSON:", e);
-        }
-      }
-
-      if (trackIds.length === 0) {
-        const { data: oldSettingsList } = await supabase
-          .from('lore_chapters')
-          .select('content')
-          .eq('title', '__FEATURED_TRACK__')
-          .order('id', { ascending: false })
-          .limit(1);
-        const oldSettings = oldSettingsList?.[0];
-        if (oldSettings && oldSettings.content) {
-          trackIds = [oldSettings.content];
-        }
-      }
-      
-      if (trackIds.length > 0) {
+      if (trackIds && trackIds.length > 0) {
         // 2. Fetch all featured tracks details
-        const { data: tracks, error: tracksError } = await supabase
-          .from('tracks')
-          .select(`
-            *,
-            albums (
-              title,
-              cover_url
-            )
-          `)
-          .in('id', trackIds);
+        const { data: tracks, error: tracksError } = await getTracksByIds(trackIds);
           
         if (tracksError) {
           console.error("Error fetching featured tracks details:", tracksError);
@@ -73,21 +33,14 @@ export function Home() {
           
         if (tracks && tracks.length > 0) {
           // Sort tracks to match the order in trackIds
-          const sortedTracks = trackIds.map(id => tracks.find(t => t.id.toString() === id.toString())).filter(Boolean);
+          const sortedTracks = trackIds.map((id: string) => tracks.find((t: any) => t.id.toString() === id.toString())).filter(Boolean);
 
           // 3. Fetch synopses for these tracks
-          const synopsisTitles = trackIds.map(id => `__SYNOPSIS_${id}__`);
-          // Also check for the old synopsis title for the first track
-          synopsisTitles.push('__FEATURED_TRACK_SYNOPSIS__');
+          const { data: synopses } = await getTrackSynopses(trackIds);
 
-          const { data: synopses } = await supabase
-            .from('lore_chapters')
-            .select('title, content')
-            .in('title', synopsisTitles);
-
-          const tracksWithSynopses = sortedTracks.map(track => {
-            const specificSynopsis = synopses?.find(s => s.title === `__SYNOPSIS_${track.id}__`);
-            const fallbackSynopsis = synopses?.find(s => s.title === '__FEATURED_TRACK_SYNOPSIS__');
+          const tracksWithSynopses = sortedTracks.map((track: any) => {
+            const specificSynopsis = synopses?.find((s: any) => s.title === `__SYNOPSIS_${track.id}__`);
+            const fallbackSynopsis = synopses?.find((s: any) => s.title === '__FEATURED_TRACK_SYNOPSIS__');
             
             return {
               id: track.id,
@@ -114,8 +67,10 @@ export function Home() {
     <div className="w-full">
       {/* Hero Section */}
       <section className="relative h-[100dvh] flex items-center justify-center px-6 overflow-hidden">
-        {/* 3D Template Background - Gratuito e Customizável */}
-        <ThreeAbstractBackground />
+        {/* Simple Gradient Background instead of ThreeAbstractBackground */}
+        <div className="absolute inset-0 bg-void -z-10">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,var(--glow-purple)_0%,transparent_60%)] opacity-30" />
+        </div>
 
         <div className="relative z-10 flex flex-col items-center text-center max-w-5xl mx-auto mt-16 pointer-events-none">
           <motion.div
@@ -175,12 +130,6 @@ export function Home() {
               Músicas
             </button>
             <button 
-              onClick={() => scrollToSection('albuns')} 
-              className="text-[10px] tracking-[0.3em] text-text-low hover:text-primary transition-all uppercase cursor-pointer"
-            >
-              Álbuns
-            </button>
-            <button 
               onClick={() => scrollToSection('lore')} 
               className="text-[10px] tracking-[0.3em] text-text-low hover:text-primary transition-all uppercase cursor-pointer"
             >
@@ -210,33 +159,6 @@ export function Home() {
           </div>
         </section>
       )}
-
-      {/* Álbuns Section Placeholder */}
-      <section id="albuns" className="py-24 px-6 bg-void relative overflow-hidden scroll-mt-20">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
-            <div>
-              <span className="label-micro text-primary mb-4 block">PORTAL DISCOGRÁFICO</span>
-              <h2 className="text-4xl md:text-5xl font-display text-text-high tracking-tight">ÁLBUNS</h2>
-            </div>
-            <Link to="/arquivo" className="label-micro text-text-low hover:text-primary transition-colors flex items-center gap-2">
-              Ver discografia completa <span className="text-xs">→</span>
-            </Link>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="group relative aspect-square bg-white/5 border border-white/10 overflow-hidden r-md">
-                <div className="absolute inset-0 bg-gradient-to-t from-void via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
-                <div className="absolute bottom-0 left-0 p-8">
-                  <span className="label-micro text-primary mb-2 block opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 text-[10px]">COLEÇÃO {i}</span>
-                  <h3 className="text-2xl font-display text-text-high">Fragmento {i}</h3>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* Lore Section Placeholder */}
       <section id="lore" className="py-24 px-6 bg-deep relative border-t border-white/5 scroll-mt-20">

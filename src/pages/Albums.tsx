@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { Play } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { getAlbums } from '@/lib/apiCache';
 import { AlbumSlider } from '@/components/ui/AlbumSlider';
 
 export function Albums() {
@@ -11,20 +11,14 @@ export function Albums() {
 
   useEffect(() => {
     async function fetchAlbums() {
-      const { data, error } = await supabase
-        .from('albums')
-        .select(`
-          *,
-          tracks (count)
-        `)
-        .order('created_at', { ascending: false });
+      const { data, error } = await getAlbums();
 
       if (error) {
         console.error("Error fetching albums:", error);
       }
 
       if (data) {
-        setAlbums(data.map(a => ({
+        setAlbums(data.map((a: any) => ({
           id: a.id,
           title: a.title,
           year: a.release_year,

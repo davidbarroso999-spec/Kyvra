@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase } from '@/lib/supabase';
+import { getLoreChapters } from '@/lib/apiCache';
 import { getAI, MODELS, generateText } from '@/lib/ai';
 import { Sparkles, Loader2, BookOpen, Calendar, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -12,17 +12,14 @@ export function Lore() {
 
   useEffect(() => {
     async function fetchLore() {
-      const { data, error } = await supabase
-        .from('lore_chapters')
-        .select('*')
-        .order('chapter_number', { ascending: true });
+      const { data, error } = await getLoreChapters();
 
       if (error) {
         console.error("Error fetching lore chapters:", error);
       }
 
       if (data) {
-        setChapters(data.filter(c => c.title && !c.title.startsWith('__')));
+        setChapters(data.filter((c: any) => c.title && !c.title.startsWith('__')));
       }
       setLoading(false);
     }

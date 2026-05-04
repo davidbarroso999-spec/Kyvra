@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Search, Play, Pause } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { cn, saveForOffline } from '@/lib/utils';
-import { supabase } from '@/lib/supabase';
+import { getAllTracks } from '@/lib/apiCache';
 import { TrackDuration } from '@/components/ui/TrackDuration';
 
 export function Archive() {
@@ -22,23 +22,14 @@ export function Archive() {
 
   useEffect(() => {
     async function fetchTracks() {
-      const { data, error } = await supabase
-        .from('tracks')
-        .select(`
-          *,
-          albums (
-            title,
-            cover_url
-          )
-        `)
-        .order('created_at', { ascending: false });
+      const { data, error } = await getAllTracks();
 
       if (error) {
         console.error("Error fetching tracks:", error);
       }
 
       if (data) {
-        const mappedTracks = data.map(t => ({
+        const mappedTracks = data.map((t: any) => ({
           id: t.id,
           title: t.title,
           artist: t.artist || 'Kyvra',
