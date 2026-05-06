@@ -5,6 +5,30 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export function parseChapterNumber(chapter: any): number {
+  if (chapter === null || chapter === undefined) return 999999;
+  const str = String(chapter).trim();
+  if (/^-?\d+$/.test(str)) return parseInt(str, 10);
+  
+  const romanRegex = /^(M{0,3})(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/i;
+  if (str && str !== "" && romanRegex.test(str)) {
+    const roman: Record<string, number> = { i: 1, v: 5, x: 10, l: 50, c: 100, d: 500, m: 1000 };
+    let res = 0;
+    const s = str.toLowerCase();
+    for (let i = 0; i < s.length; i++) {
+      const current = roman[s[i]];
+      const next = roman[s[i + 1]];
+      if (next && current < next) {
+        res -= current;
+      } else {
+        res += current;
+      }
+    }
+    return res;
+  }
+  return 999999;
+}
+
 // CACHE STORAGE IMPLEMENTATION FOR PURE WEB
 const AUDIO_CACHE = 'kyvra-audio-cache';
 

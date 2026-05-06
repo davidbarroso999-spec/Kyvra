@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Upload, Lock, X, Plus, Sparkles, CheckCircle2, Edit3, Save, Trash2, ChevronDown, ChevronUp, RefreshCw, Edit2, Book, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, parseChapterNumber } from '@/lib/utils';
 import { getAI, MODELS, generateText, generateMultimodal } from '@/lib/ai';
 import { supabase } from '@/lib/supabase';
 import { getAudioMetadata } from '@/lib/audioMetadata';
@@ -84,11 +84,12 @@ export function Admin() {
   const fetchLoreChapters = async () => {
     const { data, error } = await supabase
       .from('lore_chapters')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .select('*');
     
     if (!error && data) {
-      setLoreChaptersList(data.filter(c => c.title && !c.title.startsWith('__')));
+      const filtered = data.filter(c => c.title && !c.title.startsWith('__'));
+      filtered.sort((a, b) => parseChapterNumber(a.chapter_number) - parseChapterNumber(b.chapter_number));
+      setLoreChaptersList(filtered);
     }
   };
 

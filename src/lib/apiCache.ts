@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { parseChapterNumber } from './utils';
 
 const cache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 1000 * 60 * 15; // 15 minutos
@@ -33,7 +34,13 @@ export function clearCache(keyPrefix?: string) {
 // Queries Pre-definidas:
 
 export async function getLoreChapters(force = false) {
-  return fetchWithCache('lore_chapters', async () => await supabase.from('lore_chapters').select('*').order('chapter_number', { ascending: true }), force);
+  return fetchWithCache('lore_chapters', async () => {
+    const response = await supabase.from('lore_chapters').select('*');
+    if (response.data) {
+      response.data.sort((a, b) => parseChapterNumber(a.chapter_number) - parseChapterNumber(b.chapter_number));
+    }
+    return response;
+  }, force);
 }
 
 export async function getAlbums(force = false) {
