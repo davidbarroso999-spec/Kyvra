@@ -72,81 +72,23 @@ export function Home() {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,var(--glow-purple)_0%,transparent_60%)] opacity-30" />
         </div>
 
-        <div className="relative z-10 flex flex-col items-center text-center max-w-5xl mx-auto mt-16 pointer-events-none">
+        <div className="relative z-10 flex flex-col items-center justify-center text-center w-full h-full pointer-events-none mt-0">
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
+            className="inline-flex flex-col items-center pointer-events-auto select-none"
           >
-            <span className="label-micro block mb-6 animate-pulse text-primary pointer-events-auto">SETOR DE ARQUIVO KYVRA // 2026</span>
-            <h1 className="display-large text-gradient mb-8 pointer-events-auto">
+            <h1 className="font-display font-medium text-[28vw] sm:text-[26vw] md:text-[22vw] lg:text-[220px] xl:text-[260px] leading-[0.8] tracking-[-0.04em] text-gradient m-0 p-0 text-center">
               KYVRA
             </h1>
-          </motion.div>
-          
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 1.5, delay: 0.6 }}
-            className="label-secondary mb-10 px-4 pointer-events-auto"
-          >
-            FRAGMENTOS DE UM UNIVERSO SOMBRIO
-          </motion.p>
-          
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 0.8 }}
-            className="font-sans font-light text-text-mid text-base md:text-xl max-w-xl leading-relaxed mb-12 px-4 italic pointer-events-auto"
-          >
-            "Onde a luz falha e o som se torna o único guia através do abismo consciente."
-          </motion.p>
-          
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 1 }}
-            className="flex flex-row items-center justify-center gap-4 w-full px-2 max-w-sm mx-auto pb-20 pointer-events-auto"
-          >
-            <Link to="/arquivo" className="btn-uiverse text-[10px] sm:text-xs text-center flex-1 px-2 py-3 sm:px-6 sm:py-4">
-              Explorar
-            </Link>
-
-            <Link to="/cosmogonia" className="btn-uiverse text-[10px] sm:text-xs text-center flex-1 px-2 py-3 sm:px-6 sm:py-4" style={{ background: 'transparent', border: '1px solid var(--border)', boxShadow: 'none' }}>
-              A Cosmogonia 
-            </Link>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 1, delay: 1.2 }}
-            className="flex flex-wrap items-center justify-center gap-8 mt-4 pointer-events-auto border-t border-white/5 pt-8 w-full max-w-xs"
-          >
-            <button 
-              onClick={() => scrollToSection('musicas')} 
-              className="text-[10px] tracking-[0.3em] text-text-low hover:text-primary transition-all uppercase cursor-pointer"
-            >
-              Músicas
-            </button>
-            <button 
-              onClick={() => scrollToSection('lore')} 
-              className="text-[10px] tracking-[0.3em] text-text-low hover:text-primary transition-all uppercase cursor-pointer"
-            >
-              Lore
-            </button>
+            <div className="w-full flex justify-between text-primary/80 font-sans text-[2.5vw] sm:text-[2vw] md:text-[1.6vw] lg:text-[16px] xl:text-[18px] uppercase mt-4 md:mt-6 font-medium">
+              {"FRAGMENTOS DE UM UNIVERSO SOMBRIO".split('').map((char, index) => (
+                <span key={index}>{char === ' ' ? '\u00A0' : char}</span>
+              ))}
+            </div>
           </motion.div>
         </div>
-        
-        {/* Scroll Indicator */}
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.5, duration: 1 }}
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 pointer-events-none"
-        >
-          <div className="w-[1px] h-10 bg-gradient-to-b from-primary/50 to-transparent" />
-        </motion.div>
       </section>
 
       {/* Seção de Destaques com Slider */}
@@ -160,54 +102,7 @@ export function Home() {
         </section>
       )}
 
-      {/* Lore Section Placeholder */}
-      <section id="lore" className="py-24 px-6 bg-deep relative border-t border-white/5 scroll-mt-20">
-        <div className="max-w-4xl mx-auto text-center">
-          <span className="label-micro text-accent mb-6 block tracking-[0.4em]">ARQUIVO HISTÓRICO</span>
-          <h2 className="text-4xl md:text-6xl font-display text-text-high mb-8 tracking-tighter">A LORE DE KYVRA</h2>
-          <p className="font-sans font-light text-text-mid text-lg md:text-xl leading-relaxed mb-12 italic opacity-80">
-            "A realidade é apenas um eco de freqüências que esquecemos como sintonizar. 
-            Nestas páginas, reside a verdade por trás do véu."
-          </p>
-          <Link to="/cosmogonia" className="btn-uiverse inline-block px-12 py-4">
-            Acessar Registros
-          </Link>
-        </div>
-      </section>
 
-      {/* Citação Poética — Editorial */}
-      <section className="py-24 md:py-32 px-6 relative overflow-hidden">
-        {/* Número decorativo de fundo */}
-        <div 
-          className="absolute left-4 md:left-12 top-1/2 -translate-y-1/2 font-display font-light leading-none select-none pointer-events-none"
-          style={{ 
-            fontSize: 'clamp(120px, 25vw, 280px)', 
-            color: 'var(--primary)', 
-            opacity: 0.04,
-            letterSpacing: '-0.05em'
-          }}
-          aria-hidden="true"
-        >
-          I
-        </div>
-        
-        {/* Gradiente radial de fundo sutil */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_left,var(--glow-purple)_0%,transparent_60%)] opacity-20 pointer-events-none" />
-        
-        <div className="max-w-4xl mx-auto relative z-10">
-          {/* Label acima */}
-          <span className="font-sc text-[10px] tracking-[0.3em] text-primary/60 block mb-8">
-            I
-          </span>
-          
-          {/* Citação alinhada à esquerda */}
-          <blockquote>
-            <p className="font-display font-light italic text-3xl sm:text-4xl md:text-5xl text-text-high leading-[1.2] max-w-3xl">
-              — Em cada fragmento, uma história. Em cada nota, um suspiro da alma perdida nas névoas do tempo.
-            </p>
-          </blockquote>
-        </div>
-      </section>
     </div>
   );
 }

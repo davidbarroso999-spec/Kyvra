@@ -3,6 +3,7 @@ import { motion, useScroll, useTransform } from 'motion/react';
 import { BackgroundEffects } from '../ui/BackgroundEffects';
 import { Header } from './Header';
 import { MiniPlayer } from '../ui/MiniPlayer';
+import { CircularMenu } from '../ui/CircularMenu';
 
 export function Layout() {
   const { scrollYProgress } = useScroll();
@@ -12,15 +13,13 @@ export function Layout() {
     <div className="min-h-screen flex flex-col relative">
       <BackgroundEffects />
       
-      <div className="noise-overlay" />
-      <div className="scanlines" />
-      
       <Header />
       
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 flex flex-col pb-32 sm:pb-24">
         <Outlet />
       </main>
 
+      <CircularMenu />
       <MiniPlayer />
     </div>
   );

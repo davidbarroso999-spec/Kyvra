@@ -82,23 +82,6 @@ export function Header() {
             KYVRA
           </Link>
 
-          {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-8">
-            {navLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                className="relative text-sm font-sans font-medium text-text-mid hover:text-text-high transition-colors group"
-              >
-                {link.label}
-                <span className="absolute -bottom-1 left-1/2 w-0 h-[1px] bg-primary transition-all duration-300 group-hover:w-full group-hover:left-0" />
-                {location.pathname === link.path && (
-                  <span className="absolute -bottom-1 left-0 w-full h-[1px] bg-primary" />
-                )}
-              </Link>
-            ))}
-          </nav>
-
           {/* Actions */}
           <div className="flex items-center gap-4 z-50 relative">
             {/* Sync Offline Button */}
@@ -159,83 +142,13 @@ export function Header() {
 
             <Link
               to="/arquivista"
-              className="hidden md:flex text-xs font-sc tracking-widest text-text-low hover:text-primary transition-colors"
+              className="md:flex text-xs font-sc tracking-widest text-text-low hover:text-primary transition-colors"
             >
               O ARQUIVISTA
             </Link>
-
-            {!isMobileMenuOpen && (
-              <button
-                className="md:hidden text-text-high"
-                onClick={() => setIsMobileMenuOpen(true)}
-              >
-                <Menu size={24} />
-              </button>
-            )}
           </div>
         </div>
       </header>
-
-      {/* Mobile Menu Overlay */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="fixed inset-0 z-40 bg-void/60 backdrop-blur-md md:hidden"
-            />
-            
-            {/* Side Drawer */}
-            <motion.div
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 250 }}
-              className="fixed top-0 right-0 bottom-0 w-[80%] max-w-sm z-40 bg-surface/95 backdrop-blur-xl border-l border-border/50 shadow-2xl flex flex-col p-6 pt-28 md:hidden"
-            >
-              <nav className="flex flex-col gap-2 w-full">
-                {navLinks.map((link, i) => (
-                  <motion.div
-                    key={link.path}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.05 + 0.1, ease: "easeOut" }}
-                    className="w-full"
-                  >
-                    <Link
-                      to={link.path}
-                      className={cn(
-                        "block w-full py-4 px-6 font-display text-2xl transition-colors r-md text-left",
-                        location.pathname === link.path ? "text-primary bg-primary/10 border-l-2 border-primary" : "text-text-high hover:text-primary hover:bg-overlay"
-                      )}
-                    >
-                      {link.label}
-                    </Link>
-                  </motion.div>
-                ))}
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: navLinks.length * 0.05 + 0.1, ease: "easeOut" }}
-                  className="mt-8 w-full px-6"
-                >
-                  <Link
-                    to="/arquivista"
-                    className="block w-full text-center py-3 font-sc tracking-[0.2em] text-xs text-text-low hover:text-primary transition-colors border border-border/50 r-md"
-                  >
-                    O ARQUIVISTA
-                  </Link>
-                </motion.div>
-              </nav>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
     </>
   );
 }

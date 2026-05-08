@@ -130,6 +130,7 @@ export function FeaturedSlider({ tracks }: FeaturedSliderProps) {
                   src={track.coverUrl}
                   alt={track.title}
                   loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   referrerPolicy="no-referrer"
                   draggable={false}

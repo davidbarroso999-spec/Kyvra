@@ -38,7 +38,7 @@ export function Lore() {
           <h1 className="text-4xl md:text-7xl font-display tracking-tight text-text-high">
             A Cosmogonia do Abismo
           </h1>
-          <p className="mt-6 text-text-mid font-sans font-light max-w-2xl text-lg leading-relaxed italic">
+          <p className="mt-6 text-text-mid font-sans font-light max-w-2xl text-lg leading-relaxed">
             "Para entender o som, é preciso primeiro compreender o silêncio que o precede. Aqui residem as memórias do que fomos antes de sermos música."
           </p>
         </motion.div>
@@ -180,7 +180,7 @@ export function Lore() {
                           <div className="w-full max-w-3xl prose prose-invert text-left">
                             <div className="space-y-8">
                               {chapter.content.split('\n\n').map((para: string, i: number) => (
-                                <p key={i} className="font-sans font-light text-text-mid text-lg md:text-xl md:text-center lg:text-left leading-relaxed italic opacity-90 first-letter:text-4xl first-letter:font-display first-letter:text-primary first-letter:mr-2">
+                                <p key={i} className="font-sans font-light text-text-mid text-lg md:text-xl md:text-center lg:text-left leading-relaxed opacity-90 first-letter:text-4xl first-letter:font-display first-letter:text-primary first-letter:mr-2">
                                   {para}
                                 </p>
                               ))}

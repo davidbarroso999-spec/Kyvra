@@ -92,12 +92,13 @@ export function AlbumSlider({ albums }: AlbumSliderProps) {
               {/* capa — aspecto 1:1.3 (retrato) */}
               <div
                 className="relative overflow-hidden"
-                style={{ borderRadius: 'var(--radius-md)', aspectRatio: '1 / 1.3' }}
+                style={{ borderRadius: 'var(--radius-md)', aspectRatio: '1 / 1' }}
               >
                 <img
                   src={album.coverUrl}
                   alt={album.title}
                   loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   referrerPolicy="no-referrer"
                   draggable={false}

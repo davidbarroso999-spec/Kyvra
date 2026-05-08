@@ -5,6 +5,15 @@ import { Play } from 'lucide-react';
 import { getAlbums } from '@/lib/apiCache';
 import { AlbumSlider } from '@/components/ui/AlbumSlider';
 
+const ALBUM_ORDER = [
+  "sob a última luz",
+  "ecos de cinzas",
+  "fragmentos do abismo",
+  "além dos véus do vazio",
+  "tronos de ruína",
+  "o eclipse dos amantes"
+].map(a => a.toLowerCase());
+
 export function Albums() {
   const [albums, setAlbums] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -18,14 +27,26 @@ export function Albums() {
       }
 
       if (data) {
-        setAlbums(data.map((a: any) => ({
+        const formattedAlbums = data.map((a: any) => ({
           id: a.id,
           title: a.title,
           year: a.release_year,
           coverUrl: a.cover_url,
           description: a.description,
           tracks: a.tracks?.[0]?.count || 0
-        })));
+        }));
+
+        formattedAlbums.sort((a: any, b: any) => {
+          const titleA = a.title?.toLowerCase().trim() || "";
+          const titleB = b.title?.toLowerCase().trim() || "";
+          const idxA = ALBUM_ORDER.findIndex(t => titleA.includes(t) || t.includes(titleA));
+          const idxB = ALBUM_ORDER.findIndex(t => titleB.includes(t) || t.includes(titleB));
+          const valA = idxA === -1 ? 999 : idxA;
+          const valB = idxB === -1 ? 999 : idxB;
+          return valA - valB;
+        });
+
+        setAlbums(formattedAlbums);
       }
       setLoading(false);
     }
@@ -49,10 +70,10 @@ export function Albums() {
       </motion.div>
 
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {[...Array(6)].map((_, i) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
+          {[...Array(8)].map((_, i) => (
             <div key={i} className="animate-pulse">
-              <div className="skeleton skeleton-md aspect-[1/1.3] w-full mb-4" />
+              <div className="skeleton skeleton-md aspect-square w-full mb-4" />
               <div className="skeleton h-5 w-3/4 mb-2" style={{ borderRadius: 'var(--radius-sm)' }} />
               <div className="skeleton h-3 w-1/2" style={{ borderRadius: 'var(--radius-sm)' }} />
             </div>

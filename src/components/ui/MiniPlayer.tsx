@@ -377,11 +377,18 @@ export function MiniPlayer() {
         initial={{ y: 100, opacity: 0 }}
         animate={{ y: isExpanded ? 100 : 0, opacity: isExpanded ? 0 : 1 }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className="fixed bottom-4 right-4 left-4 sm:left-auto sm:bottom-6 sm:right-6 z-[1000] glass r-md p-3 flex items-center gap-4 w-auto sm:w-[320px] shadow-2xl cursor-pointer"
+        className="fixed bottom-4 left-4 right-20 sm:left-auto sm:bottom-6 sm:right-24 z-[1000] glass r-md p-2.5 flex items-center gap-3 w-auto sm:w-[260px] shadow-2xl cursor-pointer"
         style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
         onClick={() => setIsExpanded(true)}
       >
-        <img src={currentTrack.coverUrl} alt="Cover" className="w-12 h-12 rounded object-cover" referrerPolicy="no-referrer" />
+        <img 
+          src={currentTrack.coverUrl} 
+          alt={currentTrack.title} 
+          loading="lazy"
+          decoding="async"
+          className="w-12 h-12 rounded object-cover shrink-0" 
+          referrerPolicy="no-referrer" 
+        />
         <div className="flex-1 min-w-0">
           <h4 className="text-sm font-medium text-text-high truncate">{currentTrack.title}</h4>
           <p className="text-[10px] text-text-low truncate uppercase tracking-wider">
@@ -420,7 +427,7 @@ export function MiniPlayer() {
           dragElastic={{ top: 0, bottom: 0.5 }}
           onDragEnd={handleDragEnd}
           transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-          className="fixed inset-0 z-[2000] bg-void/98 flex flex-col"
+          className="fixed inset-0 z-[4000] bg-void/98 flex flex-col"
           style={{
             paddingTop: 'env(safe-area-inset-top)',
             paddingBottom: 'env(safe-area-inset-bottom)'
@@ -558,6 +565,8 @@ export function MiniPlayer() {
                               <img
                                 src={track.coverUrl}
                                 alt={track.title}
+                                loading="lazy"
+                                decoding="async"
                                 className="w-10 h-10 rounded object-cover shrink-0 pointer-events-none"
                                 referrerPolicy="no-referrer"
                               />
@@ -616,6 +625,8 @@ export function MiniPlayer() {
                       <img 
                         src={currentTrack.coverUrl} 
                         alt="Cover" 
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover"
                         referrerPolicy="no-referrer"
                       />
@@ -680,26 +691,6 @@ export function MiniPlayer() {
                         <SkipForward size={20} className="fill-current" />
                       </KyvraButton>
                     </div>
-
-                    {/* Bottom Strip Actions */}
-                    <div className="grid grid-cols-4 gap-2 pb-2">
-                      <button onClick={() => { setShowQueue(!showQueue); setShowLyrics(false); }} className={cn("flex flex-col items-center gap-1 py-2 rounded-lg transition-all", showQueue ? "text-primary" : "text-text-low hover:text-text-high")}>
-                        <ListMusic size={20} />
-                        <span className="text-[8px] font-sc tracking-widest">FILA</span>
-                      </button>
-                      <button onClick={() => { setShowLyrics(!showLyrics); setShowQueue(false); }} className={cn("flex flex-col items-center gap-1 py-2 rounded-lg transition-all", showLyrics ? "text-primary" : "text-text-low hover:text-text-high")}>
-                        <AlignLeft size={20} />
-                        <span className="text-[8px] font-sc tracking-widest">LETRA</span>
-                      </button>
-                      <button onClick={toggleShuffle} className={cn("flex flex-col items-center gap-1 py-2 rounded-lg transition-all", isShuffle ? "text-primary" : "text-text-low hover:text-text-high")}>
-                        <Shuffle size={20} />
-                        <span className="text-[8px] font-sc tracking-widest">SHUFFLE</span>
-                      </button>
-                      <button onClick={toggleRepeat} className={cn("flex flex-col items-center gap-1 py-2 rounded-lg transition-all", repeatMode !== 'off' ? "text-primary" : "text-text-low hover:text-text-high")}>
-                        {repeatMode === 'one' ? <Repeat1 size={20} className="stroke-[3px]" /> : <Repeat size={20} />}
-                        <span className="text-[8px] font-sc tracking-widest">{repeatMode === 'one' ? 'UM' : 'REPETIR'}</span>
-                      </button>
-                    </div>
                   </div>
                 </motion.div>
               ) : (
@@ -737,6 +728,26 @@ export function MiniPlayer() {
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {/* Bottom Strip Actions (Always Visible) */}
+            <div className="grid grid-cols-4 gap-2 pt-4 pb-2 mt-auto shrink-0 border-t border-white/5 relative z-[2005]">
+              <button onClick={() => { setShowQueue(!showQueue); setShowLyrics(false); }} className={cn("flex flex-col items-center gap-1 py-2 rounded-lg transition-all", showQueue ? "text-primary" : "text-text-low hover:text-text-high")}>
+                <ListMusic size={20} />
+                <span className="text-[8px] font-sc tracking-widest">FILA</span>
+              </button>
+              <button onClick={() => { setShowLyrics(!showLyrics); setShowQueue(false); }} className={cn("flex flex-col items-center gap-1 py-2 rounded-lg transition-all", showLyrics ? "text-primary" : "text-text-low hover:text-text-high")}>
+                <AlignLeft size={20} />
+                <span className="text-[8px] font-sc tracking-widest">LETRA</span>
+              </button>
+              <button onClick={toggleShuffle} className={cn("flex flex-col items-center gap-1 py-2 rounded-lg transition-all", isShuffle ? "text-primary" : "text-text-low hover:text-text-high")}>
+                <Shuffle size={20} />
+                <span className="text-[8px] font-sc tracking-widest">SHUFFLE</span>
+              </button>
+              <button onClick={toggleRepeat} className={cn("flex flex-col items-center gap-1 py-2 rounded-lg transition-all", repeatMode !== 'off' ? "text-primary" : "text-text-low hover:text-text-high")}>
+                {repeatMode === 'one' ? <Repeat1 size={20} className="stroke-[3px]" /> : <Repeat size={20} />}
+                <span className="text-[8px] font-sc tracking-widest">{repeatMode === 'one' ? 'UM' : 'REPETIR'}</span>
+              </button>
+            </div>
           </div>
         </motion.div>
       )}

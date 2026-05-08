@@ -1,10 +1,39 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Play, Pause } from 'lucide-react';
+import { Search, Play, Pause, ChevronDown } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { cn, saveForOffline } from '@/lib/utils';
 import { getAllTracks } from '@/lib/apiCache';
 import { TrackDuration } from '@/components/ui/TrackDuration';
+
+const TRACK_ORDER = [
+  "Sob a Égide da Lua",
+  "Eco de um Adeus",
+  "Vestígios de Nós",
+  "Entre os Reinos do Fim",
+  "Onde as Estrelas Morrem",
+  "Rastros das Cinzas",
+  "Voz que Me Queima",
+  "Cativeiro",
+  "Chamas Sob Minha Pele",
+  "Reescreve Meu Fim",
+  "Sussurri nella Notte",
+  "Teu Vazio",
+  "Cicatrizes e Delírios",
+  "Limiar da Pele",
+  "Flor de Sangue",
+  "Sou",
+  "Lâminas",
+  "Incanto di Veleno",
+  "Principado",
+  "Cicatrizes",
+  "Aurora",
+  "Espelho de Cinzas",
+  "Ruína",
+  "Trono de Névoa",
+  "Veneno em Flor",
+  "Último Eclipse"
+].map(t => t.toLowerCase());
 
 export function Archive() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -19,6 +48,31 @@ export function Archive() {
     window.addEventListener('scroll', closeMenu);
     return () => window.removeEventListener('scroll', closeMenu);
   }, []);
+
+  const location = window.location;
+  
+  useEffect(() => {
+    if (loading || tracks.length === 0) return;
+    
+    // Check if we have a track to scroll to
+    const searchParams = new URLSearchParams(location.search);
+    const trackId = searchParams.get('track');
+    
+    if (trackId) {
+      setTimeout(() => {
+        const element = document.getElementById(`track-${trackId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Optional: Add a brief highlight class
+          element.classList.add('bg-primary/20');
+          setTimeout(() => {
+            element.classList.remove('bg-primary/20');
+            element.classList.add('transition-colors', 'duration-1000');
+          }, 2000);
+        }
+      }, 500);
+    }
+  }, [loading, tracks, location.search]);
 
   useEffect(() => {
     async function fetchTracks() {
@@ -67,6 +121,24 @@ export function Archive() {
       track.vibe.toLowerCase().includes(q);
   });
 
+  let sortedTracks = [...filteredTracks];
+  sortedTracks.sort((a, b) => {
+    const titleA = a.title?.toLowerCase().trim() || "";
+    const titleB = b.title?.toLowerCase().trim() || "";
+    
+    const idxA = TRACK_ORDER.findIndex(t => titleA.includes(t) || t.includes(titleA));
+    const idxB = TRACK_ORDER.findIndex(t => titleB.includes(t) || t.includes(titleB));
+    
+    const valA = idxA === -1 ? 999 : idxA;
+    const valB = idxB === -1 ? 999 : idxB;
+    
+    // Fallback pra nome caso não esteja na lista
+    if (valA === valB) {
+      return titleA.localeCompare(titleB);
+    }
+    return valA - valB;
+  });
+
   const [queueFeedback, setQueueFeedback] = useState<string | null>(null);
 
   const showFeedback = (msg: string) => {
@@ -79,12 +151,12 @@ export function Archive() {
       setIsPlaying(!isPlaying);
     } else {
       setCurrentTrack(track);
-      setQueue(filteredTracks);
+      setQueue(sortedTracks);
     }
   };
 
   const handleShareTrack = async (track: any) => {
-    const shareUrl = `https://descubrakyvra.vercel.app${window.location.pathname}${window.location.search}`;
+    const shareUrl = `https://descubrakyvra.vercel.app/musicas?track=${track.id}`;
     try {
       if (navigator.share) {
         await navigator.share({
@@ -139,11 +211,11 @@ export function Archive() {
           <h1 className="text-5xl md:text-7xl leading-none">Biblioteca</h1>
         </div>
         <span className="font-mono text-xs text-text-low pb-2 hidden md:block">
-          {filteredTracks.length} fragmentos
+          {sortedTracks.length} fragmentos
         </span>
       </motion.div>
 
-      {/* Search Bar */}
+      {/* Controls: Search */}
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -183,7 +255,7 @@ export function Archive() {
               </div>
             ))}
           </div>
-        ) : filteredTracks.length === 0 ? (
+        ) : sortedTracks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
             <div className="w-[1px] h-12 bg-gradient-to-b from-transparent via-border to-transparent" />
             <p className="font-sc text-xs tracking-[0.3em] text-text-low">FRAGMENTO NÃO ENCONTRADO</p>
@@ -202,12 +274,13 @@ export function Archive() {
             )}
           </div>
         ) : (
-          filteredTracks.map((track, index) => {
+          sortedTracks.map((track, index) => {
             const isCurrentTrack = currentTrack?.id === track.id;
             
             return (
               <div
                 key={track.id}
+                id={`track-${track.id}`}
                 onClick={() => handlePlay(track)}
                 className="track-row-hover flex items-center gap-4 py-3 px-4 cursor-pointer rounded-none border-b border-border/50 last:border-0 group"
               >
@@ -247,7 +320,7 @@ export function Archive() {
                   )}
                 </div>
                 
-                <img src={track.coverUrl} alt={track.title} loading="lazy" className="w-12 h-12 rounded object-cover" referrerPolicy="no-referrer" />
+                <img src={track.coverUrl} alt={track.title} loading="lazy" decoding="async" className="w-12 h-12 rounded object-cover" referrerPolicy="no-referrer" />
                 
                 <div className="flex-1 min-w-0">
                   <h3 className={cn("font-medium truncate", isCurrentTrack ? "text-primary" : "text-text-high")}>

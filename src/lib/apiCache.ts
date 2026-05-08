@@ -8,17 +8,18 @@ export async function fetchWithCache(key: string, fetcher: () => Promise<any>, f
   if (!forceRefresh) {
     const cached = cache.get(key);
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      return cached.data;
+      return { data: cached.data, error: null };
     }
   }
 
-  const { data, error } = await fetcher();
+  const response = await fetcher();
+  const { data, error } = response;
   
   if (!error && data) {
     cache.set(key, { data, timestamp: Date.now() });
   }
   
-  return { data, error };
+  return response;
 }
 
 export function clearCache(keyPrefix?: string) {

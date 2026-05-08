@@ -98,7 +98,7 @@ export function AlbumDetail() {
   };
 
   const handleShareTrack = async (track: any) => {
-    const shareUrl = `https://descubrakyvra.vercel.app${window.location.pathname}${window.location.search}`;
+    const shareUrl = `https://descubrakyvra.vercel.app/musicas?track=${track.id}`;
     try {
       if (navigator.share) {
         await navigator.share({
@@ -211,7 +211,8 @@ export function AlbumDetail() {
             animate={{ opacity: 1, scale: 1 }}
             src={album.coverUrl} 
             alt={album.title} 
-            loading="lazy"
+            fetchPriority="high"
+            decoding="async"
             className="w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 object-cover r-md shadow-[0_30px_60px_rgba(0,0,0,0.8)]"
             referrerPolicy="no-referrer"
           />
