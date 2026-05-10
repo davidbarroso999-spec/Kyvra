@@ -1,10 +1,94 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence, Reorder } from 'motion/react';
+import { motion, AnimatePresence, Reorder, useDragControls } from 'motion/react';
 import { Play, Pause, SkipBack, SkipForward, Repeat, Repeat1, Shuffle, Volume2, Volume1, VolumeX, AlignLeft, ListMusic, X, GripVertical, Share, Heart, SlidersHorizontal, Moon, ChevronDown, ChevronLeft, MoreVertical, Download, WifiOff } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { cn, isSavedOffline, getOfflineUrl } from '@/lib/utils';
 import { TrackDuration } from '@/components/ui/TrackDuration';
 import { KyvraButton } from './KyvraButton';
+
+function QueueItem({ track, index, isCurrent, isPlaying, setCurrentTrack, removeFromQueue }: { track: any, index: number, isCurrent: boolean, isPlaying: boolean, setCurrentTrack: (t: any) => void, removeFromQueue: (id: string) => void }) {
+  const dragControls = useDragControls();
+
+  return (
+    <Reorder.Item
+      value={track}
+      dragListener={false}
+      dragControls={dragControls}
+      className={cn(
+        "flex items-center gap-3 p-3 rounded-lg transition-colors group",
+        isCurrent
+          ? "bg-primary/10 border border-primary/20"
+          : "hover:bg-overlay"
+      )}
+    >
+      {/* Drag Handle */}
+      <div 
+        className="w-5 text-center shrink-0 text-text-low opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
+        onPointerDown={(e) => dragControls.start(e)}
+      >
+        <GripVertical size={16} />
+      </div>
+
+      {/* Número ou indicador de tocando */}
+      <div className="w-5 text-center shrink-0">
+        {isCurrent ? (
+          /* Ícone animado de "tocando" — 3 barras pulsando */
+          <div className="flex items-end justify-center gap-[2px] h-4">
+            {[0, 0.2, 0.1].map((delay, i) => (
+              <div
+                key={i}
+                className="w-[3px] bg-primary rounded-sm"
+                style={{
+                  height: isPlaying ? '100%' : '40%',
+                  animation: isPlaying
+                    ? `queueBar 0.8s ease-in-out ${delay}s infinite alternate`
+                    : 'none',
+                  transition: 'height 0.3s ease'
+                }}
+              />
+            ))}
+          </div>
+        ) : (
+          <span className="font-mono text-xs text-text-low">{index + 1}</span>
+        )}
+      </div>
+
+      {/* Capa miniatura */}
+      <img
+        src={track.coverUrl}
+        alt={track.title}
+        loading="lazy"
+        decoding="async"
+        className="w-10 h-10 rounded object-cover shrink-0 pointer-events-none"
+        referrerPolicy="no-referrer"
+      />
+
+      {/* Info da faixa — clicável para tocar */}
+      <button
+        className="flex-1 text-left min-w-0"
+        onClick={() => setCurrentTrack(track)}
+      >
+        <p className={cn(
+          "text-sm font-medium truncate",
+          isCurrent ? "text-primary" : "text-text-high"
+        )}>
+          {track.title}
+        </p>
+        <p className="text-xs text-text-low truncate">{track.artist}</p>
+      </button>
+
+      {/* Botão de remover — aparece no hover */}
+      {!isCurrent && (
+        <button
+          onClick={() => removeFromQueue(track.id)}
+          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-text-low hover:text-primary"
+        >
+          <X size={14} />
+        </button>
+      )}
+    </Reorder.Item>
+  );
+}
 
 export function MiniPlayer() {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -519,84 +603,17 @@ export function MiniPlayer() {
                         onReorder={updateQueueOrder} 
                         className="flex flex-col gap-1 px-2"
                       >
-                        {(isShuffle ? shuffledQueue : queue).map((track, index) => {
-                          const isCurrent = track.id === currentTrack?.id;
-                          return (
-                            <Reorder.Item
-                              key={track.id}
-                              value={track}
-                              className={cn(
-                                "flex items-center gap-3 p-3 rounded-lg transition-colors group cursor-grab active:cursor-grabbing",
-                                isCurrent
-                                  ? "bg-primary/10 border border-primary/20"
-                                  : "hover:bg-overlay"
-                              )}
-                            >
-                              {/* Drag Handle */}
-                              <div className="w-5 text-center shrink-0 text-text-low opacity-0 group-hover:opacity-100 transition-opacity">
-                                <GripVertical size={16} />
-                              </div>
-
-                              {/* Número ou indicador de tocando */}
-                              <div className="w-5 text-center shrink-0">
-                                {isCurrent ? (
-                                  /* Ícone animado de "tocando" — 3 barras pulsando */
-                                  <div className="flex items-end justify-center gap-[2px] h-4">
-                                    {[0, 0.2, 0.1].map((delay, i) => (
-                                      <div
-                                        key={i}
-                                        className="w-[3px] bg-primary rounded-sm"
-                                        style={{
-                                          height: isPlaying ? '100%' : '40%',
-                                          animation: isPlaying
-                                            ? `queueBar 0.8s ease-in-out ${delay}s infinite alternate`
-                                            : 'none',
-                                          transition: 'height 0.3s ease'
-                                        }}
-                                      />
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <span className="font-mono text-xs text-text-low">{index + 1}</span>
-                                )}
-                              </div>
-
-                              {/* Capa miniatura */}
-                              <img
-                                src={track.coverUrl}
-                                alt={track.title}
-                                loading="lazy"
-                                decoding="async"
-                                className="w-10 h-10 rounded object-cover shrink-0 pointer-events-none"
-                                referrerPolicy="no-referrer"
-                              />
-
-                              {/* Info da faixa — clicável para tocar */}
-                              <button
-                                className="flex-1 text-left min-w-0"
-                                onClick={() => setCurrentTrack(track)}
-                              >
-                                <p className={cn(
-                                  "text-sm font-medium truncate",
-                                  isCurrent ? "text-primary" : "text-text-high"
-                                )}>
-                                  {track.title}
-                                </p>
-                                <p className="text-xs text-text-low truncate">{track.artist}</p>
-                              </button>
-
-                              {/* Botão de remover — aparece no hover */}
-                              {!isCurrent && (
-                                <button
-                                  onClick={() => removeFromQueue(track.id)}
-                                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-text-low hover:text-primary"
-                                >
-                                  <X size={14} />
-                                </button>
-                              )}
-                            </Reorder.Item>
-                          );
-                        })}
+                        {(isShuffle ? shuffledQueue : queue).map((track, index) => (
+                          <QueueItem
+                            key={track.id}
+                            track={track}
+                            index={index}
+                            isCurrent={track.id === currentTrack?.id}
+                            isPlaying={isPlaying}
+                            setCurrentTrack={setCurrentTrack}
+                            removeFromQueue={removeFromQueue}
+                          />
+                        ))}
                       </Reorder.Group>
                     )}
                   </div>

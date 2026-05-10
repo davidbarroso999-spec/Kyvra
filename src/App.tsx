@@ -7,6 +7,7 @@ import { HashRouter, Routes, Route } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
 import { useStore } from './store/useStore';
 import React, { Suspense } from 'react';
+import { UltraPerformanceEngine } from './lib/performance-engine';
 
 // Lazy loading das páginas para melhorar a performance inicial
 const Home = React.lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
@@ -31,6 +32,11 @@ export default function App() {
     } else {
       console.warn("GEMINI_API_KEY is NOT detected in the environment. AI features will not work.");
     }
+
+    // Initialize ultra performance engine
+    (window as any).PerformanceEngine = new UltraPerformanceEngine({
+      targetFPS: 120
+    });
   }, []);
 
   return (
