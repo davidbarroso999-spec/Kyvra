@@ -6,7 +6,6 @@ import { getFeaturedTracksSettings, getTracksByIds, getTrackSynopses } from '@/l
 import { useStore } from '@/store/useStore';
 import { Play } from 'lucide-react';
 import { FeaturedSlider } from '@/components/ui/FeaturedSlider';
-import Phosphor30 from '@/components/ui/phosphor-30';
 
 export function Home() {
   const [featuredTracks, setFeaturedTracks] = useState<any[]>([]);
@@ -68,23 +67,30 @@ export function Home() {
     <div className="w-full">
       {/* Hero Section */}
       <section className="relative h-[100dvh] flex items-center justify-center px-6 overflow-hidden">
-        {/* WebGL Shader Background */}
-        <div className="absolute inset-0 bg-void -z-10">
-          <Phosphor30 />
-          {/* Overlay to ensure text readability */}
-          <div className="absolute inset-0 bg-void/50 pointer-events-none" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,var(--glow-purple)_0%,transparent_60%)] opacity-20 pointer-events-none" />
+        <div className="absolute inset-0 bg-void -z-10 overflow-hidden">
+          {/* Efeitos de fumaça / glow puramente estáticos em CSS para performance máxima (zero JS, zero recálculo) */}
+          <div 
+            className="absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] rounded-full bg-[radial-gradient(circle,var(--glow-purple)_0%,transparent_60%)] opacity-20 blur-[100px] pointer-events-none"
+          />
+          <div 
+            className="absolute -bottom-[20%] -right-[10%] w-[60vw] h-[60vw] rounded-full bg-[radial-gradient(circle,var(--glow-purple)_0%,transparent_60%)] opacity-10 blur-[120px] pointer-events-none"
+          />
+          
+          {/* Overlay final para garantir leitura e transição pro resto da página */}
+          <div className="absolute inset-0 bg-gradient-to-b from-void/10 via-void/40 to-void pointer-events-none" />
         </div>
 
         <div className="relative z-10 flex flex-col items-center justify-center text-center w-full h-full pointer-events-none mt-0">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-            className="inline-flex flex-col items-center pointer-events-auto select-none glass-premium rounded-3xl px-12 py-14 md:px-24 md:py-20 mx-4 shadow-[0_40px_100px_rgba(0,0,0,0.7)] border-t border-white/5"
+            className="inline-flex flex-col items-center pointer-events-auto select-none rounded-[2rem] px-10 py-12 md:px-24 md:py-20 mx-4"
             style={{ 
-              background: "linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01))",
-              backdropFilter: "blur(24px) saturate(2)",
+              background: "linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)",
+              backdropFilter: "blur(30px)",
+              WebkitBackdropFilter: "blur(30px)",
+              boxShadow: "0 0 0 1px rgba(255,255,255,0.05), 0 40px 100px -20px rgba(0,0,0,0.8)",
             }}
           >
             <h1 className="font-display font-medium text-[24vw] sm:text-[22vw] md:text-[20vw] lg:text-[180px] xl:text-[220px] leading-[0.85] tracking-[-0.04em] text-gradient m-0 p-0 text-center drop-shadow-2xl">
