@@ -98,7 +98,7 @@ export function AlbumDetail() {
   };
 
   const handleShareTrack = async (track: any) => {
-    const shareUrl = `https://descubrakyvra.vercel.app/musicas?track=${track.id}`;
+    const shareUrl = `https://descubrakyvra.vercel.app/#/arquivo?track=${track.id}`;
     try {
       if (navigator.share) {
         await navigator.share({

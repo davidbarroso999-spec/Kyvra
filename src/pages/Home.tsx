@@ -6,6 +6,7 @@ import { getFeaturedTracksSettings, getTracksByIds, getTrackSynopses } from '@/l
 import { useStore } from '@/store/useStore';
 import { Play } from 'lucide-react';
 import { FeaturedSlider } from '@/components/ui/FeaturedSlider';
+import { LampContainer } from '@/components/ui/lamp';
 
 export function Home() {
   const [featuredTracks, setFeaturedTracks] = useState<any[]>([]);
@@ -70,14 +71,20 @@ export function Home() {
         <div className="absolute inset-0 bg-void -z-10 overflow-hidden">
           {/* Efeitos de fumaça / glow puramente estáticos em CSS para performance máxima (zero JS, zero recálculo) */}
           <div 
-            className="absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] rounded-full bg-[radial-gradient(circle,var(--glow-purple)_0%,transparent_60%)] opacity-20 blur-[100px] pointer-events-none"
+            className="absolute -top-[50%] -left-[50%] w-[200vw] h-[200vw] sm:-top-[20%] sm:-left-[10%] sm:w-[70vw] sm:h-[70vw] bg-[radial-gradient(circle_at_center,var(--glow-purple)_0%,transparent_50%)] opacity-15 pointer-events-none"
+            style={{ transform: 'translateZ(0)' }}
           />
           <div 
-            className="absolute -bottom-[20%] -right-[10%] w-[60vw] h-[60vw] rounded-full bg-[radial-gradient(circle,var(--glow-purple)_0%,transparent_60%)] opacity-10 blur-[120px] pointer-events-none"
+            className="absolute -bottom-[50%] -right-[50%] w-[200vw] h-[200vw] sm:-bottom-[20%] sm:-right-[10%] sm:w-[60vw] sm:h-[60vw] bg-[radial-gradient(circle_at_center,var(--glow-purple)_0%,transparent_50%)] opacity-10 pointer-events-none"
+            style={{ transform: 'translateZ(0)' }}
           />
           
           {/* Overlay final para garantir leitura e transição pro resto da página */}
           <div className="absolute inset-0 bg-gradient-to-b from-void/10 via-void/40 to-void pointer-events-none" />
+        </div>
+
+        <div className="absolute inset-0 z-0 pointer-events-none flex items-center justify-center translate-y-[-14dvh] sm:translate-y-[calc(-50px-12dvh)] md:translate-y-[calc(-100px-12dvh)] lg:translate-y-[calc(-120px-10dvh)] scale-[1.05] sm:scale-110 origin-center select-none">
+          <LampContainer />
         </div>
 
         <div className="relative z-10 flex flex-col items-center justify-center text-center w-full h-full pointer-events-none mt-0">
@@ -85,12 +92,12 @@ export function Home() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-            className="inline-flex flex-col items-center pointer-events-auto select-none rounded-[2rem] px-10 py-12 md:px-24 md:py-20 mx-4"
+            className="inline-flex flex-col items-center pointer-events-auto select-none rounded-[2rem] px-5 py-8 sm:px-10 sm:py-12 md:px-24 md:py-20 mx-4"
             style={{ 
               background: "linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)",
-              backdropFilter: "blur(30px)",
-              WebkitBackdropFilter: "blur(30px)",
-              boxShadow: "0 0 0 1px rgba(255,255,255,0.05), 0 40px 100px -20px rgba(0,0,0,0.8)",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              boxShadow: "0 0 0 1px rgba(255,255,255,0.05), 0 20px 50px -10px rgba(0,0,0,0.8)",
             }}
           >
             <h1 className="font-display font-medium text-[24vw] sm:text-[22vw] md:text-[20vw] lg:text-[180px] xl:text-[220px] leading-[0.85] tracking-[-0.04em] text-gradient m-0 p-0 text-center drop-shadow-2xl">

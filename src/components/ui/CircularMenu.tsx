@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 
 // Glassmorphism otimizado: Usar blur apenas no backdrop global e não nas camadas sobrepostas
 const menuItems = [
-  { path: '/cosmogonia', label: 'lore', size: 560, zIndex: 20, bg: 'bg-surface/20 backdrop-blur-xl border border-primary/40 shadow-2xl', textColor: 'fill-text-high' },
+  { path: '/cosmogonia', label: 'lore', size: 560, zIndex: 20, bg: 'bg-surface/90 sm:bg-surface/20 backdrop-blur-none sm:backdrop-blur-md border border-primary/40 shadow-2xl', textColor: 'fill-text-high' },
   { path: '/reliquias', label: 'álbuns', size: 440, zIndex: 30, bg: 'bg-transparent hover:bg-primary/5 border border-primary/30 hover:border-primary/50 transition-colors duration-500', textColor: 'fill-text-high' },
   { path: '/arquivo', label: 'músicas', size: 320, zIndex: 40, bg: 'bg-transparent hover:bg-primary/10 border border-primary/40 hover:border-primary/60 transition-colors duration-500', textColor: 'fill-text-high' },
   { path: '/', label: 'home', size: 200, zIndex: 50, bg: 'bg-transparent hover:bg-primary/15 border border-primary/50 hover:border-primary/70 transition-colors duration-500', textColor: 'fill-text-high' },
@@ -39,85 +39,89 @@ export function CircularMenu() {
       </AnimatePresence>
 
       {/* Origin perfectly at bottom-right, spaced a bit from edges to align with MiniPlayer */}
-      <div className="fixed bottom-[3.125rem] right-[2.5rem] sm:bottom-[3.625rem] sm:right-[3rem] z-[3010] flex items-center justify-center">
+      <div className="fixed bottom-[6rem] right-[1.5rem] sm:bottom-[3.625rem] sm:right-[3rem] z-[5000] flex items-center justify-center pointer-events-none">
         
         {/* Origin Center Point */}
-        <div className="relative w-0 h-0 flex justify-center items-center">
-          <AnimatePresence>
-            {isOpen && menuItems.map((item, index) => {
-              const R = item.size / 2; // Radius
-              const innerR = index === menuItems.length - 1 ? 40 : menuItems[index + 1].size / 2;
-              const textR = (R + innerR) / 2; 
-              
-              // Top-Left quadrant arc em SVG (O centro do círculo é no item.size/2)
-              // Começa em (cx - textR, cy) -> extremidade esquerda
-              // E vai para (cx, cy - textR) -> extremidade topo
-              const pathId = `text-path-${index}`;
-              const cx = R;
-              const cy = R;
-              const d = `M ${cx - textR} ${cy} A ${textR} ${textR} 0 0 1 ${cx} ${cy - textR}`;
+        <div className="relative w-0 h-0 flex justify-center items-center pointer-events-auto">
+          
+          {/* Sub-container responsivo para reduzir dimensões e evitar transbordos de SVG no mobile */}
+          <div className="absolute w-0 h-0 flex justify-center items-center scale-[0.68] sm:scale-100 origin-center pointer-events-none">
+            <AnimatePresence>
+              {isOpen && menuItems.map((item, index) => {
+                const R = item.size / 2; // Radius
+                const innerR = index === menuItems.length - 1 ? 40 : menuItems[index + 1].size / 2;
+                const textR = (R + innerR) / 2; 
+                
+                // Top-Left quadrant arc em SVG (O centro do círculo é no item.size/2)
+                // Começa em (cx - textR, cy) -> extremidade esquerda
+                // E vai para (cx, cy - textR) -> extremidade topo
+                const pathId = `text-path-${index}`;
+                const cx = R;
+                const cy = R;
+                const d = `M ${cx - textR} ${cy} A ${textR} ${textR} 0 0 1 ${cx} ${cy - textR}`;
 
-              return (
-                <motion.div
-                  key={item.path}
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0, opacity: 0 }}
-                  transition={{
-                    type: 'spring',
-                    damping: 30,
-                    stiffness: 250,
-                    delay: (menuItems.length - index) * 0.05,
-                  }}
-                  className={cn(
-                    "absolute rounded-full transition-colors group flex justify-center items-center shadow-lg",
-                    item.bg
-                  )}
-                  style={{
-                    width: item.size,
-                    height: item.size,
-                    zIndex: item.zIndex,
-                  }}
-                >
-                  <Link
-                    to={item.path}
-                    onClick={() => setIsOpen(false)}
-                    className="absolute w-full h-full rounded-full focus:outline-none"
+                return (
+                  <motion.div
+                    key={item.path}
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.9, opacity: 0 }}
+                    transition={{
+                      duration: 0.22,
+                      ease: [0.16, 1, 0.3, 1],
+                      delay: (menuItems.length - 1 - index) * 0.02,
+                    }}
+                    className={cn(
+                      "absolute rounded-full transition-colors group flex justify-center items-center shadow-lg pointer-events-auto",
+                      item.bg
+                    )}
+                    style={{
+                      width: item.size,
+                      height: item.size,
+                      zIndex: item.zIndex,
+                      willChange: 'transform, opacity',
+                    }}
                   >
-                    <svg 
-                      className="absolute inset-0 pointer-events-none" 
-                      width="100%" 
-                      height="100%" 
-                      viewBox={`0 0 ${item.size} ${item.size}`}
+                    <Link
+                      to={item.path}
+                      onClick={() => setIsOpen(false)}
+                      className="absolute w-full h-full rounded-full focus:outline-none"
                     >
-                      <path 
-                        id={pathId} 
-                        d={d} 
-                        fill="none" 
-                        stroke="none" 
-                      />
-                      <text 
-                        className={cn(
-                          "font-display font-medium transition-opacity duration-300 opacity-80 group-hover:opacity-100",
-                          item.textColor,
-                          index === 0 ? "text-[20px] sm:text-[22px] tracking-[0.3em]" : "text-[16px] sm:text-[18px] tracking-[0.25em]"
-                        )}
-                        dominantBaseline="middle"
+                      <svg 
+                        className="absolute inset-0 pointer-events-none" 
+                        width="100%" 
+                        height="100%" 
+                        viewBox={`0 0 ${item.size} ${item.size}`}
                       >
-                        <textPath 
-                          href={`#${pathId}`} 
-                          startOffset="50%" 
-                          textAnchor="middle"
+                        <path 
+                          id={pathId} 
+                          d={d} 
+                          fill="none" 
+                          stroke="none" 
+                        />
+                        <text 
+                          className={cn(
+                            "font-display font-medium transition-opacity duration-300 opacity-80 group-hover:opacity-100",
+                            item.textColor,
+                            index === 0 ? "text-[20px] sm:text-[22px] tracking-[0.3em]" : "text-[16px] sm:text-[18px] tracking-[0.25em]"
+                          )}
+                          dominantBaseline="middle"
                         >
-                          {item.label}
-                        </textPath>
-                      </text>
-                    </svg>
-                  </Link>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
+                          <textPath 
+                            href={`#${pathId}`} 
+                            startOffset="50%" 
+                            textAnchor="middle"
+                          >
+                            {item.label}
+                          </textPath>
+                        </text>
+                      </svg>
+                    </Link>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </div>
 
           {/* Botão Principal Toggle */}
           <motion.button
@@ -125,8 +129,10 @@ export function CircularMenu() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className={cn(
-              "absolute rounded-full flex items-center justify-center transition-all duration-300 drop-shadow-2xl z-[3020]",
-              isOpen ? "bg-surface/90 backdrop-blur-md text-text-high w-[70px] h-[70px] border border-white/5" : "glass w-[60px] h-[60px] hover:bg-surface/30 transition-colors"
+               "absolute rounded-full flex items-center justify-center transition-all duration-300 shadow-2xl z-[5020]",
+               isOpen 
+                ? "bg-surface/95 sm:bg-surface/90 backdrop-blur-sm sm:backdrop-blur-md text-text-high w-[70px] h-[70px] border border-white/5" 
+                : "bg-surface/80 sm:bg-surface/30 backdrop-blur-sm sm:backdrop-blur-lg border border-white/10 text-text-high w-[60px] h-[60px] hover:bg-surface/50"
             )}
           >
             <AnimatePresence mode="wait">

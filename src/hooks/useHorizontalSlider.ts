@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import gsap from 'gsap';
 
+// Using native transforms for better performance
 interface UseHorizontalSliderOptions {
   ease?: number;
   cardWidth?: number;
@@ -31,24 +31,24 @@ export function useHorizontalSlider(
   // Variáveis para detectar inércia e forçar o snap
   const isDraggingRef = useRef(false);
   const velocityRef = useRef(0);
-  const lastTargetRef = useRef(0);
   const snapPointsRef = useRef<number[]>([]);
+  
+  // Cache for positions
+  const slideMetricsRef = useRef<{originX: number, width: number}[]>([]);
+  const isMobileRef = useRef(false);
 
   const lerp = (start: number, end: number, factor: number) =>
     start + (end - start) * factor;
 
   const forceSnap = useCallback((velocity = 0, overrideTarget?: number) => {
-    if (!snapPointsRef.current.length || !isDraggingRef.current === false && overrideTarget === undefined) return;
+    if (!snapPointsRef.current.length || (!isDraggingRef.current === false && overrideTarget === undefined)) return;
 
     let baseTarget = overrideTarget !== undefined ? overrideTarget : targetRef.current;
 
     // Multiplicador de intenção (puxa muito mais forte dependendo da velocidade de soltura).
-    // O swipe de um toque gera valores como 20 a 50 de delta entre frames.
-    // Assim, multiplicando por 25, o alvo é lançado centenas de pixels para frente,
-    // garantindo que ele chegue ou passe do próximo "snap point"
     let projectedTarget = baseTarget + (velocity * 25);
 
-    let closestSnap = snapPointsRef.current[0];
+    let closestSnap = snapPointsRef.current[0] || 0;
     let minDiff = Infinity;
 
     snapPointsRef.current.forEach((snap) => {
@@ -59,7 +59,6 @@ export function useHorizontalSlider(
       }
     });
 
-    // Ancra o destino no snap exato! A inércia natural do lerp fará o resto de forma suave
     targetRef.current = closestSnap;
   }, []);
 
@@ -67,61 +66,83 @@ export function useHorizontalSlider(
   const calculateSnapPoints = useCallback(() => {
     if (!wrapperRef.current || !slideRefs.current?.length) return;
     
-    // Calcula as posições centrais ideais para cada card
-    // Como a animação move o wrapper, um card estará no centro quando
-    // wrapper.x for: (offset inicial do card) + (metade da largura do card) - (metade da tela)
-    
     const centerScreen = window.innerWidth / 2;
     const newSnapPoints: number[] = [];
+    const newMetrics: {originX: number, width: number}[] = [];
+    
+    isMobileRef.current = window.innerWidth < 768;
     
     slideRefs.current.forEach((slide) => {
       if (!slide) return;
-      // Usamos offsetLeft bruto para saber a posição natural do card na div,
-      // sem a distorção da matriz de transformação do GSAP
       const originX = slide.offsetLeft;
       const originWidth = slide.offsetWidth;
       
-      let snapPos = originX + (originWidth / 2) - centerScreen;
+      newMetrics.push({ originX, width: originWidth });
       
-      // Limites: não faz snap além do início nem do fim do scroll máximo
+      let snapPos = originX + (originWidth / 2) - centerScreen;
       snapPos = Math.max(0, Math.min(maxScrollRef.current, snapPos));
       newSnapPoints.push(snapPos);
     });
     
     snapPointsRef.current = newSnapPoints;
+    slideMetricsRef.current = newMetrics;
   }, [slideRefs, wrapperRef]);
 
   const updateScaleAndPosition = useCallback(() => {
     const slides = slideRefs.current;
     if (!slides) return;
+    
+    const cw = window.innerWidth;
+    const centerScreen = cw / 2;
+    const metrics = slideMetricsRef.current;
 
-    slides.forEach((slide) => {
-      if (!slide) return;
-      const rect   = slide.getBoundingClientRect();
-      const center = (rect.left + rect.right) / 2;
-      const dist   = center - window.innerWidth / 2;
+    slides.forEach((slide, i) => {
+      if (!slide || !metrics[i]) return;
+      
+      // Calculate center based on current translation
+      const { originX, width } = metrics[i];
+      const center = originX + (width / 2) - currentRef.current;
+      const dist = center - centerScreen;
 
-      let scale: number, offsetX: number;
-
-      if (dist > 0) {
-        // à direita do centro: cresce
-        scale   = Math.min(scaleMax, 1 + dist / window.innerWidth);
-        offsetX = (scale - 1) * offsetMultiplier;
+      let scale = 1;
+      let offsetX = 0;
+      
+      // Only do heavy scaling logic on desktop
+      if (!isMobileRef.current) {
+        if (dist > 0) {
+          scale = Math.min(scaleMax, 1 + dist / cw);
+          offsetX = (scale - 1) * offsetMultiplier;
+        } else {
+          scale = Math.max(scaleMin, 1 - Math.abs(dist) / cw);
+          offsetX = 0;
+        }
+        slide.style.transform = `translate3d(${offsetX}px, 0, 0) scale(${scale})`;
       } else {
-        // à esquerda do centro: encolhe
-        scale   = Math.max(scaleMin, 1 - Math.abs(dist) / window.innerWidth);
-        offsetX = 0;
+        // Less expensive styling for mobile, no scale or simple scale
+        scale = Math.max(0.9, 1 - (Math.abs(dist) / cw) * 0.2);
+        slide.style.transform = `scale(${scale}) translateZ(0)`;
       }
-
-      gsap.set(slide, { scale, x: offsetX });
     });
   }, [scaleMax, scaleMin, offsetMultiplier, slideRefs]);
 
   const update = useCallback(() => {
+    const diff = targetRef.current - currentRef.current;
+    
+    // Stop animation if we are extremely close to the target
+    if (Math.abs(diff) < 0.1 && !isDraggingRef.current) {
+      if (wrapperRef.current && currentRef.current !== targetRef.current) {
+         currentRef.current = targetRef.current;
+         wrapperRef.current.style.transform = `translate3d(${-currentRef.current}px, 0, 0)`;
+         updateScaleAndPosition();
+      }
+      rafRef.current = requestAnimationFrame(update);
+      return;
+    }
+
     currentRef.current = lerp(currentRef.current, targetRef.current, ease);
 
     if (wrapperRef.current) {
-      gsap.set(wrapperRef.current, { x: -currentRef.current });
+      wrapperRef.current.style.transform = `translate3d(${-currentRef.current}px, 0, 0)`;
     }
 
     updateScaleAndPosition();
@@ -135,27 +156,22 @@ export function useHorizontalSlider(
     // calcula o scroll máximo
     const recalcMax = () => {
       maxScrollRef.current = wrapper.scrollWidth - window.innerWidth;
-      calculateSnapPoints(); // Recalcula pontos de snap quando redimensiona
+      calculateSnapPoints();
     };
 
-    // delay pequeno pra garantir que o DOM já renderizou tamanhos
     const delayRecalc = setTimeout(recalcMax, 100);
-    
     window.addEventListener('resize', recalcMax);
 
-    // scroll de roda do mouse → movimento horizontal
     let wheelTimeout: NodeJS.Timeout;
     let wheelVelocity = 0;
+    
     const handleWheel = (e: WheelEvent) => {
-      // Se o scroll for primariamente vertical (scrollando a página para baixo/cima), ignoramos o carrossel.
       if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) return;
 
       isDraggingRef.current = true;
       clearTimeout(wheelTimeout);
       
       const delta = e.deltaX;
-      
-      // Mantém um valor leve caso termine no mouse wheel (trackpads já têm snap natural mas não queremos pular muitos)
       wheelVelocity = delta;
 
       targetRef.current += delta;
@@ -168,7 +184,6 @@ export function useHorizontalSlider(
       }, 100);
     };
 
-    // drag para dispositivos touch / mobile
     let touchStartX = 0;
     let touchStartY = 0;
     let touchStartTarget = 0;
@@ -195,22 +210,21 @@ export function useHorizontalSlider(
       const currentY = e.touches[0].clientY;
 
       if (isFirstMove) {
-        // Trava o eixo: se arrastou mais no Y do que no X no primeiro movimento, é um scroll da página puro.
         if (Math.abs(currentY - touchStartY) > Math.abs(currentX - touchStartX)) {
           isVerticalSwipe = true;
-          isDraggingRef.current = false; // Desliga o arraste para o snap voltar ao normal
+          isDraggingRef.current = false;
           return;
         }
         isFirstMove = false;
       }
 
-      touchVelocity = lastTouchX - currentX; // Positivo se deslizar para ESQUERDA (intenção de ir p/ DIREITA na lista)
+      touchVelocity = lastTouchX - currentX;
       lastTouchX = currentX;
 
       const delta = touchStartX - currentX;
       targetRef.current = Math.max(0, Math.min(
         maxScrollRef.current,
-        touchStartTarget + delta * 1.5  // 1.5× para mais responsividade
+        touchStartTarget + delta * 1.5 
       ));
     };
     
@@ -225,7 +239,6 @@ export function useHorizontalSlider(
     window.addEventListener('touchmove', handleTouchMove, { passive: true });
     window.addEventListener('touchend', handleTouchEnd, { passive: true });
 
-    // inicia o loop de animação
     rafRef.current = requestAnimationFrame(update);
 
     return () => {
@@ -239,9 +252,8 @@ export function useHorizontalSlider(
     };
   }, [update, wrapperRef, calculateSnapPoints]);
 
-  // função para navegar programaticamente (para botões de seta)
   const scrollTo = useCallback((position: number) => {
-    isDraggingRef.current = false; // Permite que ele encaixe
+    isDraggingRef.current = false;
     targetRef.current = Math.max(0, Math.min(maxScrollRef.current, position));
     forceSnap(0, targetRef.current);
   }, [forceSnap]);

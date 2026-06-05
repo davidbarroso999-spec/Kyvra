@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, Play, Pause, ChevronDown } from 'lucide-react';
 import { useStore } from '@/store/useStore';
@@ -49,7 +50,7 @@ export function Archive() {
     return () => window.removeEventListener('scroll', closeMenu);
   }, []);
 
-  const location = window.location;
+  const location = useLocation();
   
   useEffect(() => {
     if (loading || tracks.length === 0) return;
@@ -156,7 +157,7 @@ export function Archive() {
   };
 
   const handleShareTrack = async (track: any) => {
-    const shareUrl = `https://descubrakyvra.vercel.app/musicas?track=${track.id}`;
+    const shareUrl = `https://descubrakyvra.vercel.app/#/arquivo?track=${track.id}`;
     try {
       if (navigator.share) {
         await navigator.share({
