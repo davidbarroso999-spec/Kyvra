@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 
 // Glassmorphism otimizado: Usar blur apenas no backdrop global e não nas camadas sobrepostas
 const menuItems = [
-  { path: '/cosmogonia', label: 'lore', size: 560, zIndex: 20, bg: 'bg-surface/90 sm:bg-surface/20 backdrop-blur-none sm:backdrop-blur-md border border-primary/40 shadow-2xl', textColor: 'fill-text-high' },
+  { path: '/cosmogonia', label: 'lore', size: 560, zIndex: 20, bg: 'bg-surface/20 backdrop-blur-xl border border-primary/40 shadow-2xl', textColor: 'fill-text-high' },
   { path: '/reliquias', label: 'álbuns', size: 440, zIndex: 30, bg: 'bg-transparent hover:bg-primary/5 border border-primary/30 hover:border-primary/50 transition-colors duration-500', textColor: 'fill-text-high' },
   { path: '/arquivo', label: 'músicas', size: 320, zIndex: 40, bg: 'bg-transparent hover:bg-primary/10 border border-primary/40 hover:border-primary/60 transition-colors duration-500', textColor: 'fill-text-high' },
   { path: '/', label: 'home', size: 200, zIndex: 50, bg: 'bg-transparent hover:bg-primary/15 border border-primary/50 hover:border-primary/70 transition-colors duration-500', textColor: 'fill-text-high' },
@@ -63,13 +63,14 @@ export function CircularMenu() {
                 return (
                   <motion.div
                     key={item.path}
-                    initial={{ scale: 0.9, opacity: 0 }}
+                    initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.9, opacity: 0 }}
+                    exit={{ scale: 0, opacity: 0 }}
                     transition={{
-                      duration: 0.22,
-                      ease: [0.16, 1, 0.3, 1],
-                      delay: (menuItems.length - 1 - index) * 0.02,
+                      type: 'spring',
+                      damping: 30,
+                      stiffness: 250,
+                      delay: (menuItems.length - index) * 0.05,
                     }}
                     className={cn(
                       "absolute rounded-full transition-colors group flex justify-center items-center shadow-lg pointer-events-auto",
@@ -131,8 +132,8 @@ export function CircularMenu() {
             className={cn(
                "absolute rounded-full flex items-center justify-center transition-all duration-300 shadow-2xl z-[5020]",
                isOpen 
-                ? "bg-surface/95 sm:bg-surface/90 backdrop-blur-sm sm:backdrop-blur-md text-text-high w-[70px] h-[70px] border border-white/5" 
-                : "bg-surface/80 sm:bg-surface/30 backdrop-blur-sm sm:backdrop-blur-lg border border-white/10 text-text-high w-[60px] h-[60px] hover:bg-surface/50"
+                ? "bg-surface/90 backdrop-blur-md text-text-high w-[70px] h-[70px] border border-white/5" 
+                : "bg-surface/30 backdrop-blur-lg border border-white/10 text-text-high w-[60px] h-[60px] hover:bg-surface/50"
             )}
           >
             <AnimatePresence mode="wait">
