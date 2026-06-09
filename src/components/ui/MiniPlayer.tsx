@@ -1,146 +1,268 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence, Reorder, useDragControls } from 'motion/react';
-import { Play, Pause, SkipBack, SkipForward, Repeat, Repeat1, Shuffle, Volume2, Volume1, VolumeX, AlignLeft, ListMusic, X, GripVertical, Share, Heart, SlidersHorizontal, Moon, ChevronDown, ChevronLeft, MoreVertical, Download, WifiOff } from 'lucide-react';
-import { useStore } from '@/store/useStore';
-import { cn, isSavedOffline, getOfflineUrl } from '@/lib/utils';
-import { TrackDuration } from '@/components/ui/TrackDuration';
-import { KyvraButton } from './KyvraButton';
+import React, { useRef, useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  Shuffle,
+  Repeat,
+  Repeat1,
+  Maximize2,
+  Minimize2,
+  ChevronDown,
+  AlignLeft
+} from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { cn } from "@/lib/utils";
+import { useStore } from "@/store/useStore";
 
-function QueueItem({ track, index, isCurrent, isPlaying, setCurrentTrack, removeFromQueue }: { track: any, index: number, isCurrent: boolean, isPlaying: boolean, setCurrentTrack: (t: any) => void, removeFromQueue: (id: string) => void }) {
-  const dragControls = useDragControls();
+const formatTime = (seconds: number = 0) => {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+  return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+};
+
+const CustomSlider = ({
+  value,
+  onChange,
+  className,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  className?: string;
+}) => {
+  return (
+    <motion.div
+      className={cn(
+        "relative w-full h-[3px] bg-white/20 rounded-full cursor-pointer hover:h-[5px] transition-all",
+        className
+      )}
+      onClick={(e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const percentage = (x / rect.width) * 100;
+        onChange(Math.min(Math.max(percentage, 0), 100));
+      }}
+    >
+      <motion.div
+        className="absolute top-0 left-0 h-full bg-white rounded-full"
+        style={{ width: `${value}%` }}
+        initial={{ width: 0 }}
+        animate={{ width: `${value}%` }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      />
+    </motion.div>
+  );
+};
+
+export const AudioSpectrum = ({ audioRef }: { audioRef: React.RefObject<HTMLAudioElement> }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const animationRef = useRef<number>(0);
+  const themeColorRef = useRef<string>('#a78bfa'); // Default primary hex
+
+  useEffect(() => {
+    // Read theme color based on the current class of HTML
+    const updateThemeColor = () => {
+      const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
+      if (primary) themeColorRef.current = primary;
+    };
+    
+    updateThemeColor();
+    
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach(m => {
+        if (m.attributeName === 'class') {
+          updateThemeColor();
+        }
+      });
+    });
+    
+    observer.observe(document.documentElement, { attributes: true });
+    
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!audioRef.current) return;
+    const audioEl = audioRef.current;
+    
+    // WebAudio initialization that waits for an interaction (play)
+    const initAudio = () => {
+      if (audioContextRef.current) {
+        if (audioContextRef.current.state === 'suspended') {
+          audioContextRef.current.resume();
+        }
+        return;
+      }
+      try {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioCtx) return;
+        audioContextRef.current = new AudioCtx();
+        analyserRef.current = audioContextRef.current.createAnalyser();
+        analyserRef.current.fftSize = 256; 
+        
+        sourceRef.current = audioContextRef.current.createMediaElementSource(audioEl);
+        sourceRef.current.connect(analyserRef.current);
+        analyserRef.current.connect(audioContextRef.current.destination);
+      } catch (e) {
+        console.warn("Kyvra: Mute ou interrupção WebAudio", e);
+      }
+    };
+
+    audioEl.addEventListener('play', initAudio, { once: true });
+    
+    return () => {
+      audioEl.removeEventListener('play', initAudio);
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+          audioContextRef.current.close().catch(()=>{});
+      }
+    };
+  }, [audioRef]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d', { alpha: true }); // optimize by specifying basic properties, alpha is true by default
+    if (!ctx) return;
+    
+    const onResize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = 100;
+      ctx.imageSmoothingEnabled = false; // better performance for simple rects
+    };
+    onResize(); // Initial setup
+    
+    const draw = () => {
+      animationRef.current = requestAnimationFrame(draw);
+      if (!analyserRef.current) return;
+      
+      const analyser = analyserRef.current;
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+      analyser.getByteFrequencyData(dataArray);
+      
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      const barWidth = 4;
+      const gap = 3;
+      // We only use the lower 60% of frequency bins for visual clarity
+      const visualBins = Math.floor(bufferLength * 0.6); 
+      const totalWidth = visualBins * (barWidth + gap);
+      const startX = (canvas.width - totalWidth) / 2;
+      
+      let x = startX > 0 ? startX : 0;
+      const effectiveBarWidth = startX > 0 ? barWidth : (canvas.width / visualBins) - gap;
+      
+      // We set the fill style once per frame since it's the same color
+      ctx.fillStyle = themeColorRef.current;
+      
+      for (let i = 0; i < visualBins; i++) {
+        // Apply dampening to lower visual noise
+        const rawValue = dataArray[i];
+        if (rawValue === 0) {
+          x += effectiveBarWidth + gap;
+          continue; // Skip drawing empty bars for performance
+        }
+        
+        // non-linear scaling for better visuals
+        const percent = Math.pow(rawValue / 255, 1.5);
+        const barHeight = Math.max(2, percent * canvas.height * 0.9);
+        
+        ctx.globalAlpha = percent * 0.7 + 0.1;
+        ctx.beginPath();
+        ctx.roundRect(x, canvas.height - barHeight, effectiveBarWidth, barHeight, Math.min(2, effectiveBarWidth/2));
+        ctx.fill();
+        
+        x += effectiveBarWidth + gap;
+      }
+      ctx.globalAlpha = 1.0; // Reset alpha
+    };
+    
+    draw();
+    window.addEventListener('resize', onResize, { passive: true }); // passive listener
+    
+    return () => {
+      cancelAnimationFrame(animationRef.current);
+      window.removeEventListener('resize', onResize);
+    };
+  }, []);
 
   return (
-    <Reorder.Item
-      value={track}
-      dragListener={false}
-      dragControls={dragControls}
-      className={cn(
-        "flex items-center gap-3 p-3 rounded-lg transition-colors group",
-        isCurrent
-          ? "bg-primary/10 border border-primary/20"
-          : "hover:bg-overlay"
-      )}
-    >
-      {/* Drag Handle */}
-      <div 
-        className="w-5 text-center shrink-0 text-text-low opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
-        onPointerDown={(e) => dragControls.start(e)}
-      >
-        <GripVertical size={16} />
-      </div>
-
-      {/* Número ou indicador de tocando */}
-      <div className="w-5 text-center shrink-0">
-        {isCurrent ? (
-          /* Ícone animado de "tocando" — 3 barras pulsando */
-          <div className="flex items-end justify-center gap-[2px] h-4">
-            {[0, 0.2, 0.1].map((delay, i) => (
-              <div
-                key={i}
-                className="w-[3px] bg-primary rounded-sm"
-                style={{
-                  height: isPlaying ? '100%' : '40%',
-                  animation: isPlaying
-                    ? `queueBar 0.8s ease-in-out ${delay}s infinite alternate`
-                    : 'none',
-                  transition: 'height 0.3s ease'
-                }}
-              />
-            ))}
-          </div>
-        ) : (
-          <span className="font-mono text-xs text-text-low">{index + 1}</span>
-        )}
-      </div>
-
-      {/* Capa miniatura */}
-      <img
-        src={track.coverUrl}
-        alt={track.title}
-        loading="lazy"
-        decoding="async"
-        className="w-10 h-10 rounded object-cover shrink-0 pointer-events-none"
-        referrerPolicy="no-referrer"
-      />
-
-      {/* Info da faixa — clicável para tocar */}
-      <button
-        className="flex-1 text-left min-w-0"
-        onClick={() => setCurrentTrack(track)}
-      >
-        <p className={cn(
-          "text-sm font-medium truncate",
-          isCurrent ? "text-primary" : "text-text-high"
-        )}>
-          {track.title}
-        </p>
-        <p className="text-xs text-text-low truncate">{track.artist}</p>
-      </button>
-
-      {/* Botão de remover — aparece no hover */}
-      {!isCurrent && (
-        <button
-          onClick={() => removeFromQueue(track.id)}
-          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-text-low hover:text-primary"
-        >
-          <X size={14} />
-        </button>
-      )}
-    </Reorder.Item>
+    <div className="fixed bottom-0 left-0 w-full h-[80px] pointer-events-none z-[4900] opacity-60 mix-blend-screen flex items-end">
+      <canvas ref={canvasRef} className="w-full h-full" />
+    </div>
   );
-}
+};
 
 export function MiniPlayer() {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [isActive, setIsActive] = useState(false);
+  const [isFullPlayerOpen, setIsFullPlayerOpen] = useState(false);
   const [showLyrics, setShowLyrics] = useState(false);
-  const [showQueue, setShowQueue] = useState(false);
-  const [isOffline, setIsOffline] = useState(false);
-  const [actualAudioUrl, setActualAudioUrl] = useState<string>('');
 
   const {
-    currentTrack, isPlaying, setIsPlaying, playNext, playPrevious,
-    volume, isShuffle, repeatMode, toggleShuffle, toggleRepeat,
-    queue, shuffledQueue, setQueue, updateQueueOrder, removeFromQueue, clearQueue, setCurrentTrack, playHistory
+    currentTrack,
+    isPlaying,
+    setIsPlaying,
+    playNext,
+    playPrevious,
+    volume,
+    isShuffle,
+    repeatMode,
+    toggleShuffle,
+    toggleRepeat,
   } = useStore();
 
-  useEffect(() => {
-    if (!currentTrack) return;
-    
-    // Web Media Session API
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: currentTrack.title,
-        artist: currentTrack.artist || 'Kyvra',
-        album: currentTrack.albumTitle || 'Kyvra',
-        artwork: [
-          { src: currentTrack.coverUrl || '', sizes: '512x512', type: 'image/jpeg' }
-        ]
-      });
+  const [progress, setProgress] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
 
-      navigator.mediaSession.setActionHandler('play', () => { setIsPlaying(true); });
-      navigator.mediaSession.setActionHandler('pause', () => { setIsPlaying(false); });
-      navigator.mediaSession.setActionHandler('previoustrack', () => handlePrev());
-      navigator.mediaSession.setActionHandler('nexttrack', () => handleNext());
-      
-      try {
-        navigator.mediaSession.setActionHandler('seekbackward', (details) => {
-          if (audioRef.current) {
-            audioRef.current.currentTime = Math.max(audioRef.current.currentTime - (details.seekOffset || 10), 0);
-          }
-        });
-        navigator.mediaSession.setActionHandler('seekforward', (details) => {
-          if (audioRef.current) {
-            audioRef.current.currentTime = Math.min(audioRef.current.currentTime + (details.seekOffset || 10), audioRef.current.duration);
-          }
-        });
-      } catch (e) {
-        // Ignored
+  const togglePlay = () => {
+    setIsPlaying(!isPlaying);
+  };
+
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      const prog = (audioRef.current.currentTime / audioRef.current.duration) * 100;
+      setProgress(isFinite(prog) ? prog : 0);
+      setCurrentTime(audioRef.current.currentTime);
+      setDuration(audioRef.current.duration);
+    }
+  };
+
+  const handleSeek = (value: number) => {
+    if (audioRef.current && audioRef.current.duration) {
+      const time = (value / 100) * audioRef.current.duration;
+      if (isFinite(time)) {
+        audioRef.current.currentTime = time;
+        setProgress(value);
       }
     }
-  }, [currentTrack]);
+  };
+
+  const handleEnded = () => {
+    if (repeatMode === 'one') {
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play();
+      }
+    } else {
+      playNext();
+    }
+  };
 
   useEffect(() => {
-    if (audioRef.current && actualAudioUrl) {
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+    }
+  }, [volume]);
+
+  useEffect(() => {
+    if (audioRef.current) {
       if (isPlaying) {
         const playPromise = audioRef.current.play();
         if (playPromise !== undefined) {
@@ -154,620 +276,492 @@ export function MiniPlayer() {
         audioRef.current.pause();
       }
     }
-  }, [isPlaying, actualAudioUrl]);
-
-  useEffect(() => {
-    const checkOffline = async () => {
-      if (currentTrack?.audioUrl) {
-        const saved = await isSavedOffline(currentTrack.audioUrl);
-        setIsOffline(saved);
-        setActualAudioUrl(await getOfflineUrl(currentTrack.audioUrl));
-      } else {
-        setIsOffline(false);
-        setActualAudioUrl('');
-      }
-    };
-    checkOffline();
-  }, [currentTrack?.id]);
-  const audioRef = useRef<HTMLAudioElement>(null);
-  
-  // Use refs instead of state for performance (prevents 4x/sec re-renders of the entire player & queue)
-  const [currentTime, setCurrentTime] = useState('0:00'); // only used for initial render
-  const progressFillRef = useRef<HTMLDivElement>(null);
-  const compactProgressFillRef = useRef<HTMLDivElement>(null);
-  const timeDisplayRef = useRef<HTMLSpanElement>(null);
-  const progressCircleRef = useRef<HTMLDivElement>(null);
-
-  // Volume states
-  const [isHoveringVolume, setIsHoveringVolume] = useState(false);
-  const [isDraggingVolume, setIsDraggingVolume] = useState(false);
-  const [previousVolume, setPreviousVolume] = useState(1);
-  const volumeBarRef = useRef<HTMLDivElement>(null);
-
-  // Swipe gesture states
-  const [dragOffset, setDragOffset] = useState(0);
-
-  // Options menu state
-  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
-
-  // Seek hover states
-  const [seekHoverTime, setSeekHoverTime] = useState<string | null>(null);
-  const [seekHoverX, setSeekHoverX] = useState(0);
-  const progressBarRef = useRef<HTMLDivElement>(null);
-  const scrollableRef = useRef<HTMLDivElement>(null);
-  const lyricsScrollRef = useRef<HTMLDivElement>(null);
-
-  const cleanLyrics = currentTrack?.lyrics?.replace(/\[\d{2}:\d{2}(?:\.\d{2,3})?\]/g, '').trim() || '';
-  const lyricsLines = cleanLyrics.split('\n').filter(l => l.trim().length > 0);
-
-  const handleDownload = () => {
-    if (!currentTrack || !currentTrack.audioUrl) return;
-    const a = document.createElement('a');
-    a.href = currentTrack.audioUrl;
-    a.download = `${currentTrack.title} - ${currentTrack.artist}.mp3`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setShowOptionsMenu(false);
-  };
-
-  useEffect(() => {
-    // Reset lyrics view when track changes
-    setShowLyrics(false);
-    
-    // Reset time when track changes
-    if (audioRef.current) {
-      audioRef.current.currentTime = 0;
-      if (progressFillRef.current) progressFillRef.current.style.width = '0%';
-      if (compactProgressFillRef.current) compactProgressFillRef.current.style.width = '0%';
-      if (progressCircleRef.current) progressCircleRef.current.style.left = 'calc(0% - 6px)';
-      if (timeDisplayRef.current) timeDisplayRef.current.innerText = '0:00';
-    }
-  }, [currentTrack?.id]);
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume;
-    }
-  }, [volume]);
-
-  const handleDragEnd = (_: any, info: any) => {
-    // Se arrastou pra baixo mais de 100px ou em alta velocidade
-    if (info.offset.y > 100 || info.velocity.y > 400) {
-      setIsExpanded(false);
-    }
-    setDragOffset(0);
-  };
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume;
-    }
-  }, [volume]);
-
-  const handleVolumeChange = (e: MouseEvent | React.MouseEvent) => {
-    if (volumeBarRef.current) {
-      const bounds = volumeBarRef.current.getBoundingClientRect();
-      const percent = (e.clientX - bounds.left) / bounds.width;
-      const newVolume = Math.max(0, Math.min(1, percent));
-      useStore.getState().setVolume(newVolume);
-      if (newVolume > 0) {
-        setPreviousVolume(newVolume);
-      }
-    }
-  };
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (isDraggingVolume) {
-        handleVolumeChange(e);
-      }
-    };
-    const handleMouseUp = () => {
-      setIsDraggingVolume(false);
-    };
-
-    if (isDraggingVolume) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-    }
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDraggingVolume]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignora se o usuário estiver digitando em um input/textarea
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
-
-      switch (e.key) {
-        case ' ':
-          // Espaço: play/pause
-          e.preventDefault();
-          setIsPlaying(!isPlaying);
-          break;
-
-        case 'ArrowRight':
-          // Seta direita: avança 10 segundos
-          e.preventDefault();
-          if (audioRef.current) {
-            audioRef.current.currentTime = Math.min(
-              audioRef.current.currentTime + 10,
-              audioRef.current.duration || 0
-            );
-          }
-          break;
-
-        case 'ArrowLeft':
-          // Seta esquerda: volta 10 segundos
-          e.preventDefault();
-          if (audioRef.current) {
-            audioRef.current.currentTime = Math.max(
-              audioRef.current.currentTime - 10,
-              0
-            );
-          }
-          break;
-
-        case 'ArrowUp':
-          // Seta cima: aumenta volume em 10%
-          e.preventDefault();
-          useStore.getState().setVolume(Math.min(volume + 0.1, 1));
-          break;
-
-        case 'ArrowDown':
-          // Seta baixo: diminui volume em 10%
-          e.preventDefault();
-          useStore.getState().setVolume(Math.max(volume - 0.1, 0));
-          break;
-
-        case 'm':
-        case 'M':
-          // M: mute/unmute
-          toggleMute();
-          break;
-
-        case 'n':
-        case 'N':
-          // N: próxima música
-          handleNext();
-          break;
-
-        case 'p':
-        case 'P':
-          // P: música anterior
-          handlePrev();
-          break;
-      }
-    };
-
-    // Só ativa os atalhos se houver uma música carregada
-    if (currentTrack) {
-      window.addEventListener('keydown', handleKeyDown);
-    }
-
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentTrack, isPlaying, volume]);
-
-  const toggleMute = () => {
-    if (volume > 0) {
-      setPreviousVolume(volume);
-      useStore.getState().setVolume(0);
-    } else {
-      useStore.getState().setVolume(previousVolume > 0 ? previousVolume : 1);
-    }
-  };
-
-  const handleTimeUpdate = () => {
-    if (audioRef.current) {
-      const current = audioRef.current.currentTime;
-      const duration = audioRef.current.duration;
-      if (duration > 0) {
-        const p = (current / duration) * 100;
-        if (progressFillRef.current) progressFillRef.current.style.width = `${p}%`;
-        if (compactProgressFillRef.current) compactProgressFillRef.current.style.width = `${p}%`;
-        if (progressCircleRef.current) progressCircleRef.current.style.left = `calc(${p}% - 6px)`;
-      }
-      
-      const minutes = Math.floor(current / 60);
-      const seconds = Math.floor(current % 60);
-      const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-      if (timeDisplayRef.current && timeDisplayRef.current.innerText !== timeStr) {
-        timeDisplayRef.current.innerText = timeStr;
-      }
-    }
-  };
-
-  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (audioRef.current) {
-      const bounds = e.currentTarget.getBoundingClientRect();
-      const percent = (e.clientX - bounds.left) / bounds.width;
-      audioRef.current.currentTime = percent * audioRef.current.duration;
-    }
-  };
-
-  const handleEnded = () => {
-    if (repeatMode === 'one') {
-      if (audioRef.current) {
-        audioRef.current.currentTime = 0;
-        audioRef.current.play();
-      }
-    } else {
-      handleNext();
-    }
-  };
-
-  const handleNext = () => {
-    const prevId = currentTrack?.id;
-    playNext();
-    
-    // Pequeno delay para garantir que o estado da store atualizou
-    setTimeout(() => {
-      const nextTrack = useStore.getState().currentTrack;
-      if (nextTrack?.id === prevId) {
-        // Se o ID não mudou (ex: fila de 1 música), reinicia
-        if (audioRef.current) {
-          audioRef.current.currentTime = 0;
-          audioRef.current.play();
-        }
-      }
-    }, 50);
-  };
-
-  const handlePrev = () => {
-    if (audioRef.current && audioRef.current.currentTime > 3) {
-      audioRef.current.currentTime = 0;
-    } else {
-      const prevId = currentTrack?.id;
-      playPrevious();
-      
-      setTimeout(() => {
-        const nextTrack = useStore.getState().currentTrack;
-        if (nextTrack?.id === prevId) {
-          if (audioRef.current) {
-            audioRef.current.currentTime = 0;
-            audioRef.current.play();
-          }
-        }
-      }, 50);
-    }
-  };
+  }, [isPlaying, currentTrack?.audioUrl]);
 
   if (!currentTrack) return null;
 
   return (
     <>
-      {actualAudioUrl && (
-        <audio 
-          ref={audioRef} 
-          src={actualAudioUrl} 
-          autoPlay={isPlaying}
-          onTimeUpdate={handleTimeUpdate}
-          onEnded={handleEnded}
-          onCanPlay={() => {
-            if (isPlaying && audioRef.current) {
-              audioRef.current.play().catch(() => {});
-            }
-          }}
-        />
-      )}
-      
-      {/* Compact Player */}
-      <motion.div
-        initial={{ y: 100, opacity: 0 }}
-        animate={{ y: isExpanded ? 100 : 0, opacity: isExpanded ? 0 : 1 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className="fixed bottom-4 left-4 right-20 sm:left-auto sm:bottom-6 sm:right-24 z-[1000] glass r-md p-2.5 flex items-center gap-3 w-auto sm:w-[260px] shadow-2xl cursor-pointer"
-        style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
-        onClick={() => setIsExpanded(true)}
-      >
-        <img 
-          src={currentTrack.coverUrl} 
-          alt={currentTrack.title} 
-          loading="lazy"
-          decoding="async"
-          className="w-12 h-12 rounded object-cover shrink-0" 
-          referrerPolicy="no-referrer" 
-        />
-        <div className="flex-1 min-w-0">
-          <h4 className="text-sm font-medium text-text-high truncate">{currentTrack.title}</h4>
-          <p className="text-[10px] text-text-low truncate uppercase tracking-wider">
-            {currentTrack.artist} {currentTrack.albumTitle && `• ${currentTrack.albumTitle}`}
-          </p>
-        </div>
-        <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-          <button onClick={handlePrev} className="text-text-mid hover:text-text-high transition-colors">
-            <SkipBack size={16} />
-          </button>
-          <button 
-            onClick={() => setIsPlaying(!isPlaying)}
-            className="w-8 h-8 flex items-center justify-center bg-primary text-void rounded-full hover:scale-105 transition-transform"
-          >
-            {isPlaying ? <Pause size={14} /> : <Play size={14} className="ml-0.5" />}
-          </button>
-          <button onClick={handleNext} className="text-text-mid hover:text-text-high transition-colors">
-            <SkipForward size={16} />
-          </button>
-        </div>
-        {/* Progress Bar (Visual only for compact) */}
-        <div className="absolute bottom-0 left-0 w-full h-[2px] bg-border overflow-hidden" style={{ borderBottomLeftRadius: 'var(--radius-md)', borderBottomRightRadius: 'var(--radius-md)' }}>
-          <div ref={compactProgressFillRef} className="h-full bg-primary" style={{ width: '0%' }} />
-        </div>
-      </motion.div>
+      <AudioSpectrum audioRef={audioRef} />
+      <audio
+        ref={audioRef}
+        onTimeUpdate={handleTimeUpdate}
+        onEnded={handleEnded}
+        src={currentTrack.audioUrl!}
+        className="hidden"
+        crossOrigin="anonymous"
+        onCanPlay={() => {
+          if (isPlaying && audioRef.current) {
+            audioRef.current.play().catch(() => {});
+          }
+        }}
+      />
 
-      {/* Expanded Player Overlay */}
-      {isExpanded && (
-        <motion.div
-          initial={{ y: '100%' }}
-          animate={{ y: 0 }}
-          exit={{ y: '100%' }}
-          drag="y"
-          dragDirectionLock
-          dragConstraints={{ top: 0, bottom: 0 }}
-          dragElastic={{ top: 0, bottom: 0.5 }}
-          onDragEnd={handleDragEnd}
-          transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-          className="fixed inset-0 z-[4000] bg-void/98 flex flex-col"
-          style={{
-            paddingTop: 'env(safe-area-inset-top)',
-            paddingBottom: 'env(safe-area-inset-bottom)'
-          }}
-        >
-          {/* Header/Handle Arrastável - Área de Toque Principal para Fechar */}
-          <div className="absolute top-0 left-0 right-0 h-20 z-[2001] cursor-grab active:cursor-grabbing" />
-          
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 w-10 h-1 bg-border rounded-full z-[2002] pointer-events-none" />
-
-          {/* Background Overlay */}
-          <div className="absolute inset-0 bg-void opacity-50 z-0 pointer-events-none" />
-          <div 
-            className="absolute inset-0 opacity-10 pointer-events-none"
-            style={{ 
-              backgroundImage: `url(${currentTrack.coverUrl})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              filter: 'blur(100px) saturate(2)'
-            }}
-          />
-
-          <div 
-            className="relative z-10 flex-1 flex flex-col p-6 max-w-lg mx-auto w-full h-full overflow-hidden"
-            onPointerDown={(e) => {
-              if (showOptionsMenu) {
-                setShowOptionsMenu(false);
-              }
-            }}
-          >
-            {/* Top Bar - Área de Toque Superior Aumentada */}
-            <div className="flex items-center justify-between w-full mb-4 md:mb-8 mt-4 md:mt-0 select-none relative z-[2003]">
-              <div className="flex-1 flex justify-start">
-                <button 
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => { 
-                    e.stopPropagation();
-                    if (showQueue || showLyrics) {
-                      setShowQueue(false); 
-                      setShowLyrics(false); 
-                    } else {
-                      setIsExpanded(false);
-                    }
-                  }}
-                  className="w-16 h-16 -ml-4 flex items-center justify-center text-text-mid hover:text-text-high bg-transparent rounded-full transition-colors active:scale-95 touch-none group"
-                  aria-label={showQueue || showLyrics ? "Voltar para o Player" : "Minimizar Player"}
-                >
-                  <div className="w-10 h-10 flex items-center justify-center bg-surface/30 rounded-full group-hover:bg-primary/20 group-hover:text-primary transition-colors">
-                    {showQueue || showLyrics ? <ChevronLeft size={24} /> : <ChevronDown size={24} />}
-                  </div>
-                </button>
-              </div>
-
-              <div className="text-[10px] font-sc tracking-[0.3em] text-text-low text-center flex-[2] pointer-events-none">
-                {showQueue ? 'FILA DE REPRODUÇÃO' : showLyrics ? 'ARQUIVO DE LETRAS' : 'FREQUÊNCIA ATUAL'}
-              </div>
-
-              <div className="flex-1 flex justify-end">
-                {/* Placeholder para balanceamento de layout flex da Top Bar */}
-                <div className="w-16" />
-              </div>
-            </div>
-
-            <AnimatePresence mode="wait">
-              {showQueue ? (
-                /* VIEW DA FILA */
-                <motion.div
-                  key="queue"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  className="flex flex-col w-full flex-1 min-h-0 relative z-[2004]"
-                  onPointerDown={e => e.stopPropagation()} 
-                >
-                  <div className="w-full text-center mb-4 shrink-0">
-                    <p className="text-xs text-text-low font-mono mt-1">{queue.length} faixas</p>
-                  </div>
-
-                  {/* Lista de faixas na fila */}
-                  <div className="flex-1 overflow-y-auto w-full scrollbar-hide">
-                    {queue.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center h-32 gap-2">
-                        <p className="font-sc text-xs tracking-widest text-text-low">FILA VAZIA</p>
-                      </div>
-                    ) : (
-                      <Reorder.Group 
-                        axis="y" 
-                        values={isShuffle ? shuffledQueue : queue} 
-                        onReorder={updateQueueOrder} 
-                        className="flex flex-col gap-1 px-2"
-                      >
-                        {(isShuffle ? shuffledQueue : queue).map((track, index) => (
-                          <QueueItem
-                            key={track.id}
-                            track={track}
-                            index={index}
-                            isCurrent={track.id === currentTrack?.id}
-                            isPlaying={isPlaying}
-                            setCurrentTrack={setCurrentTrack}
-                            removeFromQueue={removeFromQueue}
-                          />
-                        ))}
-                      </Reorder.Group>
-                    )}
-                  </div>
-
-                  {/* Botão limpar fila */}
-                  {queue.length > 1 && (
-                    <button
-                      onClick={clearQueue}
-                      className="mt-4 mx-auto text-xs text-text-low hover:text-primary transition-colors font-sc tracking-widest"
+      {/* Origin Center Point of CircularMenu for perfect alignment */}
+      <div className="fixed bottom-[6rem] right-[1.5rem] sm:bottom-[3.625rem] sm:right-[3rem] z-[5000] flex items-center justify-center pointer-events-none">
+        <div className="relative w-0 h-0 flex justify-center items-center pointer-events-auto">
+          <AnimatePresence>
+            {!isFullPlayerOpen && (
+              <motion.div
+                drag
+                dragMomentum={false}
+                dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+                dragElastic={0.4}
+                style={{
+                  position: 'absolute',
+                  right: '40px', // Exactly beside the menu (approx 30px radius + 10px gap)
+                  bottom: '-30px', // Vertical center perfectly aligned with menu center (which is -30px for a 60px height element)
+                }}
+                className={cn(
+                  "flex mx-auto overflow-hidden shadow-[0_40px_80px_rgba(0,0,0,0.6)] cursor-grab active:cursor-grabbing transition-colors duration-700 glass-premium origin-bottom-right",
+                  isActive 
+                    ? "flex-col rounded-2xl p-3 w-[220px] h-auto" 
+                    : "flex-row rounded-full p-2 w-auto h-[60px] items-center justify-center"
+                )}
+                initial={{ opacity: 0, filter: "blur(10px)", y: 50 }}
+                animate={{ 
+                  opacity: 1, 
+                  filter: "blur(0px)", 
+                  y: 0,
+                  scale: 1
+                }}
+                exit={{ opacity: 0, filter: "blur(10px)", y: 50, scale: 0.9 }}
+                transition={{
+                  duration: 0.3,
+                  ease: "easeInOut",
+                  type: "spring",
+                }}
+                layout
+              >
+                <AnimatePresence mode="popLayout">
+                  {isActive ? (
+                    <motion.div
+                      key="full-player-mini"
+                      className="flex flex-col relative"
+                      layout
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      transition={{ duration: 0.2 }}
                     >
-                      LIMPAR FILA
-                    </button>
-                  )}
-                </motion.div>
-              ) : !showLyrics ? (
-                <motion.div 
-                  key="cover"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  className="flex flex-col w-full flex-1 justify-between min-h-0 py-2 sm:py-4"
-                >
-                  <div className="flex-1 flex items-center justify-center min-h-0 mb-4 sm:mb-8">
-                    {/* Album Art */}
-                    <div className="w-full max-w-[min(100%,360px)] aspect-square rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_40px_80px_rgba(0,0,0,0.6)] shrink-0">
-                      <img 
-                        src={currentTrack.coverUrl} 
-                        alt="Cover" 
-                        loading="lazy"
-                        decoding="async"
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col shrink-0">
-                    {/* Title & Actions */}
-                    <div className="flex items-center justify-between mb-4 sm:mb-6">
-                      <div className="flex flex-col overflow-hidden pr-4 flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h2 className="text-2xl md:text-3xl font-display text-text-high truncate">{currentTrack.title}</h2>
-                          {isOffline && (
-                            <WifiOff size={14} className="text-primary opacity-50" />
-                          )}
-                        </div>
-                        <p className="text-primary text-xs md:text-sm tracking-[0.1em] font-sc truncate opacity-80 uppercase">{currentTrack.artist}</p>
-                      </div>
-                    </div>
-
-                    {/* Progress */}
-                    <div className="flex flex-col mb-6 sm:mb-8">
-                      <div className="w-full cursor-pointer py-4 -my-4 group" ref={progressBarRef} onClick={handleSeek}>
-                        <div className="h-1.5 bg-surface/50 rounded-full relative overflow-hidden group-hover:h-2 transition-all">
-                          <div ref={progressFillRef} className="absolute top-0 left-0 h-full bg-primary rounded-full transition-[width] duration-75" style={{ width: '0%' }} />
-                        </div>
-                        <div ref={progressCircleRef} className="absolute w-3 h-3 bg-primary rounded-full shadow-[0_0_10px_var(--glow-purple)] opacity-0 group-hover:opacity-100 transition-opacity" style={{ left: 'calc(0% - 6px)', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
-                      </div>
-                      <div className="flex justify-between mt-3 font-mono text-[10px] text-text-low tracking-widest">
-                        <span ref={timeDisplayRef}>0:00</span>
-                        <TrackDuration audioUrl={currentTrack.audioUrl} defaultDuration={currentTrack.duration} />
-                      </div>
-                    </div>
-
-                    {/* Main Controls */}
-                    <div className="flex items-center justify-center gap-6 sm:gap-8 mb-6 sm:mb-10">
-                      <KyvraButton 
-                        onClick={handlePrev} 
-                        variant="player"
-                        className="w-14 h-14 rounded-full text-text-high"
-                      >
-                        <SkipBack size={20} className="fill-current" />
-                      </KyvraButton>
-                      <KyvraButton 
-                        onClick={() => setIsPlaying(!isPlaying)}
-                        variant="player"
-                        showLed
-                        isActive={isPlaying}
-                        ledColor="red"
-                        className={cn(
-                          "w-20 h-20 rounded-full",
-                          isPlaying ? "text-primary bg-primary/10 border-primary/50" : "text-void bg-primary"
-                        )}
-                      >
-                        {isPlaying ? <Pause size={32} className="fill-current" /> : <Play size={32} className="ml-1 fill-current" />}
-                      </KyvraButton>
-                      <KyvraButton 
-                        onClick={handleNext} 
-                        variant="player"
-                        className="w-14 h-14 rounded-full text-text-high"
-                      >
-                        <SkipForward size={20} className="fill-current" />
-                      </KyvraButton>
-                    </div>
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div 
-                  key="lyrics"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  className="flex flex-col w-full flex-1 min-h-0"
-                  onPointerDown={e => e.stopPropagation()}
-                >
-                  <div className="w-full text-center mb-6 shrink-0 mt-4">
-                    <h2 className="text-xl md:text-2xl font-display text-text-high leading-tight">{currentTrack.title}</h2>
-                    <p className="text-primary/60 text-[10px] tracking-[0.2em] uppercase mt-1">{currentTrack.artist}</p>
-                  </div>
-                  
-                  <div 
-                    ref={lyricsScrollRef}
-                    className="w-full flex-1 overflow-y-auto scrollbar-hide text-center px-4 pb-32 mask-fade-vertical pt-8"
-                  >
-                    {lyricsLines.length > 0 ? (
-                      <div className="space-y-6">
-                        {lyricsLines.map((line, idx) => (
-                          <div key={idx} className="w-full flex items-center justify-center min-h-[2rem]">
-                            <p className="text-lg sm:text-xl md:text-2xl font-display font-medium text-text-high opacity-80 hover:opacity-100 transition-opacity text-balance lg:whitespace-nowrap leading-tight mx-auto">
-                              {line}
-                            </p>
+                      {/* Cover */}
+                      {currentTrack.coverUrl && (
+                        <motion.div 
+                          className="bg-white/20 overflow-hidden rounded-2xl aspect-square w-full relative group cursor-pointer"
+                          onClick={() => setIsFullPlayerOpen(true)}
+                        >
+                          <img
+                            src={currentTrack.coverUrl}
+                            alt="cover"
+                            className="!object-cover w-full my-0 p-0 !mt-0 border-none !h-full transition-transform duration-500 group-hover:scale-105"
+                            referrerPolicy="no-referrer"
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <Maximize2 className="text-white w-6 h-6 drop-shadow-md" />
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-text-low font-sc tracking-widest text-sm mt-10 opacity-50">Não há letras disponíveis.</p>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                        </motion.div>
+                      )}
 
-            {/* Bottom Strip Actions (Always Visible) */}
-            <div className="grid grid-cols-4 gap-2 pt-4 pb-2 mt-auto shrink-0 border-t border-white/5 relative z-[2005]">
-              <button onClick={() => { setShowQueue(!showQueue); setShowLyrics(false); }} className={cn("flex flex-col items-center gap-1 py-2 rounded-lg transition-all", showQueue ? "text-primary" : "text-text-low hover:text-text-high")}>
-                <ListMusic size={20} />
-                <span className="text-[8px] font-sc tracking-widest">FILA</span>
-              </button>
-              <button onClick={() => { setShowLyrics(!showLyrics); setShowQueue(false); }} className={cn("flex flex-col items-center gap-1 py-2 rounded-lg transition-all", showLyrics ? "text-primary" : "text-text-low hover:text-text-high")}>
-                <AlignLeft size={20} />
-                <span className="text-[8px] font-sc tracking-widest">LETRA</span>
-              </button>
-              <button onClick={toggleShuffle} className={cn("flex flex-col items-center gap-1 py-2 rounded-lg transition-all", isShuffle ? "text-primary" : "text-text-low hover:text-text-high")}>
-                <Shuffle size={20} />
-                <span className="text-[8px] font-sc tracking-widest">SHUFFLE</span>
-              </button>
-              <button onClick={toggleRepeat} className={cn("flex flex-col items-center gap-1 py-2 rounded-lg transition-all", repeatMode !== 'off' ? "text-primary" : "text-text-low hover:text-text-high")}>
-                {repeatMode === 'one' ? <Repeat1 size={20} className="stroke-[3px]" /> : <Repeat size={20} />}
-                <span className="text-[8px] font-sc tracking-widest">{repeatMode === 'one' ? 'UM' : 'REPETIR'}</span>
-              </button>
+                      <motion.div className="flex flex-col w-full gap-y-2 pointer-events-auto">
+                        {/* Title */}
+                        {currentTrack.title && (
+                          <motion.h3 className="text-white font-bold text-sm text-center mt-2 truncate px-2">
+                            {currentTrack.title}
+                          </motion.h3>
+                        )}
+
+                        {/* Slider */}
+                        <motion.div className="flex flex-col gap-y-1">
+                          <CustomSlider
+                            value={progress}
+                            onChange={handleSeek}
+                            className="w-full"
+                          />
+                          <div className="flex items-center justify-between mt-0.5">
+                            <span className="text-white text-[10px] opacity-80">
+                              {formatTime(currentTime)}
+                            </span>
+                            <span className="text-white text-[10px] opacity-80">
+                              {formatTime(duration)}
+                            </span>
+                          </div>
+                        </motion.div>
+
+                        {/* Controls */}
+                        <motion.div className="flex items-center justify-center w-full mt-1">
+                          <div className="flex items-center gap-1.5 w-fit bg-black/40 rounded-[16px] p-1.5">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleShuffle();
+                              }}
+                              className={cn(
+                                "text-white hover:bg-white/20 hover:text-white h-7 w-7 rounded-full transition-colors",
+                                isShuffle && "bg-white/20 text-white"
+                              )}
+                            >
+                              <Shuffle className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                playPrevious();
+                              }}
+                              className="text-white hover:bg-white/20 hover:text-white h-7 w-7 rounded-full transition-colors"
+                            >
+                              <SkipBack className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                togglePlay();
+                              }}
+                              variant="ghost"
+                              size="icon"
+                              className="text-white bg-primary/20 hover:bg-primary/40 hover:text-white h-9 w-9 rounded-full transition-colors"
+                            >
+                              {isPlaying ? (
+                                <Pause className="h-5 w-5" />
+                              ) : (
+                                <Play className="h-5 w-5 ml-0.5" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                playNext();
+                              }}
+                              className="text-white hover:bg-white/20 hover:text-white h-7 w-7 rounded-full transition-colors"
+                            >
+                              <SkipForward className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleRepeat();
+                              }}
+                              className={cn(
+                                "text-white hover:bg-white/20 hover:text-white h-7 w-7 rounded-full transition-colors",
+                                repeatMode !== 'off' && "bg-white/20 text-white"
+                              )}
+                            >
+                              {repeatMode === 'one' ? <Repeat1 className="h-4 w-4 stroke-[3px]" /> : <Repeat className="h-4 w-4" />}
+                            </Button>
+                            <div className="w-[1px] h-5 bg-white/20 mx-0.5" />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsActive(false);
+                              }}
+                              className="text-white hover:bg-white/20 hover:text-white h-7 w-7 rounded-full transition-colors"
+                            >
+                              <Minimize2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </motion.div>
+                      </motion.div>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="compact-player-mini"
+                      className="flex items-center gap-1 pointer-events-auto"
+                      layout
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {currentTrack.coverUrl && (
+                        <img
+                          src={currentTrack.coverUrl}
+                          alt="cover"
+                          className="w-8 h-8 rounded-full object-cover shrink-0 ml-1 pointer-events-none"
+                          referrerPolicy="no-referrer"
+                        />
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          playPrevious();
+                        }}
+                        className="text-white hover:bg-white/20 hover:text-white h-8 w-8 rounded-full transition-colors ml-1"
+                      >
+                        <SkipBack className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          togglePlay();
+                        }}
+                        variant="ghost"
+                        size="icon"
+                        className="text-white bg-primary/20 hover:bg-primary/40 hover:text-white h-10 w-10 rounded-full transition-colors shrink-0"
+                      >
+                        {isPlaying ? (
+                          <Pause className="h-5 w-5" />
+                        ) : (
+                          <Play className="h-5 w-5 ml-0.5" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          playNext();
+                        }}
+                        className="text-white hover:bg-white/20 hover:text-white h-8 w-8 rounded-full transition-colors mr-1"
+                      >
+                        <SkipForward className="h-4 w-4" />
+                      </Button>
+                      <div className="w-[1px] h-6 bg-white/20 mx-1" />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsActive(true);
+                        }}
+                        className="text-white hover:bg-white/20 hover:text-white h-8 w-8 rounded-full transition-colors mr-1"
+                      >
+                        <Maximize2 className="h-4 w-4" />
+                      </Button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* FULL PLAYER OVERLAY */}
+      <AnimatePresence>
+        {isFullPlayerOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: "100%" }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="fixed inset-0 z-[6000] flex flex-col bg-void"
+          >
+            {/* Background Blur optimized for performance */}
+            <div 
+              className="absolute inset-0 z-0 opacity-20 pointer-events-none"
+              style={{
+                backgroundImage: `url(${currentTrack.coverUrl})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                filter: 'blur(20px)',
+                transform: 'scale(1.4)',
+                willChange: 'transform'
+              }}
+            />
+            {/* Additional overlay to smooth out the grain from smaller blur */}
+            <div className="absolute inset-0 z-[1] bg-void/60 pointer-events-none" />
+            
+            {/* Header */}
+            <div className="relative z-10 flex items-center justify-between p-6 pt-12 md:p-8 md:pt-12 shrink-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsFullPlayerOpen(false)}
+                className="text-white hover:bg-white/10 rounded-full h-10 w-10"
+              >
+                <ChevronDown className="h-6 w-6" />
+              </Button>
+              <div className="flex flex-col items-center">
+                <span className="text-[10px] tracking-[0.2em] font-sc text-primary uppercase">
+                  TOCANDO AGORA
+                </span>
+                <span className="text-white/80 text-sm font-medium">
+                  {currentTrack.albumTitle || currentTrack.artist}
+                </span>
+              </div>
+              <div className="w-10"> {/* Balance header */} </div>
             </div>
-          </div>
-        </motion.div>
-      )}
+
+            {/* Main Content */}
+            <div className="relative z-10 flex-1 flex flex-col md:flex-row items-center justify-center p-6 md:p-12 gap-10 md:gap-20 overflow-y-auto">
+              {/* Cover Art */}
+              <motion.div 
+                layoutId={`cover-${currentTrack.id}`}
+                className={cn(
+                  "w-full max-w-[320px] md:max-w-[450px] aspect-square rounded-xl overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,0.5)] shrink-0 transition-all duration-700",
+                  showLyrics ? "md:scale-90 opacity-40 md:opacity-100" : ""
+                )}
+              >
+                <img
+                  src={currentTrack.coverUrl}
+                  alt={currentTrack.title}
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              </motion.div>
+
+              {/* Lyrics Panel */}
+              <AnimatePresence>
+                {showLyrics && (
+                  <motion.div 
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20, position: "absolute" }}
+                    className={cn(
+                      "w-full md:w-[400px] h-[50dvh] md:h-full max-h-[500px] overflow-y-auto py-4 px-2 custom-scrollbar",
+                      "absolute md:relative inset-x-6 md:inset-auto z-20 md:z-auto bg-void/60 md:bg-transparent backdrop-blur-xl md:backdrop-blur-none p-6 md:p-0 rounded-2xl md:rounded-none"
+                    )}
+                  >
+                    <AnimatePresence mode="popLayout">
+                      {currentTrack.lyrics ? (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="flex flex-col gap-4 text-white/80 text-lg md:text-xl font-medium leading-relaxed"
+                          style={{ whiteSpace: "pre-wrap" }}
+                        >
+                          {currentTrack.lyrics}
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="flex h-full items-center justify-center"
+                        >
+                          <p className="text-white/50 text-center text-sm font-sans">
+                            Letra não disponível para este fragmento.
+                          </p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Controls */}
+            <div className="relative z-10 w-full max-w-3xl mx-auto p-6 md:p-12 pb-12 shrink-0 flex flex-col gap-6">
+              
+              <div className="flex items-center justify-between w-full">
+                <div className="flex flex-col">
+                  <h2 className="text-2xl md:text-3xl font-display text-white">{currentTrack.title}</h2>
+                  <p className="text-white/60 text-sm md:text-base">{currentTrack.artist}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowLyrics(!showLyrics)}
+                  className={cn(
+                    "rounded-full h-10 w-10 transition-colors",
+                    showLyrics ? "bg-primary text-white" : "text-white/60 hover:text-white bg-white/5 hover:bg-white/10"
+                  )}
+                  title="Mostrar Letra"
+                >
+                  <AlignLeft className="h-5 w-5" />
+                </Button>
+              </div>
+
+              <div className="flex flex-col gap-2 w-full">
+                <CustomSlider
+                  value={progress}
+                  onChange={handleSeek}
+                  className="w-full h-[4px] hover:h-[6px]"
+                />
+                <div className="flex items-center justify-between text-white/50 text-xs font-mono">
+                  <span>{formatTime(currentTime)}</span>
+                  <span>{formatTime(duration)}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between max-w-[400px] w-full mx-auto mt-4">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleShuffle();
+                  }}
+                  className={cn(
+                    "text-white/60 hover:text-white h-12 w-12 rounded-full transition-colors",
+                    isShuffle && "text-primary"
+                  )}
+                >
+                  <Shuffle className="h-5 w-5" />
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    playPrevious();
+                  }}
+                  className="text-white/90 hover:text-white hover:bg-white/10 h-14 w-14 rounded-full transition-colors"
+                >
+                  <SkipBack className="h-6 w-6" />
+                </Button>
+                
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    togglePlay();
+                  }}
+                  variant="ghost"
+                  size="icon"
+                  className="text-void bg-primary hover:bg-primary/90 hover:scale-105 h-20 w-20 rounded-full transition-all shadow-[0_0_30px_rgba(var(--color-primary),0.4)]"
+                >
+                  {isPlaying ? (
+                    <Pause className="h-8 w-8" />
+                  ) : (
+                    <Play className="h-8 w-8 ml-1" />
+                  )}
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    playNext();
+                  }}
+                  className="text-white/90 hover:text-white hover:bg-white/10 h-14 w-14 rounded-full transition-colors"
+                >
+                  <SkipForward className="h-6 w-6" />
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleRepeat();
+                  }}
+                  className={cn(
+                    "text-white/60 hover:text-white h-12 w-12 rounded-full transition-colors",
+                    repeatMode !== 'off' && "text-primary"
+                  )}
+                >
+                  {repeatMode === 'one' ? <Repeat1 className="h-5 w-5 stroke-[2px]" /> : <Repeat className="h-5 w-5" />}
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }
+

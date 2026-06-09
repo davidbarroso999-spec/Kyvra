@@ -142,13 +142,23 @@
 
   body {
     @apply bg-void text-text-mid font-sans antialiased selection:bg-primary/30 selection:text-text-high;
-    background-image: var(--theme-bg-gradient);
-    background-attachment: fixed;
     transition: background-color 600ms cubic-bezier(0.16, 1, 0.3, 1), 
-                color 600ms cubic-bezier(0.16, 1, 0.3, 1),
-                background-image 600ms ease;
+                color 600ms cubic-bezier(0.16, 1, 0.3, 1);
     overflow-x: hidden;
     padding: env(safe-area-inset);
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -9999;
+    pointer-events: none;
+    background-image: var(--theme-bg-gradient);
+    transition: background-image 600ms ease;
+    transform: translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
   }
 
   h1, h2, h3, h4, h5, h6 {

@@ -83,7 +83,7 @@ export function Home() {
           <div className="absolute inset-0 bg-gradient-to-b from-void/10 via-void/40 to-void pointer-events-none" />
         </div>
 
-        <div className="absolute inset-0 z-0 pointer-events-none flex items-center justify-center translate-y-[-14dvh] sm:translate-y-[calc(-50px-12dvh)] md:translate-y-[calc(-100px-12dvh)] lg:translate-y-[calc(-120px-10dvh)] scale-[1.05] sm:scale-110 origin-center select-none">
+        <div className="absolute inset-0 z-0 pointer-events-none flex flex-col items-center justify-center translate-y-[-14dvh] sm:translate-y-[-12dvh] lg:translate-y-[-6dvh] scale-[1.05] sm:scale-[1.2] lg:scale-[1.4] origin-top select-none pt-[10dvh]">
           <LampContainer />
         </div>
 

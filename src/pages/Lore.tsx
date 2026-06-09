@@ -26,6 +26,22 @@ export function Lore() {
     fetchLore();
   }, []);
 
+  const toggleChapter = (id: number) => {
+    if (expandedId === id) {
+      setExpandedId(null);
+    } else {
+      setExpandedId(id);
+      // Wait for animation to start, then scroll
+      setTimeout(() => {
+        const el = document.getElementById(`chapter-${id}`);
+        if (el) {
+          const y = el.getBoundingClientRect().top + window.scrollY - 100;
+          window.scrollTo({ top: y, behavior: 'smooth' });
+        }
+      }, 150);
+    }
+  };
+
   return (
     <div className="w-full pt-32 px-6 pb-40">
       <div className="max-w-7xl mx-auto">
@@ -53,164 +69,158 @@ export function Lore() {
             Nenhuma memória foi recuperada do arquivo central.
           </div>
         ) : (
-          <div className="flex flex-col w-full h-auto min-h-[85vh] gap-4 pb-10">
-            {chapters.map((chapter, index) => (
-              <motion.div
-                key={chapter.id}
-                id={`chapter-${chapter.id}`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                onClick={() => {
-                  if (expandedId !== chapter.id) {
-                    setExpandedId(chapter.id);
-                    setTimeout(() => {
-                      const el = document.getElementById(`chapter-${chapter.id}`);
-                      if (el) {
-                        const y = el.getBoundingClientRect().top + window.scrollY - 100;
-                        window.scrollTo({ top: y, behavior: 'smooth' });
-                      }
-                    }, 50);
-                  }
-                }}
-                className={cn(
-                  "group relative overflow-hidden transition-[flex,background-color] duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] r-md flex flex-col translate-z-0",
-                  expandedId === chapter.id 
-                    ? "flex-none h-auto shadow-[0_8px_30px_rgba(0,0,0,0.5)] cursor-default glass-premium" 
-                    : "flex-[1] min-h-[140px] lg:min-h-[180px] glass hover:border-primary/40 shadow-sm cursor-pointer"
-                )}
-              >
-                {/* Image Background */}
-                {chapter.image_url && (
+          <div className="flex flex-col w-full gap-6 pb-10">
+            {chapters.map((chapter, index) => {
+              const isExpanded = expandedId === chapter.id;
+
+              return (
+                <motion.div
+                  key={chapter.id}
+                  id={`chapter-${chapter.id}`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  layout
+                  className={cn(
+                    "group relative overflow-hidden r-md flex flex-col",
+                    isExpanded 
+                      ? "shadow-[0_8px_30px_rgba(0,0,0,0.5)] cursor-default glass-premium" 
+                      : "min-h-[140px] lg:min-h-[180px] glass hover:border-primary/40 shadow-sm cursor-pointer"
+                  )}
+                  onClick={() => !isExpanded && toggleChapter(chapter.id)}
+                >
+                  {/* Image Background */}
+                  {chapter.image_url && (
+                    <div className={cn(
+                      "absolute inset-0 z-0 transition-opacity duration-700",
+                      isExpanded ? "opacity-10" : "opacity-30 group-hover:opacity-50"
+                    )}>
+                      <img 
+                        src={chapter.image_url} 
+                        alt={chapter.title}
+                        loading="lazy"
+                        decoding="async"
+                        referrerPolicy="no-referrer"
+                        className={cn(
+                          "w-full h-full object-cover transition-transform duration-700",
+                          isExpanded ? "scale-105" : "scale-105 group-hover:scale-100"
+                        )}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-void via-void/40 to-void/20" />
+                    </div>
+                  )}
+
+                  {/* Header Content Overlay */}
                   <div className={cn(
-                    "absolute inset-0 z-0 transition-all duration-700",
-                    expandedId === chapter.id ? "opacity-20 blur-2xl" : "opacity-30 group-hover:opacity-60 scale-110 group-hover:scale-100"
+                    "relative z-10 w-full p-6 lg:p-10 flex flex-col",
+                    isExpanded ? "items-center text-center pb-0" : "h-full justify-end"
                   )}>
-                    <img 
-                      src={chapter.image_url} 
-                      alt={chapter.title}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-void via-void/40 to-transparent" />
-                  </div>
-                )}
+                    
+                    <div 
+                      className={cn(
+                        "flex w-full relative",
+                        isExpanded 
+                          ? "flex-col items-center cursor-pointer group/header hover:opacity-80" 
+                          : "flex-col md:flex-row items-start md:items-end justify-start gap-2 md:gap-6 mt-auto"
+                      )}
+                      onClick={(e) => {
+                        if (isExpanded) {
+                          e.stopPropagation();
+                          toggleChapter(chapter.id);
+                        }
+                      }}
+                    >
+                      <motion.span 
+                        layout="position"
+                        className={cn(
+                          "label-micro tracking-[0.3em] shrink-0",
+                          isExpanded ? "text-primary text-sm mb-4" : "text-accent group-hover:text-primary transition-colors"
+                        )}
+                      >
+                        {chapter.chapter_number || index + 1}
+                      </motion.span>
 
-                {/* Uiverse-style pseudo layer (glow opacity on hover) */}
-                <div className={cn(
-                  "absolute inset-0 bg-white/5 z-0 transition-opacity duration-500 pointer-events-none",
-                  expandedId === chapter.id ? "opacity-0" : "opacity-0 group-hover:opacity-100"
-                )} />
-
-                {/* Content Overlay */}
-                <div className={cn(
-                  "relative z-10 w-full p-4 lg:p-10 flex flex-col transition-all duration-500",
-                  expandedId === chapter.id 
-                    ? "justify-start h-auto overflow-visible items-center text-center" 
-                    : "justify-end items-start h-full overflow-hidden"
-                )}>
-                  
-                  <div 
-                    className={cn(
-                      "flex transition-all duration-500 w-full relative",
-                      expandedId === chapter.id 
-                        ? "flex-col mb-10 items-center cursor-pointer group/header hover:opacity-80" 
-                        : "flex-col md:flex-row items-start md:items-end justify-start gap-2 md:gap-6"
-                    )}
-                    onClick={(e) => {
-                      if (expandedId === chapter.id) {
-                        e.stopPropagation();
-                        setExpandedId(null);
-                        setTimeout(() => {
-                          const el = document.getElementById(`chapter-${chapter.id}`);
-                          if (el) {
-                            const y = el.getBoundingClientRect().top + window.scrollY - 100;
-                            window.scrollTo({ top: y, behavior: 'smooth' });
-                          }
-                        }, 50);
-                      }
-                    }}
-                  >
-                    <span className={cn(
-                      "label-micro tracking-[0.3em] transition-all duration-500 shrink-0",
-                      expandedId === chapter.id ? "text-primary text-sm mb-2" : "text-accent group-hover:text-primary"
-                    )}>
-                      {chapter.chapter_number || index + 1}
-                    </span>
-
-                    <h2 className={cn(
-                      "font-display leading-[1.1] tracking-tight text-text-high transition-all duration-500 m-0 [text-wrap:balance]",
-                      expandedId === chapter.id 
-                        ? "text-4xl md:text-6xl lg:text-8xl mt-2 max-w-4xl mx-auto" 
-                        : "text-xl md:text-3xl lg:text-4xl lg:w-full line-clamp-2 text-left"
-                    )}>
-                      {chapter.title}
-                    </h2>
-                  </div>
-
-                  <div 
-                    className={cn(
-                      "grid transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] w-full",
-                      expandedId === chapter.id ? "grid-rows-[1fr] opacity-100 mt-2" : "grid-rows-[0fr] opacity-0"
-                    )}
-                  >
-                    <div className="overflow-hidden">
-                      <div className="w-full max-w-6xl mx-auto pb-4 pt-2 flex flex-col items-center">
-                        <div className="h-[1px] w-12 bg-primary/40 mb-10 mx-auto" />
-                        <div className="flex flex-col gap-10 lg:gap-16 w-full items-center">
-                          {chapter.image_url && (
-                            <div className="w-full relative flex justify-center">
-                              <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={expandedId === chapter.id ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-                                transition={{ delay: 0.1, duration: 0.6 }}
-                                className="w-full max-w-5xl"
-                              >
-                                <img 
-                                  src={chapter.image_url} 
-                                  alt={chapter.title}
-                                  referrerPolicy="no-referrer" 
-                                  className="w-full h-auto max-h-[75vh] object-contain object-center r-md shadow-[0_40px_100px_rgba(0,0,0,0.8)] border border-border/10"
-                                />
-                                <div className="absolute -inset-4 bg-primary/5 blur-3xl rounded-full -z-10 animate-pulse" />
-                              </motion.div>
-                            </div>
-                          )}
-
-                          <div className="w-full max-w-3xl prose prose-invert text-left">
-                            <div className="space-y-8">
-                              {chapter.content.split('\n\n').map((para: string, i: number) => (
-                                <p key={i} className="font-sans font-light text-text-mid text-lg md:text-xl md:text-center lg:text-left leading-relaxed opacity-90 first-letter:text-4xl first-letter:font-display first-letter:text-primary first-letter:mr-2">
-                                  {para}
-                                </p>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <button 
-                          onClick={(e) => { 
-                            e.stopPropagation(); 
-                            setExpandedId(null); 
-                            setTimeout(() => {
-                              const el = document.getElementById(`chapter-${chapter.id}`);
-                              if (el) {
-                                const y = el.getBoundingClientRect().top + window.scrollY - 100;
-                                window.scrollTo({ top: y, behavior: 'smooth' });
-                              }
-                            }, 50);
-                          }}
-                          className="mt-20 mb-8 label-micro group/btn flex items-center gap-4 hover:text-primary transition-all pr-8 cursor-pointer mx-auto"
-                        >
-                          <span className="w-12 h-[1px] bg-text-low group-hover/btn:w-16 group-hover/btn:bg-primary transition-all" />
-                          FECHAR REGISTRO
-                        </button>
-                      </div>
+                      <motion.h2 
+                        layout="position"
+                        className={cn(
+                          "font-display leading-[1.1] tracking-tight text-text-high m-0 [text-wrap:balance]",
+                          isExpanded 
+                            ? "text-4xl md:text-5xl lg:text-7xl max-w-4xl mx-auto" 
+                            : "text-2xl md:text-3xl lg:text-4xl lg:w-full line-clamp-2 text-left"
+                        )}
+                      >
+                        {chapter.title}
+                      </motion.h2>
                     </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
+
+                  {/* Expanded Content with AnimatePresence */}
+                  <AnimatePresence initial={false}>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                        className="relative z-10 overflow-hidden w-full"
+                      >
+                        <div className="w-full max-w-5xl mx-auto px-6 lg:px-10 pb-12 pt-8 flex flex-col items-center">
+                          <div className="h-[1px] w-12 bg-primary/40 mb-10 mx-auto" />
+                          
+                          <div className="flex flex-col gap-10 lg:gap-16 w-full items-center">
+                            {chapter.image_url && (
+                              <div className="w-full relative flex justify-center">
+                                <motion.div
+                                  initial={{ opacity: 0, y: 20 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ delay: 0.2, duration: 0.6 }}
+                                  className="w-full"
+                                >
+                                  <img 
+                                    src={chapter.image_url} 
+                                    alt={chapter.title}
+                                    loading="lazy"
+                                    decoding="async"
+                                    referrerPolicy="no-referrer" 
+                                    className="w-full h-auto max-h-[65vh] object-contain object-center r-md shadow-[0_40px_80px_rgba(0,0,0,0.6)] border border-border/10"
+                                  />
+                                </motion.div>
+                              </div>
+                            )}
+
+                            <div className="w-full max-w-3xl prose prose-invert text-left">
+                              <motion.div 
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 0.3 }}
+                                className="space-y-8"
+                              >
+                                {chapter.content.split('\n\n').map((para: string, i: number) => (
+                                  <p key={i} className="font-sans font-light text-text-mid text-lg md:text-xl md:text-center lg:text-left leading-relaxed opacity-90 first-letter:text-4xl first-letter:font-display first-letter:text-primary first-letter:mr-2">
+                                    {para}
+                                  </p>
+                                ))}
+                              </motion.div>
+                            </div>
+                          </div>
+                          
+                          <button 
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              toggleChapter(chapter.id);
+                            }}
+                            className="mt-20 mb-4 label-micro group/btn flex items-center gap-4 hover:text-primary transition-all pr-8 cursor-pointer mx-auto"
+                          >
+                            <span className="w-12 h-[1px] bg-text-low group-hover/btn:w-16 group-hover/btn:bg-primary transition-all" />
+                            FECHAR REGISTRO
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              );
+            })}
           </div>
         )}
       </div>
