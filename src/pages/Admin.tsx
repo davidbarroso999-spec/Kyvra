@@ -5,11 +5,12 @@ import { cn, parseChapterNumber } from '@/lib/utils';
 import { getAI, MODELS, generateText, generateMultimodal } from '@/lib/ai';
 import { supabase } from '@/lib/supabase';
 import { getAudioMetadata } from '@/lib/audioMetadata';
+import { CombinationLock } from '@/components/ui/CombinationLock';
 
 export function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeTab, setActiveTab] = useState<'musicas' | 'lore' | 'editar_letras' | 'destaque' | 'acervo'>('musicas');
-  const [password, setPassword] = useState('');
+  const [password, setPassword] = useState('0000');
   const [error, setError] = useState('');
   
   const [albumTracks, setAlbumTracks] = useState<{ id: number; title: string; file: File | null; duration?: string; vibe?: string; lyrics?: string; artist?: string; trackNumber?: number }[]>([{ id: 1, title: '', file: null }]);
@@ -943,11 +944,12 @@ export function Admin() {
   };
 
   const handleLogin = () => {
-    if (password === 'davidAt33z') {
+    // 1117 (Ateez debut/fandom) ou 2024
+    if (password === '1117' || password === '2024') {
       setIsAuthenticated(true);
       setError('');
     } else {
-      setError('Senha incorreta. O arquivo permanece selado.');
+      setError('Combinação incorreta. O arquivo permanece selado.');
     }
   };
 
@@ -971,32 +973,34 @@ export function Admin() {
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="glass p-8 rounded-xl w-full max-w-md flex flex-col items-center"
+          className="glass p-8 rounded-xl w-full max-w-md flex flex-col items-center relative overflow-hidden"
         >
-          <Lock className="text-primary mb-4" size={32} />
-          <h1 className="font-display text-3xl mb-2">O ARQUIVISTA</h1>
-          <span className="font-sc text-xs tracking-[0.2em] text-text-low mb-8">ACESSO RESTRITO</span>
+          {/* Noise effect */}
+          <div className="absolute inset-0 bg-white/5 pointer-events-none mix-blend-overlay" />
           
-          <input 
-            type="password" 
-            placeholder="Senha de Acesso" 
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className="w-full bg-void border border-border rounded p-3 text-center mb-2 focus:outline-none focus:border-primary transition-colors"
-          />
+          <Lock className="text-primary mb-4 relative z-10" size={32} />
+          <h1 className="font-display text-3xl mb-2 relative z-10">O ARQUIVISTA</h1>
+          <span className="font-sc text-xs tracking-[0.2em] text-text-low mb-8 relative z-10">ACESSO RESTRITO</span>
           
-          {error && (
-            <span className="text-red-400 text-xs mb-4 text-center">{error}</span>
-          )}
-          {!error && <div className="h-4 mb-4" />}
-          
-          <button 
-            onClick={handleLogin}
-            className="w-full bg-primary text-void font-medium py-3 rounded hover:bg-primary/90 transition-colors"
-          >
-            Entrar no Arquivo
-          </button>
+          <div className="mb-4 relative z-10 w-full flex flex-col items-center">
+             <CombinationLock 
+                value={password}
+                onChange={setPassword}
+                className="mt-2"
+             />
+             
+             {error && (
+               <span className="text-red-400 text-xs mt-6 text-center h-4">{error}</span>
+             )}
+             {!error && <div className="h-4 mt-6" />}
+             
+             <button 
+               onClick={handleLogin}
+               className="w-full mt-4 bg-primary text-void font-medium py-3 rounded hover:bg-primary/90 transition-colors"
+             >
+               Entrar no Arquivo
+             </button>
+          </div>
         </motion.div>
       </div>
     );
@@ -1147,43 +1151,55 @@ export function Admin() {
               {/* Track List */}
               <div className="space-y-4">
                 {albumTracks.map((track, index) => (
-                  <div key={track.id} className="flex flex-col md:flex-row gap-4 items-start md:items-center bg-void/50 p-4 rounded border border-border">
-                    <span className="font-mono text-text-low w-6">{index + 1}</span>
-                    <div className="flex-1 w-full">
-                      <input 
-                        type="text" 
-                        value={track.title}
-                        onChange={e => setAlbumTracks(albumTracks.map(t => t.id === track.id ? { ...t, title: e.target.value } : t))}
-                        placeholder="Título da Faixa" 
-                        className="w-full bg-void border border-border rounded p-2 focus:border-primary outline-none transition-colors text-sm" 
-                      />
-                    </div>
-                    <div className="flex-1 w-full">
-                      <input 
-                        type="text" 
-                        value={track.vibe || ''}
-                        onChange={e => setAlbumTracks(albumTracks.map(t => t.id === track.id ? { ...t, vibe: e.target.value } : t))}
-                        placeholder="Gênero / Tags" 
-                        className="w-full bg-void border border-border rounded p-2 focus:border-primary outline-none transition-colors text-sm" 
-                      />
-                    </div>
-                    <div className="flex-1 w-full">
-                      <div 
-                        onClick={() => {
-                          setActiveTrackId(track.id);
-                          audioInputRef.current?.click();
-                        }}
-                        className={cn(
-                          "border rounded p-2 text-sm flex items-center justify-center cursor-pointer transition-colors",
-                          track.file ? "border-primary text-primary" : "border-border text-text-low hover:border-primary hover:text-primary"
-                        )}
-                      >
-                        {track.file ? (track.file as File).name : 'Selecionar Áudio'}
+                  <div key={track.id} className="bg-void/50 p-4 rounded border border-border flex flex-col gap-2">
+                    <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+                      <span className="font-mono text-text-low w-6">{index + 1}</span>
+                      <div className="flex-1 w-full">
+                        <input 
+                          type="text" 
+                          value={track.title}
+                          onChange={e => setAlbumTracks(albumTracks.map(t => t.id === track.id ? { ...t, title: e.target.value } : t))}
+                          placeholder="Título da Faixa" 
+                          className="w-full bg-void border border-border rounded p-2 focus:border-primary outline-none transition-colors text-sm" 
+                        />
                       </div>
+                      <div className="flex-1 w-full">
+                        <input 
+                          type="text" 
+                          value={track.vibe || ''}
+                          onChange={e => setAlbumTracks(albumTracks.map(t => t.id === track.id ? { ...t, vibe: e.target.value } : t))}
+                          placeholder="Gênero / Tags" 
+                          className="w-full bg-void border border-border rounded p-2 focus:border-primary outline-none transition-colors text-sm" 
+                        />
+                      </div>
+                      <div className="flex-1 w-full">
+                        <div 
+                          onClick={() => {
+                            setActiveTrackId(track.id);
+                            audioInputRef.current?.click();
+                          }}
+                          className={cn(
+                            "border rounded p-2 text-sm flex items-center justify-center cursor-pointer transition-colors",
+                            track.file ? "border-primary text-primary" : "border-border text-text-low hover:border-primary hover:text-primary"
+                          )}
+                        >
+                          {track.file ? (track.file as File).name : 'Selecionar Áudio'}
+                        </div>
+                      </div>
+                      <button onClick={() => removeTrack(track.id)} className="text-text-low hover:text-red-400 transition-colors p-2 md:mt-0 mt-2">
+                        <X size={16} />
+                      </button>
                     </div>
-                    <button onClick={() => removeTrack(track.id)} className="text-text-low hover:text-red-400 transition-colors p-2">
-                      <X size={16} />
-                    </button>
+                    
+                    <div className="w-full md:pl-10">
+                      <textarea 
+                        placeholder="Letras (opcional)"
+                        rows={3}
+                        value={track.lyrics || ''} 
+                        onChange={e => setAlbumTracks(albumTracks.map(t => t.id === track.id ? { ...t, lyrics: e.target.value } : t))}
+                        className="w-full bg-void border border-border rounded p-2 text-sm focus:border-primary outline-none resize-y font-sans"
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1304,7 +1320,7 @@ export function Admin() {
                     onClick={() => setExpandedAlbumId(expandedAlbumId === album.id ? null : album.id)}
                   >
                     <div className="flex items-center gap-4">
-                      <img src={album.cover_url} alt={album.title} className="w-12 h-12 rounded object-cover" referrerPolicy="no-referrer" />
+                      <img src={album.cover_url} alt={album.title} loading="lazy" decoding="async" className="w-12 h-12 rounded object-cover" referrerPolicy="no-referrer" />
                       <div>
                         <h3 className="font-medium text-text-high">{album.title}</h3>
                         <p className="text-xs text-text-low">{album.release_year} • {album.tracks?.length || 0} faixas</p>

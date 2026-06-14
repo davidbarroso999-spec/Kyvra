@@ -394,3 +394,185 @@
 ::-webkit-scrollbar-thumb:hover {
   background: var(--primary);
 }
+
+/* From Uiverse.io by dexter-st */ 
+.combination-lock {
+  position: relative;
+  display: flex;
+  gap: 1.25rem;
+  user-select: none;
+}
+
+.dial {
+  width: 34px;
+  height: 120px;
+  overflow: hidden;
+  perspective: 500px;
+  border-radius: 10px / 250px;
+  outline: solid 3px #111;
+  outline-offset: 1px;
+  filter: drop-shadow(4px 0 0px #0006) drop-shadow(8px -1px 1px #0003)
+    drop-shadow(8px 10px 1px #0003) contrast(1.2);
+  box-shadow:
+    -2px -3px 0 4px #1115,
+    0 -3px 0 2px #333,
+    0 2px 0 3px #222,
+    0 4px 0 4px #0009;
+}
+
+.dial::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle at 50% 50%, #000 40%, 40.5%, #fff0),
+    linear-gradient(to bottom, #444, 50%, #111);
+
+  background-position:
+    0 16px,
+    0 0;
+  background-repeat: no-repeat;
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+}
+
+.nonagon {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  top: 36px;
+  transform-style: preserve-3d;
+  transform-origin: 0 24px;
+  transform: rotateX(0deg);
+  transition: transform 300ms ease;
+}
+
+.face {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 47px;
+
+  background-color: #222;
+  box-shadow:
+    0 -3px 1px 2px #000a,
+    0 0px 1px 3px #333;
+
+  font-family: "Lucida Console", Courier, monospace;
+  font-size: 1.75em;
+  font-weight: bolder;
+  text-shadow:
+    1px 1px 0.5px #111,
+    -1px -1px 0.5px #000,
+    -0.5px -0.5px 0.5px #000;
+  color: #bbb;
+  -webkit-text-stroke: 1px #444;
+}
+
+.face::before,
+.face::after {
+  content: "";
+  position: absolute;
+  height: 100%;
+  width: 4px;
+  border: 0.5px solid #0005;
+}
+.face::before {
+  left: 0;
+  background-color: #444;
+}
+.face::after {
+  right: 0;
+  background-color: #000;
+}
+
+.face span {
+  position: absolute;
+  pointer-events: none;
+}
+
+.face .radio {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  appearance: none;
+  opacity: 0.5;
+  z-index: 0;
+}
+
+.nonagon:has(.radio-0:checked) {
+  transform: rotateX(0deg);
+}
+.nonagon:has(.radio-1:checked) {
+  transform: rotateX(36deg);
+}
+.nonagon:has(.radio-2:checked) {
+  transform: rotateX(72deg);
+}
+.nonagon:has(.radio-3:checked) {
+  transform: rotateX(108deg);
+}
+.nonagon:has(.radio-4:checked) {
+  transform: rotateX(144deg);
+}
+.nonagon:has(.radio-5:checked) {
+  transform: rotateX(180deg);
+}
+.nonagon:has(.radio-6:checked) {
+  transform: rotateX(216deg);
+}
+.nonagon:has(.radio-7:checked) {
+  transform: rotateX(252deg);
+}
+.nonagon:has(.radio-8:checked) {
+  transform: rotateX(288deg);
+}
+.nonagon:has(.radio-9:checked) {
+  transform: rotateX(324deg);
+}
+
+.face-0 {
+  transform: rotateX(0deg) translateZ(71px);
+}
+.face-1 {
+  transform: rotateX(-36deg) translateZ(71px);
+}
+.face-2 {
+  transform: rotateX(-72deg) translateZ(71px);
+}
+.face-3 {
+  transform: rotateX(-108deg) translateZ(71px);
+}
+.face-4 {
+  transform: rotateX(-144deg) translateZ(71px);
+}
+.face-5 {
+  transform: rotateX(-180deg) translateZ(71px);
+}
+.face-6 {
+  transform: rotateX(-216deg) translateZ(71px);
+}
+.face-7 {
+  transform: rotateX(-252deg) translateZ(71px);
+}
+.face-8 {
+  transform: rotateX(-288deg) translateZ(71px);
+}
+.face-9 {
+  transform: rotateX(-324deg) translateZ(71px);
+}
+
+.help {
+  position: absolute;
+  width: 100%;
+  transform: translateY(-50px);
+  text-align: center;
+  bottom: -40px;
+  text-wrap: nowrap;
+  font-family: "Gill Sans", "Gill Sans MT", Calibri, "Trebuchet MS", sans-serif;
+  font-weight: lighter;
+  font-size: 1em;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.5); /* Adapted for dark theme */
+}

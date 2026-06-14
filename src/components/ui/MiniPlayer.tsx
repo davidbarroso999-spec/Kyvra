@@ -287,9 +287,10 @@ export function MiniPlayer() {
         ref={audioRef}
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleEnded}
-        src={currentTrack.audioUrl!}
+        src={currentTrack.audioUrl || undefined}
         className="hidden"
         crossOrigin="anonymous"
+        autoPlay={isPlaying}
         onCanPlay={() => {
           if (isPlaying && audioRef.current) {
             audioRef.current.play().catch(() => {});
@@ -353,7 +354,9 @@ export function MiniPlayer() {
                           <img
                             src={currentTrack.coverUrl}
                             alt="cover"
-                            className="!object-cover w-full my-0 p-0 !mt-0 border-none !h-full transition-transform duration-500 group-hover:scale-105"
+                            loading="lazy"
+                            decoding="async"
+                            className="!object-contain bg-black/20 w-full my-0 p-0 !mt-0 border-none !h-full transition-transform duration-500 group-hover:scale-105"
                             referrerPolicy="no-referrer"
                           />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -606,7 +609,9 @@ export function MiniPlayer() {
                 <img
                   src={currentTrack.coverUrl}
                   alt={currentTrack.title}
-                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full h-full object-contain bg-black/20"
                   referrerPolicy="no-referrer"
                 />
               </motion.div>
