@@ -45,6 +45,8 @@ interface AppState {
   removeFromQueue: (trackId: string) => void;    // Remove uma faixa específica da fila
   updateQueueOrder: (newOrder: Track[]) => void; // Reordena arrastando
   clearQueue: () => void;                        // Limpa a fila (mantém a música atual)
+  isPlayerHidden: boolean;
+  setPlayerHidden: (hidden: boolean) => void;
 }
 
 // Função auxiliar: embaralha um array sem modificar o original
@@ -63,6 +65,9 @@ export const useStore = create<AppState>()(
     (set, get) => ({
       theme: 'abissal',
       setTheme: (theme) => set({ theme }),
+
+      isPlayerHidden: false,
+      setPlayerHidden: (isPlayerHidden) => set({ isPlayerHidden }),
 
       currentTrack: null,
       isPlaying: false,
@@ -262,6 +267,7 @@ export const useStore = create<AppState>()(
         volume: state.volume,
         isShuffle: state.isShuffle,
         repeatMode: state.repeatMode,
+        isPlayerHidden: state.isPlayerHidden,
       }),
     }
   )

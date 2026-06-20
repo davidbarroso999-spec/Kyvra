@@ -11,7 +11,9 @@ import {
   Maximize2,
   Minimize2,
   ChevronDown,
-  AlignLeft
+  AlignLeft,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
@@ -215,6 +217,8 @@ export function MiniPlayer() {
     repeatMode,
     toggleShuffle,
     toggleRepeat,
+    isPlayerHidden,
+    setPlayerHidden,
   } = useStore();
 
   const [progress, setProgress] = useState(0);
@@ -302,7 +306,7 @@ export function MiniPlayer() {
       <div className="fixed bottom-[6rem] right-[1.5rem] sm:bottom-[3.625rem] sm:right-[3rem] z-[5000] flex items-center justify-center pointer-events-none">
         <div className="relative w-0 h-0 flex justify-center items-center pointer-events-auto">
           <AnimatePresence>
-            {!isFullPlayerOpen && (
+            {!isFullPlayerOpen && !isPlayerHidden && (
               <motion.div
                 drag
                 dragMomentum={false}
@@ -464,6 +468,18 @@ export function MiniPlayer() {
                               size="icon"
                               onClick={(e) => {
                                 e.stopPropagation();
+                                setPlayerHidden(true);
+                              }}
+                              className="text-white hover:text-primary hover:bg-white/20 h-7 w-7 rounded-full transition-colors"
+                              title="Ocultar Player"
+                            >
+                              <EyeOff className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setIsActive(false);
                               }}
                               className="text-white hover:bg-white/20 hover:text-white h-7 w-7 rounded-full transition-colors"
@@ -530,6 +546,18 @@ export function MiniPlayer() {
                         <SkipForward className="h-4 w-4" />
                       </Button>
                       <div className="w-[1px] h-6 bg-white/20 mx-1" />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPlayerHidden(true);
+                        }}
+                        className="text-white hover:text-primary hover:bg-white/20 h-8 w-8 rounded-full transition-colors"
+                        title="Ocultar Player"
+                      >
+                        <EyeOff className="h-4 w-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"

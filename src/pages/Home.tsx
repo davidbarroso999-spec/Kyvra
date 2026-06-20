@@ -1,30 +1,47 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { cn } from '@/lib/utils';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { motion } from 'motion/react';
 import { getFeaturedTracksSettings, getTracksByIds, getTrackSynopses } from '@/lib/apiCache';
 import { useStore } from '@/store/useStore';
-import { Play } from 'lucide-react';
 import { FeaturedSlider } from '@/components/ui/FeaturedSlider';
 import { LampContainer } from '@/components/ui/lamp';
 
 export function Home() {
   const [featuredTracks, setFeaturedTracks] = useState<any[]>([]);
-  const { setCurrentTrack, setIsPlaying, setQueue } = useStore();
+  const videoRefDesktop = useRef<HTMLVideoElement>(null);
+  const videoRefMobile = useRef<HTMLVideoElement>(null);
 
-  const scrollToSection = (id: string) => {
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
+  useEffect(() => {
+    document.title = "Kyvra — Portal Oficial";
+  }, []);
+
+  // Guarantee the video plays programmatically
+  useEffect(() => {
+    const playVideo = (videoEl: HTMLVideoElement | null) => {
+      if (videoEl) {
+        videoEl.muted = true;
+        videoEl.play().catch((err) => {
+          console.log("Auto-play prevented by browser policy, attempting fallback on interaction", err);
+          
+          const startOnInteraction = () => {
+            videoEl.play().catch(() => {});
+            document.removeEventListener('click', startOnInteraction);
+            document.removeEventListener('touchstart', startOnInteraction);
+          };
+          document.addEventListener('click', startOnInteraction);
+          document.addEventListener('touchstart', startOnInteraction);
+        });
+      }
+    };
+
+    playVideo(videoRefDesktop.current);
+    playVideo(videoRefMobile.current);
+  }, []);
 
   useEffect(() => {
     async function fetchFeatured() {
       const { data: trackIds } = await getFeaturedTracksSettings();
       
       if (trackIds && trackIds.length > 0) {
-        // 2. Fetch all featured tracks details
         const { data: tracks, error: tracksError } = await getTracksByIds(trackIds);
           
         if (tracksError) {
@@ -33,10 +50,7 @@ export function Home() {
         }
           
         if (tracks && tracks.length > 0) {
-          // Sort tracks to match the order in trackIds
           const sortedTracks = trackIds.map((id: string) => tracks.find((t: any) => t.id.toString() === id.toString())).filter(Boolean);
-
-          // 3. Fetch synopses for these tracks
           const { data: synopses } = await getTrackSynopses(trackIds);
 
           const tracksWithSynopses = sortedTracks.map((track: any) => {
@@ -65,65 +79,125 @@ export function Home() {
   }, []);
 
   return (
-    <div className="w-full">
-      {/* Hero Section */}
-      <section className="relative h-[100dvh] flex items-center justify-center px-6 overflow-hidden">
-        <div className="absolute inset-0 bg-void -z-10 overflow-hidden">
-          {/* Efeitos de fumaça / glow puramente estáticos em CSS para performance máxima (zero JS, zero recálculo) */}
-          <div 
-            className="absolute -top-[50%] -left-[50%] w-[200vw] h-[200vw] sm:-top-[20%] sm:-left-[10%] sm:w-[70vw] sm:h-[70vw] bg-[radial-gradient(circle_at_center,var(--glow-purple)_0%,transparent_50%)] opacity-15 pointer-events-none"
-            style={{ transform: 'translateZ(0)' }}
-          />
-          <div 
-            className="absolute -bottom-[50%] -right-[50%] w-[200vw] h-[200vw] sm:-bottom-[20%] sm:-right-[10%] sm:w-[60vw] sm:h-[60vw] bg-[radial-gradient(circle_at_center,var(--glow-purple)_0%,transparent_50%)] opacity-10 pointer-events-none"
-            style={{ transform: 'translateZ(0)' }}
-          />
-          
-          {/* Overlay final para garantir leitura e transição pro resto da página */}
-          <div className="absolute inset-0 bg-gradient-to-b from-void/10 via-void/40 to-void pointer-events-none" />
-        </div>
+    <div className="w-full bg-[#030303]">
+      {/* Immersive Responsive Hero Section */}
+      <section className="relative min-h-[100dvh] lg:h-[100dvh] w-full bg-[#030303] text-white overflow-hidden pb-10 lg:pb-0">
+        
+        {/* DESKTOP SPLIT LAYOUT (lg Breakpoint & above) */}
+        <div className="hidden lg:grid lg:grid-cols-12 lg:h-full w-full">
+          {/* Left Column: Brand, Lamp Glow logo & Poetry beneath it */}
+          <div className="col-span-12 lg:col-span-6 xl:col-span-5 h-[100dvh] flex flex-col justify-between p-10 xl:p-14 relative bg-[#030303] z-10 border-r border-white/5 select-none pt-24">
+            
+            {/* Top tiny branding accent */}
+            <div className="h-4" />
 
-        <div className="absolute inset-0 z-0 pointer-events-none flex flex-col items-center justify-center translate-y-[-14dvh] sm:translate-y-[-12dvh] lg:translate-y-[-6dvh] scale-[1.05] sm:scale-[1.2] lg:scale-[1.4] origin-top select-none pt-[10dvh]">
-          <LampContainer />
-        </div>
+            {/* Lamp Logo container with massive text and adjusted spacing */}
+            <div className="flex flex-col justify-center items-center lg:items-start flex-1 w-full mt-4">
+              <div className="w-full h-[320px] xl:h-[350px] relative pointer-events-none flex flex-col items-center justify-center overflow-visible">
+                <LampContainer className="h-[360px] lg:scale-125 xl:scale-150 overflow-visible">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
+                    className="flex flex-col items-center"
+                  >
+                    <h2 className="font-display font-medium text-[5.5rem] xl:text-[7.5rem] tracking-[0.05em] text-gradient m-0 p-0 text-center drop-shadow-2xl leading-none">
+                      KYVRA
+                    </h2>
+                  </motion.div>
+                </LampContainer>
+              </div>
 
-        <div className="relative z-10 flex flex-col items-center justify-center text-center w-full h-full pointer-events-none mt-0">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-            className="inline-flex flex-col items-center pointer-events-auto select-none rounded-[2rem] px-5 py-8 sm:px-10 sm:py-12 md:px-24 md:py-20 mx-4"
-            style={{ 
-              background: "linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)",
-              backdropFilter: "blur(12px)",
-              WebkitBackdropFilter: "blur(12px)",
-              boxShadow: "0 0 0 1px rgba(255,255,255,0.05), 0 20px 50px -10px rgba(0,0,0,0.8)",
-            }}
-          >
-            <h1 className="font-display font-medium text-[24vw] sm:text-[22vw] md:text-[20vw] lg:text-[180px] xl:text-[220px] leading-[0.85] tracking-[-0.04em] text-gradient m-0 p-0 text-center drop-shadow-2xl">
-              KYVRA
-            </h1>
-            <div className="w-full flex justify-between text-primary/90 font-sans text-[2vw] sm:text-[1.8vw] md:text-[1.4vw] lg:text-[14px] xl:text-[16px] tracking-[0.1em] uppercase mt-6 md:mt-8 font-medium drop-shadow-md">
-              {"FRAGMENTOS DE UM UNIVERSO SOMBRIO".split('').map((char, index) => (
-                <span key={index}>{char === ' ' ? '\u00A0' : char}</span>
-              ))}
+              {/* Poetry & Description positioned BELOW the logo, closer with negative margin top */}
+              <div className="space-y-4 w-full max-w-[480px] lg:max-w-[500px] xl:max-w-[560px] mt-2 lg:-mt-2 xl:mt-4 text-left">
+                <h1 className="font-cormorant text-white text-[1.8rem] xl:text-[2.3rem] leading-[1.12] tracking-tight font-light">
+                  Onde as estrelas morrem, a poesia ecoa.
+                </h1>
+                <p className="font-sans text-white/70 text-xs xl:text-sm leading-relaxed font-light">
+                  Kyvra é um projeto de metal sinfônico melancólico e profundo. Um portal imersivo desenhado para guiar a alma através de arranjos grandiosos, crônicas sombrias e elegias visuais.
+                </p>
+              </div>
             </div>
-          </motion.div>
+
+            {/* Bottom mini decor info */}
+            <div className="text-[10px] font-mono text-white/30 tracking-widest uppercase">
+              // REVELAÇÃO EXCLUSIVA
+            </div>
+          </div>
+
+          {/* Right Column: Immersive Fullscreen background video with empty space */}
+          <div className="col-span-12 lg:col-span-6 xl:col-span-7 h-[100dvh] relative bg-black">
+            <video
+              ref={videoRefDesktop}
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="w-full h-full object-cover opacity-80"
+              src="https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_20260620_140915393.mp4"
+            />
+            {/* Elegant vignette overlay */}
+            <div className="absolute inset-0 bg-gradient-to-r from-[#030303] via-transparent to-transparent z-0 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#030303]/80 via-transparent to-transparent z-0 pointer-events-none" />
+          </div>
         </div>
+
+        {/* MOBILE LAYOUT (Below lg breakpoint) */}
+        <div className="lg:hidden flex flex-col justify-between min-h-[100dvh] relative z-10 px-6 pt-24 pb-8">
+          {/* Background video overlay for mobile */}
+          <div className="absolute inset-0 w-full h-full bg-[#030303] -z-10">
+            <video
+              ref={videoRefMobile}
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="w-full h-full object-cover object-[80%_center] opacity-70"
+              src="https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_20260620_140915393.mp4"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#030303] via-[#030303]/30 to-[#030303] pointer-events-none" />
+          </div>
+
+          {/* Empty spacer on mobile to keep top clean */}
+          <div className="flex-1" />
+
+          {/* Lower area on mobile with Logo + Poetry integrated closely at the bottom */}
+          <div className="space-y-6 max-w-[500px] mt-auto">
+            {/* Elegant Mobile Logo and slogan removed */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+              className="flex flex-col items-start"
+            >
+              <h1 className="font-display font-medium text-[5rem] sm:text-[6rem] leading-none text-gradient m-0 p-0 drop-shadow-2xl tracking-[0.05em]">
+                KYVRA
+              </h1>
+            </motion.div>
+
+            {/* Poetry and description */}
+            <div className="space-y-3">
+              <h1 className="font-cormorant text-white text-[1.8rem] sm:text-[2.2rem] leading-[1.12] tracking-tight font-light">
+                Onde as estrelas morrem, a poesia ecoa.
+              </h1>
+              <p className="font-sans text-white/70 text-xs sm:text-xs leading-relaxed font-light">
+                Kyvra é um projeto de metal sinfônico melancólico e profundo. Um portal imersivo desenhado para guiar a alma através de arranjos grandiosos, crônicas sombrias e elegias visuais.
+              </p>
+            </div>
+          </div>
+        </div>
+
       </section>
 
-      {/* Seção de Destaques com Slider */}
+      {/* Featured Musics section */}
       {featuredTracks.length > 0 && (
         <section id="musicas" className="py-20 relative scroll-mt-20">
-          {/* fundo sutil */}
-          <div className="absolute inset-0 bg-deep" />
+          <div className="absolute inset-0 bg-[#080814]" />
           <div className="relative z-10">
             <FeaturedSlider tracks={featuredTracks} />
           </div>
         </section>
       )}
-
-
     </div>
   );
 }
