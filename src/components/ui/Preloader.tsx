@@ -87,19 +87,74 @@ export function Preloader() {
     };
 
     const startPreload = async () => {
+      const keys = Object.keys(THEME_VIDEOS);
+      const localThemeVideoUrls: Record<string, string> = {};
+      let loadedCount = 0;
+
+      const loadVideo = async (tName: string, tUrl: string) => {
+        try {
+          // Verify if caches is supported in standard environment
+          if (typeof caches !== 'undefined') {
+            const cache = await caches.open('kyvra-hero-videos');
+            const cachedResponse = await cache.match(tUrl);
+            
+            if (cachedResponse) {
+              const blob = await cachedResponse.blob();
+              const blobUrl = URL.createObjectURL(blob);
+              localThemeVideoUrls[tName] = blobUrl;
+            } else {
+              const response = await fetch(tUrl, {
+                signal: controller.signal
+              });
+              if (!response.ok) throw new Error(`HTTP status ${response.status}`);
+              
+              // Cache a clone of response
+              await cache.put(tUrl, response.clone());
+              
+              const blob = await response.blob();
+              const blobUrl = URL.createObjectURL(blob);
+              localThemeVideoUrls[tName] = blobUrl;
+            }
+          } else {
+            // Direct fetch fallback for environments without caches API
+            const response = await fetch(tUrl, {
+              signal: controller.signal
+            });
+            const blob = await response.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            localThemeVideoUrls[tName] = blobUrl;
+          }
+        } catch (err) {
+          console.warn(`[Kyvra Preloader] Cache failed for theme ${tName}, using original remote:`, err);
+          localThemeVideoUrls[tName] = tUrl;
+        } finally {
+          if (active) {
+            loadedCount++;
+            fileProgress = (loadedCount / keys.length) * 100;
+            updateOverallProgress();
+          }
+        }
+      };
+
       try {
-        // Trigger browser's background thread network download to disk cache.
-        // We do NOT read chunk-by-chunk on the JavaScript main thread.
-        // This keeps the main thread 100% free for GPU-accelerated CSS/motion animations.
-        await fetch(videoUrl, {
-          signal: controller.signal,
-          cache: 'force-cache'
-        });
-        
-        fileProgress = 100;
-        updateOverallProgress();
+        // Trigger preloading of all theme videos in parallel
+        await Promise.all(
+          Object.entries(THEME_VIDEOS).map(([tName, tUrl]) => loadVideo(tName, tUrl))
+        );
       } catch (err) {
-        // Fallback: immediately treat file as 100% and rely purely on timeProgress
+        console.error("[Kyvra Preloader] Parallel preload encountered errors:", err);
+      }
+
+      if (active) {
+        try {
+          const state = useStore.getState();
+          state.setThemeVideoUrls(localThemeVideoUrls);
+          if (state.setIsLoadingFinished) {
+            state.setIsLoadingFinished(true);
+          }
+        } catch (stateErr) {
+          console.error("[Kyvra Preloader] Error updating store with video URLs:", stateErr);
+        }
         fileProgress = 100;
         updateOverallProgress();
       }

@@ -13,13 +13,67 @@ const THEME_VIDEOS: Record<string, string> = {
   'monolito': "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_monolito.mp4"
 };
 
+const logPerformanceMeasure = (measureName: string, startMark: string, endMark: string) => {
+  try {
+    performance.measure(measureName, startMark, endMark);
+    const entries = performance.getEntriesByName(measureName);
+    const entry = entries[entries.length - 1];
+    if (entry) {
+      console.log(
+        `%c[KYVRA PERFORMANCE] %c${measureName}: %c${entry.duration.toFixed(2)}ms`,
+        "color: #00ffd2; font-weight: bold;",
+        "color: #ffffff; font-weight: 500;",
+        "color: #ff005c; font-weight: bold;"
+      );
+    }
+  } catch (e) {
+    // Ignore error
+  }
+};
+
+const trackFPSSlowdown = (themeName: string, startTime: number) => {
+  const frameTimes: number[] = [];
+  
+  const measureFPS = () => {
+    const now = performance.now();
+    frameTimes.push(now);
+    if (now - startTime < 1200) {
+      requestAnimationFrame(measureFPS);
+    } else {
+      let stutters = 0;
+      for (let i = 1; i < frameTimes.length; i++) {
+        const delta = frameTimes[i] - frameTimes[i-1];
+        if (delta > 20) { // Se o frame demorar mais de 20ms (queda de FPS abaixo de 50 FPS)
+          stutters++;
+        }
+      }
+      console.log(
+        `%c[KYVRA TELEMETER] %cTroca concluída para %c${themeName}%c. Tempo de renderização/estabilização: %c${(performance.now() - startTime).toFixed(2)}ms%c | Quadros com stutter detectados: %c${stutters}`,
+        "color: #00e5ff; font-weight: bold;",
+        "color: #ffffff;",
+        "color: #ffd200; font-weight: bold;",
+        "color: #ffffff;",
+        "color: #00ff73; font-weight: bold;",
+        "color: #ffffff;",
+        stutters > 0 ? "color: #ff3c00; font-weight: bold;" : "color: #00ff73; font-weight: bold;"
+      );
+    }
+  };
+  
+  if (typeof requestAnimationFrame !== 'undefined') {
+    requestAnimationFrame(measureFPS);
+  }
+};
+
 export function Home() {
-  const { theme } = useStore();
+  const { theme, themeVideoUrls } = useStore();
   const [featuredTracks, setFeaturedTracks] = useState<any[]>([]);
   const videoRefsDesktop = useRef<Record<string, HTMLVideoElement | null>>({});
   const videoRefsMobile = useRef<Record<string, HTMLVideoElement | null>>({});
   const [activeVideoTheme, setActiveVideoTheme] = useState(theme);
   const fallbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const videoSrcs = { ...THEME_VIDEOS, ...themeVideoUrls };
 
   useEffect(() => {
     document.title = "Kyvra — Portal Oficial";
@@ -28,6 +82,16 @@ export function Home() {
   // Set the correct active video theme when fully ready, avoiding stuttering
   const handleCanPlayThrough = (tName: string) => {
     if (tName === theme && activeVideoTheme !== theme) {
+      try {
+        const markName = `kyvra-can-play-${tName}`;
+        performance.mark(markName);
+        logPerformanceMeasure(
+          `kyvra-buffering-lag-${tName}`,
+          `kyvra-change-start-${tName}`,
+          markName
+        );
+      } catch (e) {}
+
       if (fallbackTimeoutRef.current) {
         clearTimeout(fallbackTimeoutRef.current);
         fallbackTimeoutRef.current = null;
@@ -44,31 +108,46 @@ export function Home() {
     const playVideo = (videoEl: HTMLVideoElement | null) => {
       if (!videoEl) return;
       videoEl.muted = true;
-      videoEl.play().catch((err) => {
-        console.log("Auto-play prevented, waiting for user interaction", err);
-        const startOnInteraction = () => {
-          const actD = videoRefsDesktop.current[theme];
-          const actM = videoRefsMobile.current[theme];
-          if (actD) actD.play().catch(() => {});
-          if (actM) actM.play().catch(() => {});
-          document.removeEventListener('click', startOnInteraction);
-          document.removeEventListener('touchstart', startOnInteraction);
-        };
-        document.addEventListener('click', startOnInteraction, { passive: true });
-        document.addEventListener('touchstart', startOnInteraction, { passive: true });
-      });
+      if (videoEl.paused) {
+        videoEl.play().catch((err) => {
+          console.log("Auto-play prevented, waiting for user interaction", err);
+          const startOnInteraction = () => {
+            const actD = videoRefsDesktop.current[theme];
+            const actM = videoRefsMobile.current[theme];
+            if (actD && actD.paused) actD.play().catch(() => {});
+            if (actM && actM.paused) actM.play().catch(() => {});
+            document.removeEventListener('click', startOnInteraction);
+            document.removeEventListener('touchstart', startOnInteraction);
+          };
+          document.addEventListener('click', startOnInteraction, { passive: true });
+          document.addEventListener('touchstart', startOnInteraction, { passive: true });
+        });
+      }
     };
 
     // If the chosen theme is not the visually active video theme, start caching/playing it in background
     if (theme !== activeVideoTheme) {
+      const activeSrc = videoSrcs[theme];
+      
+      try {
+        const startMark = `kyvra-change-start-${theme}`;
+        performance.mark(startMark);
+        trackFPSSlowdown(theme, performance.now());
+      } catch (e) {}
+
       if (activeDesktop) {
         activeDesktop.preload = "auto";
-        activeDesktop.load();
+        // Only load if the source is different or not initialized to prevent reset stuttering
+        if (!activeDesktop.src || !activeDesktop.src.includes(activeSrc)) {
+          activeDesktop.load();
+        }
         playVideo(activeDesktop);
       }
       if (activeMobile) {
         activeMobile.preload = "auto";
-        activeMobile.load();
+        if (!activeMobile.src || !activeMobile.src.includes(activeSrc)) {
+          activeMobile.load();
+        }
         playVideo(activeMobile);
       }
 
@@ -79,6 +158,15 @@ export function Home() {
 
       if (isAlreadyReady) {
         setActiveVideoTheme(theme);
+        try {
+          const appliedMark = `kyvra-transition-applied-${theme}`;
+          performance.mark(appliedMark);
+          logPerformanceMeasure(
+            `kyvra-total-transition-${theme}`,
+            `kyvra-change-start-${theme}`,
+            appliedMark
+          );
+        } catch (e) {}
       } else {
         // Fallback timer: 1200ms limit to switch theme video visually even under network failure
         if (fallbackTimeoutRef.current) {
@@ -86,6 +174,15 @@ export function Home() {
         }
         fallbackTimeoutRef.current = setTimeout(() => {
           setActiveVideoTheme(theme);
+          try {
+            const appliedMark = `kyvra-transition-applied-${theme}`;
+            performance.mark(appliedMark);
+            logPerformanceMeasure(
+              `kyvra-total-transition-${theme}`,
+              `kyvra-change-start-${theme}`,
+              appliedMark
+            );
+          } catch (e) {}
         }, 1200);
       }
     } else {
@@ -100,8 +197,8 @@ export function Home() {
         if (tName !== theme) {
           const dVid = videoRefsDesktop.current[tName];
           const mVid = videoRefsMobile.current[tName];
-          if (dVid) dVid.pause();
-          if (mVid) mVid.pause();
+          if (dVid && !dVid.paused) dVid.pause();
+          if (mVid && !mVid.paused) mVid.pause();
         }
       });
     }, 1200);
@@ -204,22 +301,25 @@ export function Home() {
 
           {/* Right Column: Immersive Fullscreen background video with empty space */}
           <div className="col-span-12 md:col-span-6 xl:col-span-7 h-[100dvh] relative bg-black overflow-hidden">
-            {Object.entries(THEME_VIDEOS).map(([tName, tSrc]) => (
-              <video
-                key={`desktop-${tName}`}
-                ref={el => { videoRefsDesktop.current[tName] = el; }}
-                loop
-                muted
-                playsInline
-                preload={theme === tName ? "auto" : "metadata"}
-                onCanPlayThrough={() => handleCanPlayThrough(tName)}
-                className={cn(
-                  "absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out bg-black",
-                  activeVideoTheme === tName ? "opacity-80 z-10" : "opacity-0 z-0 pointer-events-none"
-                )}
-                src={tSrc}
-              />
-            ))}
+            {Object.entries(THEME_VIDEOS)
+              .filter(([tName]) => tName === theme || tName === activeVideoTheme)
+              .map(([tName]) => (
+                <video
+                  key={`desktop-${tName}`}
+                  ref={el => { videoRefsDesktop.current[tName] = el; }}
+                  loop
+                  muted
+                  playsInline
+                  autoPlay
+                  preload="auto"
+                  onCanPlayThrough={() => handleCanPlayThrough(tName)}
+                  className={cn(
+                    "absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out bg-black",
+                    activeVideoTheme === tName ? "opacity-80 z-10" : "opacity-0 z-0 pointer-events-none"
+                  )}
+                  src={videoSrcs[tName]}
+                />
+              ))}
             {/* Elegant vignette overlay */}
             <div className="absolute inset-0 bg-gradient-to-r from-[#030303] via-transparent to-transparent z-20 pointer-events-none" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#030303]/80 via-transparent to-transparent z-20 pointer-events-none" />
@@ -230,22 +330,25 @@ export function Home() {
         <div className="md:hidden landscape:hidden flex flex-col justify-between min-h-[100dvh] relative z-10 px-6 pt-24 pb-8 h-[100dvh] overflow-hidden">
           {/* Background video overlay for mobile */}
           <div className="absolute inset-0 w-full h-full bg-[#030303] -z-10 overflow-hidden">
-            {Object.entries(THEME_VIDEOS).map(([tName, tSrc]) => (
-              <video
-                key={`mobile-${tName}`}
-                ref={el => { videoRefsMobile.current[tName] = el; }}
-                loop
-                muted
-                playsInline
-                preload={theme === tName ? "auto" : "metadata"}
-                onCanPlayThrough={() => handleCanPlayThrough(tName)}
-                className={cn(
-                  "absolute inset-0 w-full h-full object-cover object-[80%_center] transition-opacity duration-1000 ease-in-out bg-[#030303]",
-                  activeVideoTheme === tName ? "opacity-70 z-10" : "opacity-0 z-0 pointer-events-none"
-                )}
-                src={tSrc}
-              />
-            ))}
+            {Object.entries(THEME_VIDEOS)
+              .filter(([tName]) => tName === theme || tName === activeVideoTheme)
+              .map(([tName]) => (
+                <video
+                  key={`mobile-${tName}`}
+                  ref={el => { videoRefsMobile.current[tName] = el; }}
+                  loop
+                  muted
+                  playsInline
+                  autoPlay
+                  preload="auto"
+                  onCanPlayThrough={() => handleCanPlayThrough(tName)}
+                  className={cn(
+                    "absolute inset-0 w-full h-full object-cover object-[80%_center] transition-opacity duration-1000 ease-in-out bg-[#030303]",
+                    activeVideoTheme === tName ? "opacity-70 z-10" : "opacity-0 z-0 pointer-events-none"
+                  )}
+                  src={videoSrcs[tName]}
+                />
+              ))}
             <div className="absolute inset-0 bg-gradient-to-t from-[#030303] via-[#030303]/30 to-[#030303] z-20 pointer-events-none" />
           </div>
 

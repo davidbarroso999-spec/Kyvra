@@ -47,6 +47,10 @@ interface AppState {
   clearQueue: () => void;                        // Limpa a fila (mantém a música atual)
   isPlayerHidden: boolean;
   setPlayerHidden: (hidden: boolean) => void;
+  isLoadingFinished?: boolean;
+  setIsLoadingFinished?: (finished: boolean) => void;
+  themeVideoUrls: Record<string, string>;
+  setThemeVideoUrls: (urls: Record<string, string>) => void;
 }
 
 // Função auxiliar: embaralha um array sem modificar o original
@@ -68,6 +72,12 @@ export const useStore = create<AppState>()(
 
       isPlayerHidden: false,
       setPlayerHidden: (isPlayerHidden) => set({ isPlayerHidden }),
+
+      isLoadingFinished: false,
+      setIsLoadingFinished: (isLoadingFinished) => set({ isLoadingFinished }),
+
+      themeVideoUrls: {},
+      setThemeVideoUrls: (themeVideoUrls) => set({ themeVideoUrls }),
 
       currentTrack: null,
       isPlaying: false,
