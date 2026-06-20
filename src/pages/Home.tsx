@@ -5,10 +5,20 @@ import { useStore } from '@/store/useStore';
 import { FeaturedSlider } from '@/components/ui/FeaturedSlider';
 import { LampContainer } from '@/components/ui/lamp';
 
+const THEME_VIDEOS: Record<string, string> = {
+  abissal: "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_20260620_140915393.mp4",
+  'sangue-de-drago': "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_sanguededrago.mp4",
+  'floresta-negra': "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_floresta.mp4",
+  'monolito': "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_monolito.mp4"
+};
+
 export function Home() {
+  const { theme } = useStore();
   const [featuredTracks, setFeaturedTracks] = useState<any[]>([]);
   const videoRefDesktop = useRef<HTMLVideoElement>(null);
   const videoRefMobile = useRef<HTMLVideoElement>(null);
+
+  const videoSrc = THEME_VIDEOS[theme] || THEME_VIDEOS.abissal;
 
   useEffect(() => {
     document.title = "Kyvra — Portal Oficial";
@@ -35,7 +45,7 @@ export function Home() {
 
     playVideo(videoRefDesktop.current);
     playVideo(videoRefMobile.current);
-  }, []);
+  }, [videoSrc]);
 
   useEffect(() => {
     async function fetchFeatured() {
@@ -128,13 +138,14 @@ export function Home() {
           {/* Right Column: Immersive Fullscreen background video with empty space */}
           <div className="col-span-12 lg:col-span-6 xl:col-span-7 h-[100dvh] relative bg-black">
             <video
+              key={`desktop-${videoSrc}`}
               ref={videoRefDesktop}
               autoPlay
               loop
               muted
               playsInline
               className="w-full h-full object-cover opacity-80"
-              src="https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_20260620_140915393.mp4"
+              src={videoSrc}
             />
             {/* Elegant vignette overlay */}
             <div className="absolute inset-0 bg-gradient-to-r from-[#030303] via-transparent to-transparent z-0 pointer-events-none" />
@@ -147,13 +158,14 @@ export function Home() {
           {/* Background video overlay for mobile */}
           <div className="absolute inset-0 w-full h-full bg-[#030303] -z-10">
             <video
+              key={`mobile-${videoSrc}`}
               ref={videoRefMobile}
               autoPlay
               loop
               muted
               playsInline
               className="w-full h-full object-cover object-[80%_center] opacity-70"
-              src="https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_20260620_140915393.mp4"
+              src={videoSrc}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#030303] via-[#030303]/30 to-[#030303] pointer-events-none" />
           </div>
@@ -162,21 +174,21 @@ export function Home() {
           <div className="flex-1" />
 
           {/* Lower area on mobile with Logo + Poetry integrated closely at the bottom */}
-          <div className="space-y-6 max-w-[500px] mt-auto">
-            {/* Elegant Mobile Logo and slogan removed */}
+          <div className="space-y-6 mt-auto w-full">
+            {/* Elegant Mobile Logo spanning full screen width */}
             <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-              className="flex flex-col items-start"
+              className="w-full -mx-6 px-6 flex justify-center items-center"
             >
-              <h1 className="font-display font-medium text-[5rem] sm:text-[6rem] leading-none text-gradient m-0 p-0 drop-shadow-2xl tracking-[0.05em]">
+              <h1 className="font-display font-medium text-[22vw] leading-none text-gradient m-0 p-0 drop-shadow-2xl tracking-[0.04em] text-center w-full select-none">
                 KYVRA
               </h1>
             </motion.div>
 
-            {/* Poetry and description */}
-            <div className="space-y-3">
+            {/* Poetry and description (restricted to elegant max-w) */}
+            <div className="space-y-3 max-w-[500px]">
               <h1 className="font-cormorant text-white text-[1.8rem] sm:text-[2.2rem] leading-[1.12] tracking-tight font-light">
                 Onde as estrelas morrem, a poesia ecoa.
               </h1>

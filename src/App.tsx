@@ -7,6 +7,7 @@ import { HashRouter, Routes, Route } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
 import { useStore } from './store/useStore';
 import React, { Suspense } from 'react';
+import { Preloader } from './components/ui/Preloader';
 
 // Lazy loading das páginas para melhorar a performance inicial
 const Home = React.lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
@@ -17,12 +18,17 @@ const Lore = React.lazy(() => import('./pages/Lore').then(m => ({ default: m.Lor
 const Admin = React.lazy(() => import('./pages/Admin').then(m => ({ default: m.Admin })));
 
 export default function App() {
-  const { theme } = useStore();
+  const { theme, setTheme } = useStore();
 
   React.useEffect(() => {
+    const validThemes = ['abissal', 'sangue-de-drago', 'floresta-negra', 'monolito'];
+    if (!validThemes.includes(theme)) {
+      setTheme('abissal');
+      return;
+    }
     // Apply theme to document
     document.documentElement.className = theme === 'abissal' ? '' : `theme-${theme}`;
-  }, [theme]);
+  }, [theme, setTheme]);
 
   React.useEffect(() => {
     console.log("Kyvra App mounted successfully.");
@@ -35,7 +41,8 @@ export default function App() {
 
   return (
     <HashRouter>
-      <Suspense fallback={<div className="flex h-[100dvh] w-full items-center justify-center bg-void text-text-low text-xs tracking-[0.2em]">CARREGANDO...</div>}>
+      <Preloader key={theme} />
+      <Suspense fallback={null}>
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />

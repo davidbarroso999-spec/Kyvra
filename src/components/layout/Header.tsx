@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, useScroll, useSpring } from 'motion/react';
 import { useStore, Theme } from '@/store/useStore';
-import { Menu, X, Moon, Sun, Droplet, Leaf, Waves, Sunset, Square, DownloadCloud, RefreshCw, CheckCircle, Smartphone } from 'lucide-react';
+import { Menu, X, Moon, Sun, Droplet, Leaf, Square, DownloadCloud, RefreshCw, CheckCircle, Smartphone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { syncEverythingForOffline, OfflineProgress } from '@/lib/offlineManager';
 
@@ -10,8 +10,6 @@ const themes: { id: Theme; icon: React.ReactNode; label: string }[] = [
   { id: 'abissal', icon: <Moon size={14} />, label: 'Abissal' },
   { id: 'sangue-de-drago', icon: <Droplet size={14} />, label: 'Sangue de Drago' },
   { id: 'floresta-negra', icon: <Leaf size={14} />, label: 'Floresta Negra' },
-  { id: 'mar-profundo', icon: <Waves size={14} />, label: 'Mar Profundo' },
-  { id: 'crepusculo', icon: <Sunset size={14} />, label: 'Crepúsculo' },
   { id: 'monolito', icon: <Square size={14} />, label: 'Monolito' },
 ];
 

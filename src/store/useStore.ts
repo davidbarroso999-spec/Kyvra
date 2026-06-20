@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type Theme = 'abissal' | 'sangue-de-drago' | 'floresta-negra' | 'mar-profundo' | 'crepusculo' | 'monolito';
+export type Theme = 'abissal' | 'sangue-de-drago' | 'floresta-negra' | 'monolito';
 
 export interface Track {
   id: string;
