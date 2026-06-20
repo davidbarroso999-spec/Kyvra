@@ -320,7 +320,7 @@ export function MiniPlayer() {
                 className={cn(
                   "flex mx-auto overflow-hidden shadow-[0_40px_80px_rgba(0,0,0,0.6)] cursor-grab active:cursor-grabbing transition-colors duration-700 glass-premium origin-bottom-right",
                   isActive 
-                    ? "flex-col rounded-2xl p-3 w-[220px] h-auto" 
+                    ? "flex-col rounded-2xl p-3 w-[290px] h-auto" 
                     : "flex-row rounded-full p-2 w-auto h-[60px] items-center justify-center"
                 )}
                 initial={{ opacity: 0, filter: "blur(10px)", y: 50 }}

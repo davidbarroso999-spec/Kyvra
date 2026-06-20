@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useStore } from '@/store/useStore';
 
 const CRYPTIC_PHRASES = [
   "INICIANDO RITUAL DE CONEXÃO...",
@@ -9,43 +10,111 @@ const CRYPTIC_PHRASES = [
   "RECONSTRUINDO PORTAL DE KYVRA..."
 ];
 
+const THEME_VIDEOS: Record<string, string> = {
+  abissal: "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_20260620_140915393.mp4",
+  'sangue-de-drago': "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_sanguededrago.mp4",
+  'floresta-negra': "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_floresta.mp4",
+  'monolito': "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_monolito.mp4"
+};
+
 export function Preloader() {
   const [progress, setProgress] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
   const [phraseIndex, setPhraseIndex] = useState(0);
+  const { theme } = useStore();
+
+  const videoUrl = THEME_VIDEOS[theme] || THEME_VIDEOS.abissal;
 
   // Cycle cryptic text
   useEffect(() => {
     const textInterval = setInterval(() => {
       setPhraseIndex((prev) => (prev + 1) % CRYPTIC_PHRASES.length);
-    }, 1100);
+    }, 1200);
     return () => clearInterval(textInterval);
   }, []);
 
-  // Animate progress bar to 100% over 5.0 seconds
+  // Real programmatic fetch of the video file & buffering to browser cache
   useEffect(() => {
-    const totalDuration = 5000; // 5.0s
-    const stepTime = 25;
-    const totalSteps = totalDuration / stepTime;
-    const increment = 100 / totalSteps;
+    let active = true;
+    const controller = new AbortController();
 
-    const timer = setInterval(() => {
-      setProgress((prev) => {
-        const next = prev + increment;
-        if (next >= 100) {
-          clearInterval(timer);
-          // Wait briefly, then trigger exit fade out
-          setTimeout(() => {
-            setIsVisible(false);
-          }, 350);
-          return 100;
-        }
-        return next;
-      });
+    // Setup an off-screen HTML5 video to trigger hardware decoder buffering
+    const videoElement = document.createElement('video');
+    videoElement.preload = "auto";
+    videoElement.muted = true;
+    videoElement.playsInline = true;
+    videoElement.src = videoUrl;
+
+    let timeProgress = 0;
+    let fileProgress = 0;
+
+    // Premium ritual duration (3.2 seconds for quick but highly aesthetic feedback)
+    const minDuration = 3200; 
+    const stepTime = 20;
+    const totalSteps = minDuration / stepTime;
+    const timeIncrement = 100 / totalSteps;
+
+    // Background timer
+    const intervalTimer = setInterval(() => {
+      if (!active) return;
+      timeProgress += timeIncrement;
+      if (timeProgress > 100) timeProgress = 100;
+      
+      updateOverallProgress();
     }, stepTime);
 
-    return () => clearInterval(timer);
-  }, []);
+    const updateOverallProgress = () => {
+      if (!active) return;
+
+      // Smooth progress calculation
+      let displayed = timeProgress;
+      if (fileProgress < 100) {
+        // Limit progress to 95% until fetch has successfully warmed the cache
+        displayed = Math.min(95, timeProgress * 0.9 + fileProgress * 0.1);
+      } else {
+        displayed = Math.max(timeProgress, fileProgress);
+      }
+
+      const endVal = Math.min(100, Math.floor(displayed));
+      setProgress(endVal);
+
+      if (endVal >= 100) {
+        clearInterval(intervalTimer);
+        setTimeout(() => {
+          if (active) setIsVisible(false);
+        }, 150);
+      }
+    };
+
+    const startPreload = async () => {
+      try {
+        // Trigger browser's background thread network download to disk cache.
+        // We do NOT read chunk-by-chunk on the JavaScript main thread.
+        // This keeps the main thread 100% free for GPU-accelerated CSS/motion animations.
+        await fetch(videoUrl, {
+          signal: controller.signal,
+          cache: 'force-cache'
+        });
+        
+        fileProgress = 100;
+        updateOverallProgress();
+      } catch (err) {
+        // Fallback: immediately treat file as 100% and rely purely on timeProgress
+        fileProgress = 100;
+        updateOverallProgress();
+      }
+    };
+
+    startPreload();
+
+    return () => {
+      active = false;
+      controller.abort();
+      clearInterval(intervalTimer);
+      videoElement.src = '';
+      videoElement.load();
+    };
+  }, [videoUrl]);
 
   return (
     <AnimatePresence>

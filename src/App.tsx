@@ -8,6 +8,7 @@ import { Layout } from './components/layout/Layout';
 import { useStore } from './store/useStore';
 import React, { Suspense } from 'react';
 import { Preloader } from './components/ui/Preloader';
+import { CookieBanner } from './components/ui/CookieBanner';
 
 // Lazy loading das páginas para melhorar a performance inicial
 const Home = React.lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
@@ -42,6 +43,7 @@ export default function App() {
   return (
     <HashRouter>
       <Preloader key={theme} />
+      <CookieBanner />
       <Suspense fallback={null}>
         <Routes>
           <Route path="/" element={<Layout />}>
