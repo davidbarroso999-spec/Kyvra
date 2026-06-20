@@ -76,7 +76,7 @@ export function Home() {
   const videoSrcs = { ...THEME_VIDEOS, ...themeVideoUrls };
 
   useEffect(() => {
-    document.title = "Kyvra — Portal Oficial";
+    document.title = "KYVRA | Fragmentos de um universo sombrio";
   }, []);
 
   // Set the correct active video theme when fully ready, avoiding stuttering
@@ -257,50 +257,11 @@ export function Home() {
       {/* Immersive Responsive Hero Section */}
       <section className="relative min-h-[100dvh] lg:h-[100dvh] w-full bg-[#030303] text-white overflow-hidden pb-10 lg:pb-0">
         
-        {/* DESKTOP/WIDE LANDSCAPE SPLIT LAYOUT (md:grid or landscape:grid) */}
-        <div className="hidden md:grid landscape:grid md:grid-cols-12 landscape:grid-cols-12 md:h-full landscape:h-full w-full h-[100dvh]">
-          {/* Left Column: Brand, Lamp Glow logo & Poetry beneath it */}
-          <div className="col-span-12 md:col-span-6 xl:col-span-5 h-[100dvh] flex flex-col justify-between p-8 xl:p-14 relative bg-[#030303] z-10 border-r border-white/5 select-none pt-20 md:pt-24 overflow-y-auto scrollbar-none">
-            
-            {/* Top tiny branding accent */}
-            <div className="h-4" />
-
-            {/* Lamp Logo container with massive text and adjusted spacing */}
-            <div className="flex flex-col justify-center items-center md:items-start flex-1 w-full mt-4 min-h-0">
-              <div className="w-full h-[220px] md:h-[300px] xl:h-[350px] relative pointer-events-none flex flex-col items-center justify-center overflow-visible">
-                <LampContainer className="h-[250px] md:h-[360px] scale-90 md:scale-100 lg:scale-125 xl:scale-150 overflow-visible">
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
-                    className="flex flex-col items-center"
-                  >
-                    <h2 className="font-display font-medium text-[4.5rem] md:text-[5.5rem] xl:text-[7.5rem] tracking-[0.05em] text-gradient m-0 p-0 text-center drop-shadow-2xl leading-none">
-                      KYVRA
-                    </h2>
-                  </motion.div>
-                </LampContainer>
-              </div>
-
-              {/* Poetry & Description positioned BELOW the logo */}
-              <div className="space-y-4 w-full max-w-[480px] md:max-w-[500px] xl:max-w-[560px] mt-2 lg:-mt-2 xl:mt-4 text-left">
-                <h1 className="font-cormorant text-white text-[1.4rem] md:text-[1.8rem] xl:text-[2.3rem] leading-[1.12] tracking-tight font-light">
-                  Onde as estrelas morrem, a poesia ecoa.
-                </h1>
-                <p className="font-sans text-white/70 text-[11px] md:text-xs xl:text-sm leading-relaxed font-light">
-                  Kyvra é um projeto de metal sinfônico melancólico e profundo. Um portal imersivo desenhado para guiar a alma através de arranjos grandiosos, crônicas sombrias e elegias visuais.
-                </p>
-              </div>
-            </div>
-
-            {/* Bottom mini decor info */}
-            <div className="text-[10px] font-mono text-white/30 tracking-widest uppercase mt-4">
-              // REVELAÇÃO EXCLUSIVA
-            </div>
-          </div>
-
-          {/* Right Column: Immersive Fullscreen background video with empty space */}
-          <div className="col-span-12 md:col-span-6 xl:col-span-7 h-[100dvh] relative bg-black overflow-hidden">
+        {/* DESKTOP/WIDE LANDSCAPE IMMERSIVE LAYOUT */}
+        <div className="hidden md:flex landscape:flex md:flex-col justify-between md:h-full landscape:h-full w-full h-[100dvh] relative overflow-hidden select-none">
+          
+          {/* Full-width widescreen background video */}
+          <div className="absolute inset-0 w-full h-full bg-black z-0 overflow-hidden">
             {Object.entries(THEME_VIDEOS)
               .filter(([tName]) => tName === theme || tName === activeVideoTheme)
               .map(([tName]) => (
@@ -315,14 +276,71 @@ export function Home() {
                   onCanPlayThrough={() => handleCanPlayThrough(tName)}
                   className={cn(
                     "absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out bg-black",
-                    activeVideoTheme === tName ? "opacity-80 z-10" : "opacity-0 z-0 pointer-events-none"
+                    activeVideoTheme === tName ? "opacity-85 z-10" : "opacity-0 z-0 pointer-events-none"
                   )}
                   src={videoSrcs[tName]}
                 />
               ))}
-            {/* Elegant vignette overlay */}
-            <div className="absolute inset-0 bg-gradient-to-r from-[#030303] via-transparent to-transparent z-20 pointer-events-none" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#030303]/80 via-transparent to-transparent z-20 pointer-events-none" />
+            {/* Multi-directional premium vignette overlays to ensure text readability */}
+            <div className="absolute inset-0 bg-gradient-to-r from-[#030303] via-[#030303]/40 to-transparent z-20 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#030303] via-[#030303]/10 to-[#030303]/40 z-20 pointer-events-none" />
+          </div>
+
+          {/* Left Aligned Content overlapping the video */}
+          <div className="relative z-35 flex-1 flex flex-col justify-center px-8 md:px-16 xl:px-24 pt-20 max-w-[900px]">
+            {/* Ambient subtle glow box positioned behind logo to accentuate its deep theme */}
+            <div className="relative overflow-visible pointer-events-none mb-2 md:mb-4 flex flex-col items-start justify-center">
+              <div 
+                className="absolute top-1/2 left-20 -translate-y-1/2 w-[400px] h-[300px] rounded-full pointer-events-none opacity-[0.25]"
+                style={{ background: 'radial-gradient(ellipse at center, var(--primary) 0%, transparent 65%)' }}
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, x: -30 }}
+                animate={{ opacity: 1, scale: 1, x: 0 }}
+                transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
+                className="relative flex flex-col items-start"
+              >
+                <h2 className="font-display font-medium text-[5.5rem] md:text-[6.5rem] lg:text-[8rem] xl:text-[9.5rem] tracking-[0.05em] text-gradient m-0 p-0 text-left drop-shadow-[0_20px_50px_rgba(102,51,153,0.4)] leading-none">
+                  KYVRA
+                </h2>
+              </motion.div>
+            </div>
+
+            {/* Poetry & Description positioned BELOW the logo */}
+            <div className="space-y-4 md:space-y-6 w-full max-w-[550px] md:max-w-[650px] xl:max-w-[720px] text-left mt-2 md:-mt-1 lg:mt-2">
+              <motion.h1 
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1.2, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                className="font-cormorant text-white text-[1.6rem] md:text-[2rem] lg:text-[2.5rem] xl:text-[3rem] leading-[1.12] tracking-tight font-light"
+              >
+                Onde as estrelas morrem, a poesia ecoa.
+              </motion.h1>
+              
+              <motion.p 
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1.2, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                className="font-sans text-white/75 text-xs md:text-sm lg:text-[15px] xl:text-base leading-relaxed font-light"
+              >
+                Kyvra é um projeto de metal sinfônico melancólico e profundo. Um portal imersivo desenhado para guiar a alma através de arranjos grandiosos, crônicas sombrias e elegias visuais.
+              </motion.p>
+            </div>
+          </div>
+
+          {/* Bottom brand layout footer container */}
+          <div className="relative z-35 px-8 md:px-16 xl:px-24 pb-8 flex justify-between items-center w-full">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              transition={{ delay: 0.8 }}
+              className="text-[10px] font-mono text-white/30 tracking-widest uppercase"
+            >
+              // REVELAÇÃO EXCLUSIVA
+            </motion.div>
+            <div className="text-[10px] font-mono text-white/20 tracking-wider">
+              ESTÉTICA PREMIUM V3.0
+            </div>
           </div>
         </div>
 
