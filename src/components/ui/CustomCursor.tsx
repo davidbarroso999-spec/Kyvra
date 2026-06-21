@@ -1,10 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
-import { motion } from 'motion/react';
 
 export function CustomCursor() {
-  const [isHovering, setIsHovering] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
   const cursorRef = useRef<HTMLDivElement>(null);
+  const isHoveringRef = useRef(false);
 
   useEffect(() => {
     // Only enable on devices with a fine pointer (mouse)
@@ -33,17 +32,18 @@ export function CustomCursor() {
     const animateCursor = () => {
       if (cursorRef.current) {
         // Simple easing
-        currentX += (targetX - currentX) * 0.2;
-        currentY += (targetY - currentY) * 0.2;
+        currentX += (targetX - currentX) * 0.18;
+        currentY += (targetY - currentY) * 0.18;
         
-        cursorRef.current.style.transform = `translate3d(${currentX - 8}px, ${currentY - 8}px, 0) scale(${isHovering ? 2.5 : 1})`;
-        cursorRef.current.style.backgroundColor = isHovering ? 'var(--primary)' : 'var(--text-high)';
+        cursorRef.current.style.transform = `translate3d(${currentX - 8}px, ${currentY - 8}px, 0) scale(${isHoveringRef.current ? 2.5 : 1})`;
+        cursorRef.current.style.backgroundColor = isHoveringRef.current ? 'var(--primary)' : 'var(--text-high)';
       }
       rafId = requestAnimationFrame(animateCursor);
     };
 
     const handleMouseOver = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
+      if (!target) return;
       if (
         target.tagName?.toLowerCase() === 'a' ||
         target.tagName?.toLowerCase() === 'button' ||
@@ -51,14 +51,14 @@ export function CustomCursor() {
         target.closest('button') ||
         target.classList?.contains('cursor-pointer')
       ) {
-        setIsHovering(true);
+        isHoveringRef.current = true;
       } else {
-        setIsHovering(false);
+        isHoveringRef.current = false;
       }
     };
 
-    window.addEventListener('mousemove', updateMousePosition);
-    window.addEventListener('mouseover', handleMouseOver);
+    window.addEventListener('mousemove', updateMousePosition, { passive: true });
+    window.addEventListener('mouseover', handleMouseOver, { passive: true });
     rafId = requestAnimationFrame(animateCursor);
 
     return () => {
@@ -66,7 +66,7 @@ export function CustomCursor() {
       window.removeEventListener('mouseover', handleMouseOver);
       cancelAnimationFrame(rafId);
     };
-  }, [isDesktop, isHovering]);
+  }, [isDesktop]);
 
   if (!isDesktop) return null;
 

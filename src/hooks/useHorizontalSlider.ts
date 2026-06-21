@@ -27,6 +27,7 @@ export function useHorizontalSlider(
   const currentRef = useRef(0);
   const rafRef     = useRef(0);
   const maxScrollRef = useRef(0);
+  const isAnimatingRef = useRef(false);
   
   // Variáveis para detectar inércia e forçar o snap
   const isDraggingRef = useRef(false);
@@ -129,13 +130,13 @@ export function useHorizontalSlider(
     const diff = targetRef.current - currentRef.current;
     
     // Stop animation if we are extremely close to the target
-    if (Math.abs(diff) < 0.1 && !isDraggingRef.current) {
-      if (wrapperRef.current && currentRef.current !== targetRef.current) {
+    if (Math.abs(diff) < 0.05 && !isDraggingRef.current) {
+      if (wrapperRef.current) {
          currentRef.current = targetRef.current;
          wrapperRef.current.style.transform = `translate3d(${-currentRef.current}px, 0, 0)`;
          updateScaleAndPosition();
       }
-      rafRef.current = requestAnimationFrame(update);
+      isAnimatingRef.current = false;
       return;
     }
 
@@ -149,6 +150,13 @@ export function useHorizontalSlider(
     rafRef.current = requestAnimationFrame(update);
   }, [ease, wrapperRef, updateScaleAndPosition]);
 
+  const startAnimation = useCallback(() => {
+    if (isAnimatingRef.current) return;
+    isAnimatingRef.current = true;
+    cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(update);
+  }, [update]);
+
   useEffect(() => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
@@ -157,10 +165,11 @@ export function useHorizontalSlider(
     const recalcMax = () => {
       maxScrollRef.current = wrapper.scrollWidth - window.innerWidth;
       calculateSnapPoints();
+      startAnimation();
     };
 
     const delayRecalc = setTimeout(recalcMax, 100);
-    window.addEventListener('resize', recalcMax);
+    window.addEventListener('resize', recalcMax, { passive: true });
 
     let wheelTimeout: NodeJS.Timeout;
     let wheelVelocity = 0;
@@ -177,10 +186,12 @@ export function useHorizontalSlider(
       targetRef.current += delta;
       targetRef.current = Math.max(0, targetRef.current);
       targetRef.current = Math.min(maxScrollRef.current, targetRef.current);
+      startAnimation();
       
       wheelTimeout = setTimeout(() => {
         isDraggingRef.current = false;
         forceSnap(wheelVelocity > 0 ? 5 : (wheelVelocity < 0 ? -5 : 0));
+        startAnimation();
       }, 100);
     };
 
@@ -201,6 +212,7 @@ export function useHorizontalSlider(
       touchVelocity = 0;
       isVerticalSwipe = false;
       isFirstMove = true;
+      startAnimation();
     };
 
     const handleTouchMove = (e: TouchEvent) => {
@@ -226,12 +238,14 @@ export function useHorizontalSlider(
         maxScrollRef.current,
         touchStartTarget + delta * 1.5 
       ));
+      startAnimation();
     };
     
     const handleTouchEnd = () => {
       if (isVerticalSwipe) return;
       isDraggingRef.current = false;
       forceSnap(touchVelocity);
+      startAnimation();
     };
 
     window.addEventListener('wheel', handleWheel, { passive: true });
@@ -239,7 +253,7 @@ export function useHorizontalSlider(
     window.addEventListener('touchmove', handleTouchMove, { passive: true });
     window.addEventListener('touchend', handleTouchEnd, { passive: true });
 
-    rafRef.current = requestAnimationFrame(update);
+    startAnimation();
 
     return () => {
       clearTimeout(delayRecalc);
@@ -250,13 +264,14 @@ export function useHorizontalSlider(
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [update, wrapperRef, calculateSnapPoints]);
+  }, [startAnimation, wrapperRef, calculateSnapPoints, forceSnap]);
 
   const scrollTo = useCallback((position: number) => {
     isDraggingRef.current = false;
     targetRef.current = Math.max(0, Math.min(maxScrollRef.current, position));
     forceSnap(0, targetRef.current);
-  }, [forceSnap]);
+    startAnimation();
+  }, [forceSnap, startAnimation]);
 
   const scrollBy = useCallback((delta: number) => {
     scrollTo(targetRef.current + delta);
