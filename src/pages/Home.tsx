@@ -13,6 +13,36 @@ const THEME_VIDEOS: Record<string, string> = {
   'monolito': "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_monolito.mp4"
 };
 
+const getThemeGradient = (t: string) => {
+  switch (t) {
+    case 'abissal':
+      return 'radial-gradient(circle at 75% 50%, #150933 0%, #030303 90%)';
+    case 'sangue-de-drago':
+      return 'radial-gradient(circle at 75% 50%, #30020d 0%, #030303 90%)';
+    case 'floresta-negra':
+      return 'radial-gradient(circle at 75% 50%, #032d20 0%, #030303 90%)';
+    case 'monolito':
+      return 'radial-gradient(circle at 75% 50%, #111827 0%, #030303 90%)';
+    default:
+      return 'radial-gradient(circle at 75% 50%, #150933 0%, #030303 90%)';
+  }
+};
+
+const getThemeGradientMobile = (t: string) => {
+  switch (t) {
+    case 'abissal':
+      return 'radial-gradient(circle at 50% 80%, #150933 0%, #030303 100%)';
+    case 'sangue-de-drago':
+      return 'radial-gradient(circle at 50% 80%, #30020d 0%, #030303 100%)';
+    case 'floresta-negra':
+      return 'radial-gradient(circle at 50% 80%, #032d20 0%, #030303 100%)';
+    case 'monolito':
+      return 'radial-gradient(circle at 50% 80%, #111827 0%, #030303 100%)';
+    default:
+      return 'radial-gradient(circle at 50% 80%, #150933 0%, #030303 100%)';
+  }
+};
+
 const logPerformanceMeasure = (measureName: string, startMark: string, endMark: string) => {
   try {
     performance.measure(measureName, startMark, endMark);
@@ -66,7 +96,7 @@ const trackFPSSlowdown = (themeName: string, startTime: number) => {
 };
 
 export function Home() {
-  const { theme, themeVideoUrls } = useStore();
+  const { theme, themeVideoUrls, isLowPowerMode } = useStore();
   const [featuredTracks, setFeaturedTracks] = useState<any[]>([]);
   const videoRefsDesktop = useRef<Record<string, HTMLVideoElement | null>>({});
   const videoRefsMobile = useRef<Record<string, HTMLVideoElement | null>>({});
@@ -262,25 +292,32 @@ export function Home() {
           
           {/* Full-width widescreen background video */}
           <div className="absolute inset-0 w-full h-full bg-black z-0 overflow-hidden">
-            {Object.entries(THEME_VIDEOS)
-              .filter(([tName]) => tName === theme || tName === activeVideoTheme)
-              .map(([tName]) => (
-                <video
-                  key={`desktop-${tName}`}
-                  ref={el => { videoRefsDesktop.current[tName] = el; }}
-                  loop
-                  muted
-                  playsInline
-                  autoPlay
-                  preload="auto"
-                  onCanPlayThrough={() => handleCanPlayThrough(tName)}
-                  className={cn(
-                    "absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out bg-black",
-                    activeVideoTheme === tName ? "opacity-85 z-10" : "opacity-0 z-0 pointer-events-none"
-                  )}
-                  src={videoSrcs[tName]}
-                />
-              ))}
+            {isLowPowerMode ? (
+              <div 
+                className="absolute inset-0 w-full h-full transition-all duration-1000 ease-in-out"
+                style={{ background: getThemeGradient(theme) }}
+              />
+            ) : (
+              Object.entries(THEME_VIDEOS)
+                .filter(([tName]) => tName === theme || tName === activeVideoTheme)
+                .map(([tName]) => (
+                  <video
+                    key={`desktop-${tName}`}
+                    ref={el => { videoRefsDesktop.current[tName] = el; }}
+                    loop
+                    muted
+                    playsInline
+                    autoPlay
+                    preload="auto"
+                    onCanPlayThrough={() => handleCanPlayThrough(tName)}
+                    className={cn(
+                      "absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out bg-black",
+                      activeVideoTheme === tName ? "opacity-85 z-10" : "opacity-0 z-0 pointer-events-none"
+                    )}
+                    src={videoSrcs[tName]}
+                  />
+                ))
+            )}
             {/* Multi-directional premium vignette overlays to ensure text readability */}
             <div className="absolute inset-0 bg-gradient-to-r from-[#030303] via-[#030303]/40 to-transparent z-20 pointer-events-none" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#030303] via-[#030303]/10 to-[#030303]/40 z-20 pointer-events-none" />
@@ -348,25 +385,32 @@ export function Home() {
         <div className="md:hidden landscape:hidden flex flex-col justify-between min-h-[100dvh] relative z-10 px-6 pt-24 pb-8 h-[100dvh] overflow-hidden">
           {/* Background video overlay for mobile */}
           <div className="absolute inset-0 w-full h-full bg-[#030303] -z-10 overflow-hidden">
-            {Object.entries(THEME_VIDEOS)
-              .filter(([tName]) => tName === theme || tName === activeVideoTheme)
-              .map(([tName]) => (
-                <video
-                  key={`mobile-${tName}`}
-                  ref={el => { videoRefsMobile.current[tName] = el; }}
-                  loop
-                  muted
-                  playsInline
-                  autoPlay
-                  preload="auto"
-                  onCanPlayThrough={() => handleCanPlayThrough(tName)}
-                  className={cn(
-                    "absolute inset-0 w-full h-full object-cover object-[80%_center] transition-opacity duration-1000 ease-in-out bg-[#030303]",
-                    activeVideoTheme === tName ? "opacity-70 z-10" : "opacity-0 z-0 pointer-events-none"
-                  )}
-                  src={videoSrcs[tName]}
-                />
-              ))}
+            {isLowPowerMode ? (
+              <div 
+                className="absolute inset-0 w-full h-full transition-all duration-1000 ease-in-out"
+                style={{ background: getThemeGradientMobile(theme) }}
+              />
+            ) : (
+              Object.entries(THEME_VIDEOS)
+                .filter(([tName]) => tName === theme || tName === activeVideoTheme)
+                .map(([tName]) => (
+                  <video
+                    key={`mobile-${tName}`}
+                    ref={el => { videoRefsMobile.current[tName] = el; }}
+                    loop
+                    muted
+                    playsInline
+                    autoPlay
+                    preload="auto"
+                    onCanPlayThrough={() => handleCanPlayThrough(tName)}
+                    className={cn(
+                      "absolute inset-0 w-full h-full object-cover object-[80%_center] transition-opacity duration-1000 ease-in-out bg-[#030303]",
+                      activeVideoTheme === tName ? "opacity-70 z-10" : "opacity-0 z-0 pointer-events-none"
+                    )}
+                    src={videoSrcs[tName]}
+                  />
+                ))
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-[#030303] via-[#030303]/30 to-[#030303] z-20 pointer-events-none" />
           </div>
 

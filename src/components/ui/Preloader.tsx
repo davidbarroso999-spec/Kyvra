@@ -21,7 +21,7 @@ export function Preloader() {
   const [progress, setProgress] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
   const [phraseIndex, setPhraseIndex] = useState(0);
-  const { theme } = useStore();
+  const { theme, isLowPowerMode } = useStore();
 
   const videoUrl = THEME_VIDEOS[theme] || THEME_VIDEOS.abissal;
 
@@ -38,21 +38,24 @@ export function Preloader() {
     let active = true;
     const controller = new AbortController();
 
-    // Setup an off-screen HTML5 video to trigger hardware decoder buffering
-    const videoElement = document.createElement('video');
-    videoElement.preload = "auto";
-    videoElement.muted = true;
-    videoElement.playsInline = true;
-    videoElement.src = videoUrl;
-
-    let timeProgress = 0;
-    let fileProgress = 0;
-
-    // Premium ritual duration (3.2 seconds for quick but highly aesthetic feedback)
-    const minDuration = 3200; 
-    const stepTime = 20;
+    // If performance mode is ON, run a super fast 800ms loading experience with no video downloading!
+    const minDuration = isLowPowerMode ? 800 : 2500; 
+    const stepTime = 16;
     const totalSteps = minDuration / stepTime;
     const timeIncrement = 100 / totalSteps;
+
+    let timeProgress = 0;
+    let fileProgress = isLowPowerMode ? 100 : 0;
+
+    // Setup an off-screen HTML5 video to trigger hardware decoder buffering if not in low power mode
+    let videoElement: HTMLVideoElement | null = null;
+    if (!isLowPowerMode) {
+      videoElement = document.createElement('video');
+      videoElement.preload = "auto";
+      videoElement.muted = true;
+      videoElement.playsInline = true;
+      videoElement.src = videoUrl;
+    }
 
     // Background timer
     const intervalTimer = setInterval(() => {
@@ -68,9 +71,11 @@ export function Preloader() {
 
       // Smooth progress calculation
       let displayed = timeProgress;
-      if (fileProgress < 100) {
-        // Limit progress to 95% until fetch has successfully warmed the cache
-        displayed = Math.min(95, timeProgress * 0.9 + fileProgress * 0.1);
+      if (!isLowPowerMode && fileProgress < 100) {
+        // Limit progress to 95% until active video fetch has successfully warmed the cache
+        displayed = Math.min(95, timeProgress * 0.8 + fileProgress * 0.2);
+      } else if (isLowPowerMode) {
+        displayed = timeProgress;
       } else {
         displayed = Math.max(timeProgress, fileProgress);
       }
@@ -87,63 +92,72 @@ export function Preloader() {
     };
 
     const startPreload = async () => {
+      // If low performance mode, set finished store state immediately
+      if (isLowPowerMode) {
+        if (active) {
+          try {
+            const state = useStore.getState();
+            state.setThemeVideoUrls(THEME_VIDEOS); // Fallback to raw supabase URLs
+            if (state.setIsLoadingFinished) {
+              state.setIsLoadingFinished(true);
+            }
+          } catch (e) {}
+          fileProgress = 100;
+          updateOverallProgress();
+        }
+        return;
+      }
+
       const keys = Object.keys(THEME_VIDEOS);
       const localThemeVideoUrls: Record<string, string> = {};
-      let loadedCount = 0;
+      
+      // Map other theme videos to original remote URLs for progressive loading on-demand
+      keys.forEach(k => {
+        if (k !== theme) {
+          localThemeVideoUrls[k] = THEME_VIDEOS[k];
+        }
+      });
 
-      const loadVideo = async (tName: string, tUrl: string) => {
+      const loadActiveVideoOnly = async () => {
         try {
-          // Verify if caches is supported in standard environment
           if (typeof caches !== 'undefined') {
             const cache = await caches.open('kyvra-hero-videos');
-            const cachedResponse = await cache.match(tUrl);
+            const cachedResponse = await cache.match(videoUrl);
             
             if (cachedResponse) {
               const blob = await cachedResponse.blob();
               const blobUrl = URL.createObjectURL(blob);
-              localThemeVideoUrls[tName] = blobUrl;
+              localThemeVideoUrls[theme] = blobUrl;
             } else {
-              const response = await fetch(tUrl, {
-                signal: controller.signal
-              });
+              const response = await fetch(videoUrl, { signal: controller.signal });
               if (!response.ok) throw new Error(`HTTP status ${response.status}`);
               
               // Cache a clone of response
-              await cache.put(tUrl, response.clone());
+              await cache.put(videoUrl, response.clone());
               
               const blob = await response.blob();
               const blobUrl = URL.createObjectURL(blob);
-              localThemeVideoUrls[tName] = blobUrl;
+              localThemeVideoUrls[theme] = blobUrl;
             }
           } else {
             // Direct fetch fallback for environments without caches API
-            const response = await fetch(tUrl, {
-              signal: controller.signal
-            });
+            const response = await fetch(videoUrl, { signal: controller.signal });
             const blob = await response.blob();
             const blobUrl = URL.createObjectURL(blob);
-            localThemeVideoUrls[tName] = blobUrl;
+            localThemeVideoUrls[theme] = blobUrl;
           }
         } catch (err) {
-          console.warn(`[Kyvra Preloader] Cache failed for theme ${tName}, using original remote:`, err);
-          localThemeVideoUrls[tName] = tUrl;
+          console.warn(`[Kyvra Preloader] Cache failed for active theme ${theme}, using standard source:`, err);
+          localThemeVideoUrls[theme] = videoUrl;
         } finally {
           if (active) {
-            loadedCount++;
-            fileProgress = (loadedCount / keys.length) * 100;
+            fileProgress = 100;
             updateOverallProgress();
           }
         }
       };
 
-      try {
-        // Trigger preloading of all theme videos in parallel
-        await Promise.all(
-          Object.entries(THEME_VIDEOS).map(([tName, tUrl]) => loadVideo(tName, tUrl))
-        );
-      } catch (err) {
-        console.error("[Kyvra Preloader] Parallel preload encountered errors:", err);
-      }
+      await loadActiveVideoOnly();
 
       if (active) {
         try {
@@ -157,6 +171,37 @@ export function Preloader() {
         }
         fileProgress = 100;
         updateOverallProgress();
+
+        // Progressive queue: load remaining videos inside browser idle/setTimeout queue so switching later is cached and fast
+        // We do this inside a background queue to not stall rendering or burn resources
+        setTimeout(() => {
+          if (!active) return;
+          const otherKeys = keys.filter(k => k !== theme);
+          
+          const cacheRemainingVideosSequentially = async () => {
+            if (typeof caches === 'undefined') return;
+            try {
+              const cache = await caches.open('kyvra-hero-videos');
+              for (const otherKey of otherKeys) {
+                if (!active) break;
+                const otherUrl = THEME_VIDEOS[otherKey];
+                try {
+                  const hasCache = await cache.match(otherUrl);
+                  if (!hasCache) {
+                    // Fetch quietly in background
+                    const resp = await fetch(otherUrl, { priority: 'low' } as any);
+                    if (resp.ok) {
+                      await cache.put(otherUrl, resp);
+                    }
+                  }
+                } catch (e) {
+                  // Silent fail for progressive preloader
+                }
+              }
+            } catch (err) {}
+          };
+          cacheRemainingVideosSequentially();
+        }, 3000);
       }
     };
 
@@ -166,10 +211,12 @@ export function Preloader() {
       active = false;
       controller.abort();
       clearInterval(intervalTimer);
-      videoElement.src = '';
-      videoElement.load();
+      if (videoElement) {
+        videoElement.src = '';
+        videoElement.load();
+      }
     };
-  }, [videoUrl]);
+  }, [videoUrl, isLowPowerMode]);
 
   return (
     <AnimatePresence>
