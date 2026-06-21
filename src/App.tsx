@@ -19,7 +19,8 @@ const Lore = React.lazy(() => import('./pages/Lore').then(m => ({ default: m.Lor
 const Admin = React.lazy(() => import('./pages/Admin').then(m => ({ default: m.Admin })));
 
 export default function App() {
-  const { theme, setTheme } = useStore();
+  const theme = useStore((state) => state.theme);
+  const setTheme = useStore((state) => state.setTheme);
 
   React.useEffect(() => {
     const validThemes = ['abissal', 'sangue-de-drago', 'floresta-negra', 'monolito'];

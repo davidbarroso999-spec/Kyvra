@@ -9,10 +9,10 @@ export function CookieBanner() {
     // Check if user has already accepted cookies
     const cookieConsent = localStorage.getItem('kyvra_cookie_consent');
     if (!cookieConsent) {
-      // Small delay for elegant entry experience after initial page loaded and preloader fadeout
+      // SNAPPY: Show shortly after preloader finishes (1.8s instead of 5.5s delay)
       const timer = setTimeout(() => {
         setIsOpen(true);
-      }, 5500);
+      }, 1800);
       return () => clearTimeout(timer);
     }
   }, []);

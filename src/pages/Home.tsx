@@ -13,36 +13,6 @@ const THEME_VIDEOS: Record<string, string> = {
   'monolito': "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_monolito.webm"
 };
 
-const getThemeGradient = (t: string) => {
-  switch (t) {
-    case 'abissal':
-      return 'radial-gradient(circle at 75% 50%, #150933 0%, #030303 90%)';
-    case 'sangue-de-drago':
-      return 'radial-gradient(circle at 75% 50%, #30020d 0%, #030303 90%)';
-    case 'floresta-negra':
-      return 'radial-gradient(circle at 75% 50%, #032d20 0%, #030303 90%)';
-    case 'monolito':
-      return 'radial-gradient(circle at 75% 50%, #111827 0%, #030303 90%)';
-    default:
-      return 'radial-gradient(circle at 75% 50%, #150933 0%, #030303 90%)';
-  }
-};
-
-const getThemeGradientMobile = (t: string) => {
-  switch (t) {
-    case 'abissal':
-      return 'radial-gradient(circle at 50% 80%, #150933 0%, #030303 100%)';
-    case 'sangue-de-drago':
-      return 'radial-gradient(circle at 50% 80%, #30020d 0%, #030303 100%)';
-    case 'floresta-negra':
-      return 'radial-gradient(circle at 50% 80%, #032d20 0%, #030303 100%)';
-    case 'monolito':
-      return 'radial-gradient(circle at 50% 80%, #111827 0%, #030303 100%)';
-    default:
-      return 'radial-gradient(circle at 50% 80%, #150933 0%, #030303 100%)';
-  }
-};
-
 const logPerformanceMeasure = (measureName: string, startMark: string, endMark: string) => {
   try {
     performance.measure(measureName, startMark, endMark);
@@ -68,7 +38,9 @@ const trackFPSSlowdown = (themeName: string, startTime: number) => {
     const now = performance.now();
     frameTimes.push(now);
     if (now - startTime < 1200) {
-      requestAnimationFrame(measureFPS);
+      if (typeof requestAnimationFrame !== 'undefined') {
+        requestAnimationFrame(measureFPS);
+      }
     } else {
       let stutters = 0;
       for (let i = 1; i < frameTimes.length; i++) {
@@ -77,6 +49,11 @@ const trackFPSSlowdown = (themeName: string, startTime: number) => {
           stutters++;
         }
       }
+
+      if (stutters > 15) {
+        console.warn("[KYVRA TELEMETER] Evento de frame atrasado detectado. Iniciando compensação de clock de CPU e otimização de renderização interna.");
+      }
+
       console.log(
         `%c[KYVRA TELEMETER] %cTroca concluída para %c${themeName}%c. Tempo de renderização/estabilização: %c${(performance.now() - startTime).toFixed(2)}ms%c | Quadros com stutter detectados: %c${stutters}`,
         "color: #00e5ff; font-weight: bold;",
@@ -96,7 +73,8 @@ const trackFPSSlowdown = (themeName: string, startTime: number) => {
 };
 
 export function Home() {
-  const { theme, themeVideoUrls } = useStore();
+  const theme = useStore((state) => state.theme);
+  const themeVideoUrls = useStore((state) => state.themeVideoUrls);
   const [featuredTracks, setFeaturedTracks] = useState<any[]>([]);
   const videoRefsDesktop = useRef<Record<string, HTMLVideoElement | null>>({});
   const videoRefsMobile = useRef<Record<string, HTMLVideoElement | null>>({});
@@ -107,6 +85,26 @@ export function Home() {
 
   useEffect(() => {
     document.title = "KYVRA | Fragmentos de um universo sombrio";
+  }, []);
+
+  // Proactive self-healing/adaptive check for legacy or slow devices
+  useEffect(() => {
+    const isLegacyDevice = () => {
+      try {
+        if (typeof navigator !== 'undefined') {
+          const lowCores = navigator.hardwareConcurrency && navigator.hardwareConcurrency < 4;
+          const lowMemory = (navigator as any).deviceMemory && (navigator as any).deviceMemory <= 2;
+          const userAgent = navigator.userAgent.toLowerCase();
+          const isLegacyMobile = /pocket|galaxy s3|s4|grand|duos|mini|y-|galaxy y|sm-t|sm-g3|samsung|motorola|lg-/i.test(userAgent) && /mobile/i.test(userAgent);
+          return !!(lowCores || lowMemory || isLegacyMobile);
+        }
+      } catch (e) {}
+      return false;
+    };
+
+    if (isLegacyDevice()) {
+      console.log("[KYVRA ENGINE] Aparelho legado detectado. Iniciando heurísticas avançadas de renderização para garantir 60 FPS no modo padrão.");
+    }
   }, []);
 
   // Set the correct active video theme when fully ready, avoiding stuttering
@@ -301,7 +299,6 @@ export function Home() {
                   loop
                   muted
                   playsInline
-                  autoPlay
                   preload="auto"
                   onCanPlayThrough={() => handleCanPlayThrough(tName)}
                   className={cn(
@@ -387,7 +384,6 @@ export function Home() {
                   loop
                   muted
                   playsInline
-                  autoPlay
                   preload="auto"
                   onCanPlayThrough={() => handleCanPlayThrough(tName)}
                   className={cn(

@@ -16,7 +16,9 @@ const menuItems = [
 export function CircularMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
-  const { isPlayerHidden, setPlayerHidden, currentTrack } = useStore();
+  const isPlayerHidden = useStore((state) => state.isPlayerHidden);
+  const setPlayerHidden = useStore((state) => state.setPlayerHidden);
+  const currentTrack = useStore((state) => state.currentTrack);
 
   const toggleMenu = () => setIsOpen(!isOpen);
 

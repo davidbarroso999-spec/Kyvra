@@ -39,7 +39,13 @@ const TRACK_ORDER = [
 export function Archive() {
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const { currentTrack, isPlaying, setCurrentTrack, setIsPlaying, setQueue, addToQueue, playNext_track } = useStore();
+  const currentTrack = useStore((state) => state.currentTrack);
+  const isPlaying = useStore((state) => state.isPlaying);
+  const setCurrentTrack = useStore((state) => state.setCurrentTrack);
+  const setIsPlaying = useStore((state) => state.setIsPlaying);
+  const setQueue = useStore((state) => state.setQueue);
+  const addToQueue = useStore((state) => state.addToQueue);
+  const playNext_track = useStore((state) => state.playNext_track);
   const [tracks, setTracks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);

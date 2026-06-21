@@ -545,3 +545,93 @@
   font-style: italic;
   color: rgba(255, 255, 255, 0.5); /* Adapted for dark theme */
 }
+
+/* ==========================================
+   KYVRA 60 FPS ULTRA-PERFORMANCE ENHANCERS
+   ========================================== */
+
+/* Highly optimized CSS keyframe animations for ambient graphic blurs */
+@keyframes ambientDriftOne {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.16;
+  }
+  50% {
+    transform: translate3d(5%, 3%, 0) scale(1.08);
+    opacity: 0.28;
+  }
+}
+
+@keyframes ambientDriftTwo {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.14;
+  }
+  50% {
+    transform: translate3d(-6%, -4%, 0) scale(1.12);
+    opacity: 0.24;
+  }
+}
+
+.ambient-blur-one {
+  animation: ambientDriftOne 14s ease-in-out infinite alternate;
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+.ambient-blur-two {
+  animation: ambientDriftTwo 18s ease-in-out infinite alternate;
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Force hardware accelerated GPU layers for core graphic/animated objects */
+img,
+video,
+iframe,
+canvas,
+.glass,
+.glass-premium,
+.play-reveal,
+.play-reveal-icon,
+[data-parallax],
+[data-depth] {
+  transform: translateZ(0);
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  perspective: 1000px;
+  -webkit-perspective: 1000px;
+}
+
+/* Optimizing text rendering for scrolling fluidity */
+* {
+  text-rendering: optimizeSpeed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Content visibility auto on highly structured components to eliminate off-screen render calculations */
+#musicas,
+.track-list-item,
+.album-card,
+.FeaturedSlider,
+.AlbumSlider {
+  content-visibility: auto;
+  contain-intrinsic-size: 100px 500px;
+}
+
+/* Force hardware compositing layers on root slider wrappers */
+.use-horizontal-slider-wrapper,
+#featured-slider-wrapper,
+#album-slider-wrapper {
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+}
+
+/* Prevent layout thrashing on body/html */
+html, body {
+  scroll-behavior: smooth;
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
+}

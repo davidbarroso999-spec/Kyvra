@@ -26,7 +26,8 @@ export function Header() {
   const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
   const [syncProgress, setSyncProgress] = useState<OfflineProgress | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle');
-  const { theme, setTheme } = useStore();
+  const theme = useStore((state) => state.theme);
+  const setTheme = useStore((state) => state.setTheme);
   const location = useLocation();
 
   const handleOfflineSync = async () => {
@@ -55,10 +56,17 @@ export function Header() {
   });
 
   useEffect(() => {
+    let prevScrolled = window.scrollY > 80;
+    setIsScrolled(prevScrolled);
+    
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 80);
+      const currentScrolled = window.scrollY > 80;
+      if (currentScrolled !== prevScrolled) {
+        setIsScrolled(currentScrolled);
+        prevScrolled = currentScrolled;
+      }
     };
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 

@@ -26,7 +26,9 @@ const CARD_W = 320;
 const CARD_GAP = 48;
 
 export function FeaturedSlider({ tracks }: FeaturedSliderProps) {
-  const { setCurrentTrack, setIsPlaying, setQueue } = useStore();
+  const setCurrentTrack = useStore((state) => state.setCurrentTrack);
+  const setIsPlaying = useStore((state) => state.setIsPlaying);
+  const setQueue = useStore((state) => state.setQueue);
 
   const wrapperRef  = useRef<HTMLDivElement>(null);
   const slideRefs   = useRef<HTMLDivElement[]>([]);

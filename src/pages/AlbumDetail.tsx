@@ -11,7 +11,11 @@ import { KyvraButton } from '@/components/ui/KyvraButton';
 export function AlbumDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { setCurrentTrack, setIsPlaying, setQueue, addToQueue, playNext_track } = useStore();
+  const setCurrentTrack = useStore((state) => state.setCurrentTrack);
+  const setIsPlaying = useStore((state) => state.setIsPlaying);
+  const setQueue = useStore((state) => state.setQueue);
+  const addToQueue = useStore((state) => state.addToQueue);
+  const playNext_track = useStore((state) => state.playNext_track);
   const [album, setAlbum] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);

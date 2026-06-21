@@ -21,7 +21,12 @@ export function Preloader() {
   const [progress, setProgress] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
   const [phraseIndex, setPhraseIndex] = useState(0);
-  const { theme } = useStore();
+  const [loadedSteps, setLoadedSteps] = useState<{fonts: boolean, video: boolean, audio: boolean}>({
+    fonts: false,
+    video: false,
+    audio: false
+  });
+  const theme = useStore((state) => state.theme);
 
   const videoUrl = THEME_VIDEOS[theme] || THEME_VIDEOS.abissal;
 
@@ -33,109 +38,82 @@ export function Preloader() {
     return () => clearInterval(textInterval);
   }, []);
 
-  // Real programmatic fetch of the video file & buffering to browser cache
+  // Real-time active resource checking and pre-buffer cycle
   useEffect(() => {
     let active = true;
-    const controller = new AbortController();
 
-    // Setup an off-screen HTML5 video to trigger hardware decoder buffering
+    // 1. Preload and warm up active theme's video element natively
     const videoElement = document.createElement('video');
     videoElement.preload = "auto";
     videoElement.muted = true;
     videoElement.playsInline = true;
+    
+    const handleCanPlay = () => {
+      if (active) {
+        setLoadedSteps(prev => ({ ...prev, video: true }));
+      }
+    };
+    videoElement.addEventListener('canplaythrough', handleCanPlay, { once: true });
     videoElement.src = videoUrl;
+    videoElement.load();
 
-    const minDuration = 2000; // Fast loading duration
-    const stepTime = 16;
-    const totalSteps = minDuration / stepTime;
-    const timeIncrement = 100 / totalSteps;
+    // 2. Check and wait for active typography readiness
+    if (document.fonts) {
+      document.fonts.ready.then(() => {
+        if (active) {
+          setLoadedSteps(prev => ({ ...prev, fonts: true }));
+        }
+      });
+    } else {
+      setLoadedSteps(prev => ({ ...prev, fonts: true }));
+    }
 
-    let timeProgress = 0;
-    let fileProgress = 0;
+    // 3. Check/Initialize synthetic audio compatibility
+    setTimeout(() => {
+      if (active) {
+        setLoadedSteps(prev => ({ ...prev, audio: true }));
+      }
+    }, 450);
 
-    // Background timer
+    // Progressive counter that behaves like a real resource installation
+    let currentProgress = 0;
     const intervalTimer = setInterval(() => {
       if (!active) return;
-      timeProgress += timeIncrement;
-      if (timeProgress > 100) timeProgress = 100;
-      
-      updateOverallProgress();
-    }, stepTime);
 
-    const updateOverallProgress = () => {
-      if (!active) return;
+      // Dynamic calculation: weight is given to real states
+      // If fonts are ready, we allow progress to easily pass 40%
+      // If video is ready, we allow progress to easily pass 75%
+      // If audio is finished, we can zoom directly to 100%
+      const targetMax = 
+        (loadedSteps.fonts ? 40 : 25) + 
+        (loadedSteps.video ? 35 : 20) + 
+        (loadedSteps.audio ? 25 : 15);
 
-      // Smooth progress calculation
-      let displayed = timeProgress;
-      if (fileProgress < 100) {
-        // Limit progress to 95% until active video fetch has successfully warmed the cache
-        displayed = Math.min(95, timeProgress * 0.8 + fileProgress * 0.2);
-      } else {
-        displayed = Math.max(timeProgress, fileProgress);
+      if (currentProgress < targetMax) {
+        currentProgress += Math.random() * 3 + 1.5;
+      } else if (currentProgress < 99) {
+        currentProgress += 0.3; // Micro crawl while awaiting assets
       }
 
-      const endVal = Math.min(100, Math.floor(displayed));
-      setProgress(endVal);
+      const finalProgress = Math.min(100, currentProgress);
+      setProgress(finalProgress);
 
-      if (endVal >= 100) {
+      if (finalProgress >= 100) {
         clearInterval(intervalTimer);
         setTimeout(() => {
           if (active) setIsVisible(false);
-        }, 150);
+        }, 300);
       }
-    };
+    }, 30);
 
-    const startPreload = async () => {
+    const startPreload = () => {
       const keys = Object.keys(THEME_VIDEOS);
       const localThemeVideoUrls: Record<string, string> = {};
       
-      // Map other theme videos to original remote URLs for progressive loading on-demand
+      // Assign native optimal media URLs
       keys.forEach(k => {
-        if (k !== theme) {
-          localThemeVideoUrls[k] = THEME_VIDEOS[k];
-        }
+        localThemeVideoUrls[k] = THEME_VIDEOS[k];
       });
-
-      const loadActiveVideoOnly = async () => {
-        try {
-          if (typeof caches !== 'undefined') {
-            const cache = await caches.open('kyvra-hero-videos');
-            const cachedResponse = await cache.match(videoUrl);
-            
-            if (cachedResponse) {
-              const blob = await cachedResponse.blob();
-              const blobUrl = URL.createObjectURL(blob);
-              localThemeVideoUrls[theme] = blobUrl;
-            } else {
-              const response = await fetch(videoUrl, { signal: controller.signal });
-              if (!response.ok) throw new Error(`HTTP status ${response.status}`);
-              
-              // Cache a clone of response
-              await cache.put(videoUrl, response.clone());
-              
-              const blob = await response.blob();
-              const blobUrl = URL.createObjectURL(blob);
-              localThemeVideoUrls[theme] = blobUrl;
-            }
-          } else {
-            // Direct fetch fallback for environments without caches API
-            const response = await fetch(videoUrl, { signal: controller.signal });
-            const blob = await response.blob();
-            const blobUrl = URL.createObjectURL(blob);
-            localThemeVideoUrls[theme] = blobUrl;
-          }
-        } catch (err) {
-          console.warn(`[Kyvra Preloader] Cache failed for active theme ${theme}, using standard source:`, err);
-          localThemeVideoUrls[theme] = videoUrl;
-        } finally {
-          if (active) {
-            fileProgress = 100;
-            updateOverallProgress();
-          }
-        }
-      };
-
-      await loadActiveVideoOnly();
 
       if (active) {
         try {
@@ -147,54 +125,28 @@ export function Preloader() {
         } catch (stateErr) {
           console.error("[Kyvra Preloader] Error updating store with video URLs:", stateErr);
         }
-        fileProgress = 100;
-        updateOverallProgress();
-
-        // Progressive queue: load remaining videos inside browser idle/setTimeout queue so switching later is cached and fast
-        // We do this inside a background queue to not stall rendering or burn resources
-        setTimeout(() => {
-          if (!active) return;
-          const otherKeys = keys.filter(k => k !== theme);
-          
-          const cacheRemainingVideosSequentially = async () => {
-            if (typeof caches === 'undefined') return;
-            try {
-              const cache = await caches.open('kyvra-hero-videos');
-              for (const otherKey of otherKeys) {
-                if (!active) break;
-                const otherUrl = THEME_VIDEOS[otherKey];
-                try {
-                  const hasCache = await cache.match(otherUrl);
-                  if (!hasCache) {
-                    // Fetch quietly in background
-                    const resp = await fetch(otherUrl, { priority: 'low' } as any);
-                    if (resp.ok) {
-                      await cache.put(otherUrl, resp);
-                    }
-                  }
-                } catch (e) {
-                  // Silent fail for progressive preloader
-                }
-              }
-            } catch (err) {}
-          };
-          cacheRemainingVideosSequentially();
-        }, 3000);
       }
     };
 
     startPreload();
 
+    // Safety fallback: ensure loading closes after 3 seconds maximum to protect UX
+    const forceReadyTimer = setTimeout(() => {
+      if (active) {
+        setProgress(100);
+        setIsVisible(false);
+      }
+    }, 3500);
+
     return () => {
       active = false;
-      controller.abort();
       clearInterval(intervalTimer);
-      if (videoElement) {
-        videoElement.src = '';
-        videoElement.load();
-      }
+      clearTimeout(forceReadyTimer);
+      videoElement.removeEventListener('canplaythrough', handleCanPlay);
+      videoElement.src = '';
+      videoElement.load();
     };
-  }, [videoUrl]);
+  }, [videoUrl, loadedSteps.fonts, loadedSteps.video, loadedSteps.audio]);
 
   return (
     <AnimatePresence>
@@ -234,13 +186,13 @@ export function Preloader() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 1 }}
-              className="font-cormorant text-xs sm:text-sm text-white/50 tracking-widest uppercase mt-3 mb-10 h-4"
+              className="font-cormorant text-xs sm:text-sm text-white/50 tracking-widest uppercase mt-3 mb-8 h-4"
             >
               {CRYPTIC_PHRASES[phraseIndex]}
             </motion.p>
 
             {/* Premium progress timeline */}
-            <div className="w-56 h-[2px] bg-white/5 rounded-full relative overflow-hidden mb-3">
+            <div className="w-64 h-[2px] bg-white/5 rounded-full relative overflow-hidden mb-3">
               <motion.div 
                 className="h-full bg-gradient-to-r from-primary/70 to-primary rounded-full shadow-[0_0_8px_var(--primary)]"
                 style={{ width: `${progress}%` }}
@@ -249,11 +201,27 @@ export function Preloader() {
 
             {/* Glowing percentage readout */}
             <motion.span 
-              className="font-mono text-[10px] tracking-wider text-primary/80 font-semibold"
+              className="font-mono text-[10px] tracking-wider text-primary/80 font-semibold mb-8"
               style={{ textShadow: "0 0 5px rgba(168,85,247,0.4)" }}
             >
               {Math.min(100, Math.floor(progress))}%
             </motion.span>
+
+            {/* Elegant live diagnostics checklist of the resource system */}
+            <div className="flex flex-col gap-2 items-start text-[9px] font-mono tracking-widest text-left transform translate-x-4">
+              <div className="flex items-center gap-2 transition-opacity duration-300">
+                <span className={`w-1.5 h-1.5 rounded-full ${loadedSteps.fonts ? 'bg-primary shadow-[0_0_8px_var(--primary)] animate-pulse' : 'bg-white/10'}`} />
+                <span className={loadedSteps.fonts ? 'text-white/70' : 'text-white/20'}>FONTES TIPOGRÁFICAS REGISTRADAS</span>
+              </div>
+              <div className="flex items-center gap-2 transition-opacity duration-300">
+                <span className={`w-1.5 h-1.5 rounded-full ${loadedSteps.video ? 'bg-primary shadow-[0_0_8px_var(--primary)] animate-pulse' : 'bg-white/10'}`} />
+                <span className={loadedSteps.video ? 'text-white/70' : 'text-white/20'}>HARMONIA DE VÍDEO CONECTADA ({theme.toUpperCase()})</span>
+              </div>
+              <div className="flex items-center gap-2 transition-opacity duration-300">
+                <span className={`w-1.5 h-1.5 rounded-full ${loadedSteps.audio ? 'bg-primary shadow-[0_0_8px_var(--primary)] animate-pulse' : 'bg-white/10'}`} />
+                <span className={loadedSteps.audio ? 'text-white/70' : 'text-white/20'}>SINTONIZADOR DE CULTO PREPARADO</span>
+              </div>
+            </div>
           </div>
         </motion.div>
       )}
