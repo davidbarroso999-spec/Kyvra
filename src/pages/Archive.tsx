@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, Play, Pause, ChevronDown } from 'lucide-react';
+import { Virtuoso } from 'react-virtuoso';
 import { useStore } from '@/store/useStore';
 import { cn, saveForOffline } from '@/lib/utils';
 import { getAllTracks } from '@/lib/apiCache';
@@ -281,163 +282,167 @@ export function Archive() {
             )}
           </div>
         ) : (
-          sortedTracks.map((track, index) => {
-            const isCurrentTrack = currentTrack?.id === track.id;
-            
-            return (
-              <div
-                key={track.id}
-                id={`track-${track.id}`}
-                onClick={() => handlePlay(track)}
-                className="track-row-hover flex items-center gap-4 py-3 px-4 cursor-pointer rounded-none border-b border-border/50 last:border-0 group"
-              >
-                <div className="w-8 flex justify-center items-center text-text-low font-mono text-sm shrink-0">
-                  {isCurrentTrack && isPlaying ? (
-                    /* Estado: tocando — mostra barras animadas */
-                    <div
-                      className="flex items-end gap-[2px] h-4 cursor-pointer"
-                      onClick={(e) => { e.stopPropagation(); setIsPlaying(false); }}
-                      title="Pausar"
-                    >
-                      <div className="w-1 bg-primary rounded-sm" style={{ height: '100%', animation: 'queueBar 0.8s ease-in-out 0s infinite alternate' }} />
-                      <div className="w-1 bg-primary rounded-sm" style={{ height: '60%', animation: 'queueBar 0.8s ease-in-out 0.2s infinite alternate' }} />
-                      <div className="w-1 bg-primary rounded-sm" style={{ height: '80%', animation: 'queueBar 0.8s ease-in-out 0.1s infinite alternate' }} />
-                    </div>
-                  ) : isCurrentTrack && !isPlaying ? (
-                    /* Estado: pausado na faixa atual — mostra play para retomar */
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setIsPlaying(true); }}
-                      className="text-primary"
-                      title="Retomar"
-                    >
-                      <Play size={16} className="ml-0.5" />
-                    </button>
-                  ) : (
-                    /* Estado: outra faixa ou não tocando — mostra número ou play no hover */
-                    <>
-                      <span className="group-hover:hidden">{String(index + 1).padStart(2, '0')}</span>
+          <Virtuoso
+            useWindowScroll
+            data={sortedTracks}
+            itemContent={(index, track) => {
+              const isCurrentTrack = currentTrack?.id === track.id;
+              
+              return (
+                <div
+                  key={track.id}
+                  id={`track-${track.id}`}
+                  onClick={() => handlePlay(track)}
+                  className="track-row-hover flex items-center gap-4 py-3 px-4 cursor-pointer rounded-none border-b border-border/50 last:border-0 group"
+                >
+                  <div className="w-8 flex justify-center items-center text-text-low font-mono text-sm shrink-0">
+                    {isCurrentTrack && isPlaying ? (
+                      /* Estado: tocando — mostra barras animadas */
+                      <div
+                        className="flex items-end gap-[2px] h-4 cursor-pointer"
+                        onClick={(e) => { e.stopPropagation(); setIsPlaying(false); }}
+                        title="Pausar"
+                      >
+                        <div className="w-1 bg-primary rounded-sm" style={{ height: '100%', animation: 'queueBar 0.8s ease-in-out 0s infinite alternate' }} />
+                        <div className="w-1 bg-primary rounded-sm" style={{ height: '60%', animation: 'queueBar 0.8s ease-in-out 0.2s infinite alternate' }} />
+                        <div className="w-1 bg-primary rounded-sm" style={{ height: '80%', animation: 'queueBar 0.8s ease-in-out 0.1s infinite alternate' }} />
+                      </div>
+                    ) : isCurrentTrack && !isPlaying ? (
+                      /* Estado: pausado na faixa atual — mostra play para retomar */
                       <button
-                        className="hidden group-hover:flex items-center justify-center text-primary"
-                        onClick={(e) => { e.stopPropagation(); handlePlay(track); }}
-                        title="Tocar"
+                        onClick={(e) => { e.stopPropagation(); setIsPlaying(true); }}
+                        className="text-primary"
+                        title="Retomar"
                       >
                         <Play size={16} className="ml-0.5" />
                       </button>
-                    </>
-                  )}
-                </div>
-                
-                <img src={track.coverUrl} alt={track.title} loading="lazy" decoding="async" className="w-12 h-12 rounded object-cover" referrerPolicy="no-referrer" />
-                
-                <div className="flex-1 min-w-0">
-                  <h3 className={cn("font-medium truncate", isCurrentTrack ? "text-primary" : "text-text-high")}>
-                    {track.title}
-                  </h3>
-                  <p className="text-sm text-text-low truncate">{track.artist}</p>
-                </div>
-                
-                <div className="font-mono text-sm text-text-low w-12 text-right">
-                  <TrackDuration audioUrl={track.audioUrl} defaultDuration={track.duration} />
-                </div>
+                    ) : (
+                      /* Estado: outra faixa ou não tocando — mostra número ou play no hover */
+                      <>
+                        <span className="group-hover:hidden">{String(index + 1).padStart(2, '0')}</span>
+                        <button
+                          className="hidden group-hover:flex items-center justify-center text-primary"
+                          onClick={(e) => { e.stopPropagation(); handlePlay(track); }}
+                          title="Tocar"
+                        >
+                          <Play size={16} className="ml-0.5" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                  
+                  <img src={track.coverUrl} alt={track.title} loading="lazy" decoding="async" className="w-12 h-12 rounded object-cover" referrerPolicy="no-referrer" />
+                  
+                  <div className="flex-1 min-w-0">
+                    <h3 className={cn("font-medium truncate", isCurrentTrack ? "text-primary" : "text-text-high")}>
+                      {track.title}
+                    </h3>
+                    <p className="text-sm text-text-low truncate">{track.artist}</p>
+                  </div>
+                  
+                  <div className="font-mono text-sm text-text-low w-12 text-right">
+                    <TrackDuration audioUrl={track.audioUrl} defaultDuration={track.duration} />
+                  </div>
 
-                {/* Botão de menu */}
-                <div className="relative">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setOpenMenuId(openMenuId === track.id ? null : track.id);
-                    }}
-                    className="p-2 text-text-low hover:text-primary rounded md:opacity-0 md:group-hover:opacity-100 transition-opacity"
-                  >
-                    {/* Ícone de três pontinhos vertical */}
-                    <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
-                      <circle cx="8" cy="3" r="1.5"/>
-                      <circle cx="8" cy="8" r="1.5"/>
-                      <circle cx="8" cy="13" r="1.5"/>
-                    </svg>
-                  </button>
+                  {/* Botão de menu */}
+                  <div className="relative">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenMenuId(openMenuId === track.id ? null : track.id);
+                      }}
+                      className="p-2 text-text-low hover:text-primary rounded md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                    >
+                      {/* Ícone de três pontinhos vertical */}
+                      <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
+                        <circle cx="8" cy="3" r="1.5"/>
+                        <circle cx="8" cy="8" r="1.5"/>
+                        <circle cx="8" cy="13" r="1.5"/>
+                      </svg>
+                    </button>
 
-                  {/* Dropdown do menu */}
-                  {openMenuId === track.id && (
-                    <>
-                      {/* Overlay invisível para fechar o menu ao clicar fora */}
-                      <div
-                        className="fixed inset-0 z-40"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setOpenMenuId(null);
-                        }}
-                      />
-                      <div className="absolute right-0 bottom-full mb-1 z-50 w-48 glass rounded-lg py-1 shadow-2xl border border-border">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            playNext_track(track);
-                            setOpenMenuId(null);
-                            showFeedback('Tocará em seguida');
-                          }}
-                          className="w-full text-left px-4 py-2.5 text-sm text-text-mid hover:text-text-high hover:bg-overlay transition-colors"
-                        >
-                          Tocar em seguida
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            addToQueue(track);
-                            setOpenMenuId(null);
-                            showFeedback('Adicionado à fila');
-                          }}
-                          className="w-full text-left px-4 py-2.5 text-sm text-text-mid hover:text-text-high hover:bg-overlay transition-colors"
-                        >
-                          Adicionar à fila
-                        </button>
-                        <button
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            const target = e.currentTarget;
-                            target.disabled = true;
-                            const originalText = target.innerText;
-                            target.innerText = 'Salvando...';
-                            
-                            const success = await saveForOffline(track.audioUrl);
-                            if (track.coverUrl) await saveForOffline(track.coverUrl);
-                            
-                            target.innerText = success ? 'Salvo Offline ✓' : 'Erro ao salvar';
-                            showFeedback(success ? 'Fragmento sincronizado com o drive local' : 'Falha na sincronização offline');
-                            
-                            setOpenMenuId(null);
-                          }}
-                          className="w-full text-left px-4 py-2.5 text-sm text-text-mid hover:text-text-high hover:bg-overlay transition-colors disabled:opacity-50"
-                        >
-                          Salvar Offline
-                        </button>
-                        <button
+                    {/* Dropdown do menu */}
+                    {openMenuId === track.id && (
+                      <>
+                        {/* Overlay invisível para fechar o menu ao clicar fora */}
+                        <div
+                          className="fixed inset-0 z-40"
                           onClick={(e) => {
                             e.stopPropagation();
                             setOpenMenuId(null);
-                            handleDownloadTrack(track);
                           }}
-                          className="w-full text-left px-4 py-2.5 text-sm text-text-mid hover:text-text-high hover:bg-overlay transition-colors"
-                        >
-                          Baixar Áudio
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setOpenMenuId(null);
-                            handleShareTrack(track);
-                          }}
-                          className="w-full text-left px-4 py-2.5 text-sm text-text-mid hover:text-text-high hover:bg-overlay transition-colors"
-                        >
-                          Compartilhar
-                        </button>
-                      </div>
-                    </>
-                  )}
+                        />
+                        <div className="absolute right-0 bottom-full mb-1 z-50 w-48 glass rounded-lg py-1 shadow-2xl border border-border">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              playNext_track(track);
+                              setOpenMenuId(null);
+                              showFeedback('Tocará em seguida');
+                            }}
+                            className="w-full text-left px-4 py-2.5 text-sm text-text-mid hover:text-text-high hover:bg-overlay transition-colors"
+                          >
+                            Tocar em seguida
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              addToQueue(track);
+                              setOpenMenuId(null);
+                              showFeedback('Adicionado à fila');
+                            }}
+                            className="w-full text-left px-4 py-2.5 text-sm text-text-mid hover:text-text-high hover:bg-overlay transition-colors"
+                          >
+                            Adicionar à fila
+                          </button>
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              const target = e.currentTarget;
+                              target.disabled = true;
+                              const originalText = target.innerText;
+                              target.innerText = 'Salvando...';
+                              
+                              const success = await saveForOffline(track.audioUrl);
+                              if (track.coverUrl) await saveForOffline(track.coverUrl);
+                              
+                              target.innerText = success ? 'Salvo Offline ✓' : 'Erro ao salvar';
+                              showFeedback(success ? 'Fragmento sincronizado com o drive local' : 'Falha na sincronização offline');
+                              
+                              setOpenMenuId(null);
+                            }}
+                            className="w-full text-left px-4 py-2.5 text-sm text-text-mid hover:text-text-high hover:bg-overlay transition-colors disabled:opacity-50"
+                          >
+                            Salvar Offline
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenMenuId(null);
+                              handleDownloadTrack(track);
+                            }}
+                            className="w-full text-left px-4 py-2.5 text-sm text-text-mid hover:text-text-high hover:bg-overlay transition-colors"
+                          >
+                            Baixar Áudio
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenMenuId(null);
+                              handleShareTrack(track);
+                            }}
+                            className="w-full text-left px-4 py-2.5 text-sm text-text-mid hover:text-text-high hover:bg-overlay transition-colors"
+                          >
+                            Compartilhar
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })
+              );
+            }}
+          />
         )}
       </div>
     </div>

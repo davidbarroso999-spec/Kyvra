@@ -43,7 +43,7 @@ export default function App() {
 
   return (
     <HashRouter>
-      <Preloader key={theme} />
+      <Preloader />
       <CookieBanner />
       <Suspense fallback={null}>
         <Routes>

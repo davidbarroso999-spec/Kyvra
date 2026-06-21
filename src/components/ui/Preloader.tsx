@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useStore } from '@/store/useStore';
 
@@ -30,6 +30,8 @@ export function Preloader() {
 
   const videoUrl = THEME_VIDEOS[theme] || THEME_VIDEOS.abissal;
 
+  const loadedStepsRef = useRef({ fonts: false, video: false, audio: false });
+
   // Cycle cryptic text
   useEffect(() => {
     const textInterval = setInterval(() => {
@@ -51,6 +53,7 @@ export function Preloader() {
     const handleCanPlay = () => {
       if (active) {
         setLoadedSteps(prev => ({ ...prev, video: true }));
+        loadedStepsRef.current.video = true;
       }
     };
     videoElement.addEventListener('canplaythrough', handleCanPlay, { once: true });
@@ -62,16 +65,19 @@ export function Preloader() {
       document.fonts.ready.then(() => {
         if (active) {
           setLoadedSteps(prev => ({ ...prev, fonts: true }));
+          loadedStepsRef.current.fonts = true;
         }
       });
     } else {
       setLoadedSteps(prev => ({ ...prev, fonts: true }));
+      loadedStepsRef.current.fonts = true;
     }
 
     // 3. Check/Initialize synthetic audio compatibility
     setTimeout(() => {
       if (active) {
         setLoadedSteps(prev => ({ ...prev, audio: true }));
+        loadedStepsRef.current.audio = true;
       }
     }, 450);
 
@@ -80,14 +86,11 @@ export function Preloader() {
     const intervalTimer = setInterval(() => {
       if (!active) return;
 
-      // Dynamic calculation: weight is given to real states
-      // If fonts are ready, we allow progress to easily pass 40%
-      // If video is ready, we allow progress to easily pass 75%
-      // If audio is finished, we can zoom directly to 100%
+      const currentSteps = loadedStepsRef.current;
       const targetMax = 
-        (loadedSteps.fonts ? 40 : 25) + 
-        (loadedSteps.video ? 35 : 20) + 
-        (loadedSteps.audio ? 25 : 15);
+        (currentSteps.fonts ? 40 : 25) + 
+        (currentSteps.video ? 35 : 20) + 
+        (currentSteps.audio ? 25 : 15);
 
       if (currentProgress < targetMax) {
         currentProgress += Math.random() * 3 + 1.5;
@@ -110,9 +113,20 @@ export function Preloader() {
       const keys = Object.keys(THEME_VIDEOS);
       const localThemeVideoUrls: Record<string, string> = {};
       
-      // Assign native optimal media URLs
+      // Inject native optimal media preloads into the head
       keys.forEach(k => {
-        localThemeVideoUrls[k] = THEME_VIDEOS[k];
+        const url = THEME_VIDEOS[k];
+        localThemeVideoUrls[k] = url;
+        
+        // Native Link tag preloading for the browser to cache safely
+        const existingLink = document.querySelector(`link[href="${url}"]`);
+        if (!existingLink) {
+          const link = document.createElement('link');
+          link.rel = 'preload';
+          link.as = 'video';
+          link.href = url;
+          document.head.appendChild(link);
+        }
       });
 
       if (active) {
@@ -146,7 +160,7 @@ export function Preloader() {
       videoElement.src = '';
       videoElement.load();
     };
-  }, [videoUrl, loadedSteps.fonts, loadedSteps.video, loadedSteps.audio]);
+  }, []); // Run only once on mount instead of reacting to theme changes
 
   return (
     <AnimatePresence>
@@ -166,8 +180,14 @@ export function Preloader() {
             }} />
           </div>
 
-          {/* Ambient glowing radial light in the center */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] sm:w-[500px] h-[350px] sm:h-[500px] bg-primary/10 rounded-full blur-[100px] pointer-events-none opacity-55 animate-pulse" />
+          {/* Ambient glowing radial light in the center optimized without CSS blur */}
+          <div 
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] sm:w-[500px] h-[350px] sm:h-[500px] pointer-events-none opacity-55 animate-pulse" 
+            style={{
+              background: 'radial-gradient(circle at center, rgba(168,85,247,0.2) 0%, transparent 70%)',
+              transform: 'translate(-50%, -50%) translateZ(0)'
+            }}
+          />
 
           {/* Main loader design elements */}
           <div className="relative z-10 flex flex-col items-center text-center px-6">

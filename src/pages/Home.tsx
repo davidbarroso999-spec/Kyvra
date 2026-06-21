@@ -305,6 +305,11 @@ export function Home() {
                     "absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out bg-black",
                     activeVideoTheme === tName ? "opacity-[0.82] z-10" : "opacity-0 z-0 pointer-events-none"
                   )}
+                  style={{
+                    willChange: "opacity",
+                    transform: "translateZ(0)",
+                    backfaceVisibility: "hidden"
+                  }}
                   src={videoSrcs[tName]}
                 />
               ))}
@@ -390,6 +395,11 @@ export function Home() {
                     "absolute inset-0 w-full h-full object-cover object-[80%_center] transition-opacity duration-1000 ease-in-out bg-[#030303]",
                     activeVideoTheme === tName ? "opacity-[0.78] z-10" : "opacity-0 z-0 pointer-events-none"
                   )}
+                  style={{
+                    willChange: "opacity",
+                    transform: "translateZ(0)",
+                    backfaceVisibility: "hidden"
+                  }}
                   src={videoSrcs[tName]}
                 />
               ))}

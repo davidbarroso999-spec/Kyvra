@@ -130,7 +130,9 @@ export function Header() {
                     <button
                       key={t.id}
                       onClick={() => {
-                        setTheme(t.id);
+                        React.startTransition(() => {
+                          setTheme(t.id);
+                        });
                         setIsThemeMenuOpen(false);
                       }}
                       className={cn(
