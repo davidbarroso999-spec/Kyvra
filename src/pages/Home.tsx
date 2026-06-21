@@ -410,9 +410,9 @@ export function Home() {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-              className="w-full relative flex justify-center items-center overflow-visible"
+              className="w-full relative flex justify-start items-center overflow-visible"
             >
-              <h1 className="font-display font-medium text-[24vw] leading-none text-gradient m-0 p-0 drop-shadow-2xl tracking-[0.01em] text-center w-full select-none">
+              <h1 className="font-display font-medium text-[22vw] leading-none text-gradient m-0 p-0 drop-shadow-2xl tracking-[0.01em] text-left select-none">
                 KYVRA
               </h1>
             </motion.div>

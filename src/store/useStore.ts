@@ -92,9 +92,9 @@ export const useStore = create<AppState>()(
         // Salva a música atual no histórico antes de trocar
         if (currentTrack) {
           const newHistory = [currentTrack, ...playHistory].slice(0, 50);
-          set({ currentTrack: track, isPlaying: true, playHistory: newHistory });
+          set({ currentTrack: track, isPlaying: true, playHistory: newHistory, isPlayerHidden: false });
         } else {
-          set({ currentTrack: track, isPlaying: true });
+          set({ currentTrack: track, isPlaying: true, isPlayerHidden: false });
         }
       },
 
@@ -140,7 +140,7 @@ export const useStore = create<AppState>()(
         return { repeatMode: nextMode };
       }),
 
-      playNext: () => {
+       playNext: () => {
         const { currentTrack, queue, shuffledQueue, isShuffle, repeatMode, playHistory } = get();
         if (!currentTrack) return;
 
@@ -154,7 +154,7 @@ export const useStore = create<AppState>()(
 
         // Música não está na fila (foi adicionada via playTrackNow fora da fila)
         if (currentIndex === -1) {
-          set({ currentTrack: activeQueue[0], isPlaying: true, playHistory: newHistory });
+          set({ currentTrack: activeQueue[0], isPlaying: true, playHistory: newHistory, isPlayerHidden: false });
           return;
         }
 
@@ -166,9 +166,9 @@ export const useStore = create<AppState>()(
             // Se shuffle estiver ativo, reembaralha para variar a ordem no próximo loop
             if (isShuffle) {
               const reshuffled = shuffleArray(activeQueue);
-              set({ shuffledQueue: reshuffled, currentTrack: reshuffled[0], isPlaying: true, playHistory: newHistory });
+              set({ shuffledQueue: reshuffled, currentTrack: reshuffled[0], isPlaying: true, playHistory: newHistory, isPlayerHidden: false });
             } else {
-              set({ currentTrack: activeQueue[0], isPlaying: true, playHistory: newHistory });
+              set({ currentTrack: activeQueue[0], isPlaying: true, playHistory: newHistory, isPlayerHidden: false });
             }
           } else {
             // repeatMode 'off': para no final da fila
@@ -178,7 +178,7 @@ export const useStore = create<AppState>()(
         }
 
         // Avança normalmente
-        set({ currentTrack: activeQueue[currentIndex + 1], isPlaying: true, playHistory: newHistory });
+        set({ currentTrack: activeQueue[currentIndex + 1], isPlaying: true, playHistory: newHistory, isPlayerHidden: false });
       },
 
       playPrevious: () => {
@@ -189,7 +189,7 @@ export const useStore = create<AppState>()(
         // Isso funciona em QUALQUER modo (shuffle ou não)
         if (playHistory.length > 0) {
           const [lastTrack, ...remainingHistory] = playHistory;
-          set({ currentTrack: lastTrack, isPlaying: true, playHistory: remainingHistory });
+          set({ currentTrack: lastTrack, isPlaying: true, playHistory: remainingHistory, isPlayerHidden: false });
           return;
         }
 
@@ -198,7 +198,7 @@ export const useStore = create<AppState>()(
         const currentIndex = activeQueue.findIndex(t => t.id === currentTrack.id);
 
         if (currentIndex > 0) {
-          set({ currentTrack: activeQueue[currentIndex - 1], isPlaying: true });
+          set({ currentTrack: activeQueue[currentIndex - 1], isPlaying: true, isPlayerHidden: false });
         }
         // Se for a primeira da fila e sem histórico, não faz nada
         // (o MiniPlayer já cuida de resetar o currentTime para 0 nesse caso)
@@ -221,7 +221,8 @@ export const useStore = create<AppState>()(
           shuffledQueue: shuffleArray(newQueue),
           currentTrack: track,
           isPlaying: true,
-          playHistory: newHistory
+          playHistory: newHistory,
+          isPlayerHidden: false
         });
       },
 
