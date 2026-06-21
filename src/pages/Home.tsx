@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 const THEME_VIDEOS: Record<string, string> = {
   abissal: "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_abissal.webm",
   'sangue-de-drago': "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_sanguededrago.webm",
-  'floresta-negra': "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_florestanegra.webm",
+  'floresta-negra': "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_floresta.webm",
   'monolito': "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_monolito.webm"
 };
 
@@ -285,10 +285,10 @@ export function Home() {
   return (
     <div className="w-full bg-[#030303]">
       {/* Immersive Responsive Hero Section */}
-      <section className="relative min-h-[100dvh] lg:h-[100dvh] w-full bg-[#030303] text-white overflow-hidden pb-10 lg:pb-0">
+      <section className="relative min-h-[100vh] lg:h-[100vh] w-full bg-[#030303] text-white overflow-hidden pb-10 lg:pb-0">
         
         {/* DESKTOP/WIDE LANDSCAPE IMMERSIVE LAYOUT */}
-        <div className="hidden md:flex landscape:flex md:flex-col justify-between md:h-full landscape:h-full w-full h-[100dvh] relative overflow-hidden select-none">
+        <div className="hidden md:flex landscape:flex md:flex-col justify-between md:h-full landscape:h-full w-full h-[100vh] relative overflow-hidden select-none">
           
           {/* Full-width widescreen background video */}
           <div className="absolute inset-0 w-full h-full bg-black z-0 overflow-hidden">
@@ -375,7 +375,7 @@ export function Home() {
         </div>
 
         {/* MOBILE PORTRAIT LAYOUT (Strictly vertical below md and portrait) */}
-        <div className="md:hidden landscape:hidden flex flex-col justify-between min-h-[100dvh] relative z-10 px-6 pt-24 pb-8 h-[100dvh] overflow-hidden">
+        <div className="md:hidden landscape:hidden flex flex-col justify-between min-h-[100vh] relative z-10 px-6 pt-24 pb-8 h-[100vh] overflow-hidden">
           {/* Background video overlay for mobile */}
           <div className="absolute inset-0 w-full h-full bg-[#030303] -z-10 overflow-hidden">
             {Object.entries(THEME_VIDEOS)

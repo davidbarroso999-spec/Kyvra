@@ -944,8 +944,8 @@ export function Admin() {
   };
 
   const handleLogin = () => {
-    // 1117 (Ateez debut/fandom) ou 2024
-    if (password === '1117' || password === '2024') {
+    // Senha do arquivista de acordo com a instrução do usuário: 1987
+    if (password === '1987') {
       setIsAuthenticated(true);
       setError('');
     } else {
