@@ -11,17 +11,17 @@ const CRYPTIC_PHRASES = [
 ];
 
 const THEME_VIDEOS: Record<string, string> = {
-  abissal: "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_20260620_140915393.mp4",
-  'sangue-de-drago': "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_sanguededrago.mp4",
-  'floresta-negra': "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_floresta.mp4",
-  'monolito': "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_monolito.mp4"
+  abissal: "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_abissal.webm",
+  'sangue-de-drago': "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_sanguededrago.webm",
+  'floresta-negra': "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_florestanegra.webm",
+  'monolito': "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_monolito.webm"
 };
 
 export function Preloader() {
   const [progress, setProgress] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
   const [phraseIndex, setPhraseIndex] = useState(0);
-  const { theme, isLowPowerMode } = useStore();
+  const { theme } = useStore();
 
   const videoUrl = THEME_VIDEOS[theme] || THEME_VIDEOS.abissal;
 
@@ -38,24 +38,20 @@ export function Preloader() {
     let active = true;
     const controller = new AbortController();
 
-    // If performance mode is ON, run a super fast 800ms loading experience with no video downloading!
-    const minDuration = isLowPowerMode ? 800 : 2500; 
+    // Setup an off-screen HTML5 video to trigger hardware decoder buffering
+    const videoElement = document.createElement('video');
+    videoElement.preload = "auto";
+    videoElement.muted = true;
+    videoElement.playsInline = true;
+    videoElement.src = videoUrl;
+
+    const minDuration = 2000; // Fast loading duration
     const stepTime = 16;
     const totalSteps = minDuration / stepTime;
     const timeIncrement = 100 / totalSteps;
 
     let timeProgress = 0;
-    let fileProgress = isLowPowerMode ? 100 : 0;
-
-    // Setup an off-screen HTML5 video to trigger hardware decoder buffering if not in low power mode
-    let videoElement: HTMLVideoElement | null = null;
-    if (!isLowPowerMode) {
-      videoElement = document.createElement('video');
-      videoElement.preload = "auto";
-      videoElement.muted = true;
-      videoElement.playsInline = true;
-      videoElement.src = videoUrl;
-    }
+    let fileProgress = 0;
 
     // Background timer
     const intervalTimer = setInterval(() => {
@@ -71,11 +67,9 @@ export function Preloader() {
 
       // Smooth progress calculation
       let displayed = timeProgress;
-      if (!isLowPowerMode && fileProgress < 100) {
+      if (fileProgress < 100) {
         // Limit progress to 95% until active video fetch has successfully warmed the cache
         displayed = Math.min(95, timeProgress * 0.8 + fileProgress * 0.2);
-      } else if (isLowPowerMode) {
-        displayed = timeProgress;
       } else {
         displayed = Math.max(timeProgress, fileProgress);
       }
@@ -92,22 +86,6 @@ export function Preloader() {
     };
 
     const startPreload = async () => {
-      // If low performance mode, set finished store state immediately
-      if (isLowPowerMode) {
-        if (active) {
-          try {
-            const state = useStore.getState();
-            state.setThemeVideoUrls(THEME_VIDEOS); // Fallback to raw supabase URLs
-            if (state.setIsLoadingFinished) {
-              state.setIsLoadingFinished(true);
-            }
-          } catch (e) {}
-          fileProgress = 100;
-          updateOverallProgress();
-        }
-        return;
-      }
-
       const keys = Object.keys(THEME_VIDEOS);
       const localThemeVideoUrls: Record<string, string> = {};
       
@@ -216,7 +194,7 @@ export function Preloader() {
         videoElement.load();
       }
     };
-  }, [videoUrl, isLowPowerMode]);
+  }, [videoUrl]);
 
   return (
     <AnimatePresence>

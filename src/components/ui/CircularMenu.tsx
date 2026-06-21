@@ -16,7 +16,7 @@ const menuItems = [
 export function CircularMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
-  const { isPlayerHidden, setPlayerHidden } = useStore();
+  const { isPlayerHidden, setPlayerHidden, currentTrack } = useStore();
 
   const toggleMenu = () => setIsOpen(!isOpen);
 
@@ -128,7 +128,7 @@ export function CircularMenu() {
 
           {/* Botão de revelar player se oculto (aparece acima do menu) */}
           <AnimatePresence>
-            {isOpen && isPlayerHidden && (
+            {isOpen && isPlayerHidden && currentTrack && (
               <motion.button
                 initial={{ opacity: 0, scale: 0, y: 0 }}
                 animate={{ opacity: 1, scale: 1, y: -75 }}

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, useScroll, useSpring } from 'motion/react';
 import { useStore, Theme } from '@/store/useStore';
-import { Menu, X, Moon, Sun, Droplet, Leaf, Square, DownloadCloud, RefreshCw, CheckCircle, Smartphone, Zap } from 'lucide-react';
+import { Menu, X, Moon, Sun, Droplet, Leaf, Square, DownloadCloud, RefreshCw, CheckCircle, Smartphone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { syncEverythingForOffline, OfflineProgress } from '@/lib/offlineManager';
 
@@ -26,7 +26,7 @@ export function Header() {
   const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
   const [syncProgress, setSyncProgress] = useState<OfflineProgress | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle');
-  const { theme, setTheme, isLowPowerMode, toggleLowPowerMode } = useStore();
+  const { theme, setTheme } = useStore();
   const location = useLocation();
 
   const handleOfflineSync = async () => {
@@ -105,21 +105,6 @@ export function Header() {
                 ) : (
                   <DownloadCloud size={18} />
                 )}
-              </button>
-            </div>
-
-            <div className="relative">
-              <button
-                onClick={toggleLowPowerMode}
-                className={cn(
-                  "p-2 rounded-full transition-all duration-300 flex items-center justify-center",
-                  isLowPowerMode 
-                    ? "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 font-semibold border border-emerald-500/20" 
-                    : "hover:bg-overlay text-text-low hover:text-primary"
-                )}
-                title={isLowPowerMode ? "Modo Desempenho e Bateria: ATIVO (Ultra Leve)" : "Modo Desempenho: DESATIVADO (Ativar para o site rodar super leve)"}
-              >
-                <Zap size={16} className={cn(isLowPowerMode ? "fill-emerald-400 animate-pulse" : "")} />
               </button>
             </div>
 

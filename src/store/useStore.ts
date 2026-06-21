@@ -51,30 +51,7 @@ interface AppState {
   setIsLoadingFinished?: (finished: boolean) => void;
   themeVideoUrls: Record<string, string>;
   setThemeVideoUrls: (urls: Record<string, string>) => void;
-  isLowPowerMode: boolean;
-  setIsLowPowerMode: (isLowPowerMode: boolean) => void;
-  toggleLowPowerMode: () => void;
 }
-
-const isLowEndDevice = (): boolean => {
-  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
-  
-  // 1. Check if device memory is low (less than 4GB)
-  if ('deviceMemory' in navigator && (navigator as any).deviceMemory < 4) return true;
-  
-  // 2. Check if CPU cores are low (less than 4 cores)
-  if ('hardwareConcurrency' in navigator && navigator.hardwareConcurrency < 4) return true;
-  
-  // 3. Check for specific slow connections
-  const conn = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
-  if (conn && (conn.saveData || /2g|3g/.test(conn.effectiveType || ''))) return true;
-  
-  // 4. Check if user agent is extremely old/mobile
-  const ua = navigator.userAgent.toLowerCase();
-  if (/android 2\.|android 4\.|webos|iphone 3|iphone 4|iemobile|opera mini|midp|mobile|pocket/i.test(ua)) return true;
-  
-  return false;
-};
 
 // Função auxiliar: embaralha um array sem modificar o original
 // Usa o algoritmo Fisher-Yates para distribuição uniforme
@@ -101,11 +78,6 @@ export const useStore = create<AppState>()(
 
       themeVideoUrls: {},
       setThemeVideoUrls: (themeVideoUrls) => set({ themeVideoUrls }),
-
-      isLowPowerMode: isLowEndDevice(),
-      setIsLowPowerMode: (isLowPowerMode) => set({ isLowPowerMode }),
-      toggleLowPowerMode: () => set((state) => ({ isLowPowerMode: !state.isLowPowerMode })),
-
       currentTrack: null,
       isPlaying: false,
       queue: [],
@@ -305,7 +277,6 @@ export const useStore = create<AppState>()(
         isShuffle: state.isShuffle,
         repeatMode: state.repeatMode,
         isPlayerHidden: state.isPlayerHidden,
-        isLowPowerMode: state.isLowPowerMode,
       }),
     }
   )
