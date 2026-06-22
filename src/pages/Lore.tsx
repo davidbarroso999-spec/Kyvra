@@ -232,20 +232,7 @@ export function Lore() {
                   {currentChapter.title}
                 </h1>
 
-                {/* Lore Illustration Banner */}
-                {currentChapter.image_url && (
-                  <div 
-                    className="w-full h-8 sm:h-12 md:h-16 shrink-0 rounded-xl overflow-hidden liquid-glass animate-blur-fade-up shadow-[0_20px_40px_rgba(0,0,0,0.5)] mb-6 md:mb-8"
-                    style={{ animationDelay: '450ms' }}
-                  >
-                    <img 
-                      src={currentChapter.image_url} 
-                      alt={currentChapter.title} 
-                      className="w-full h-full object-cover opacity-90 object-[50%_40%]"
-                      loading="lazy"
-                    />
-                  </div>
-                )}
+
 
                 {/* Description */}
                 <p 
