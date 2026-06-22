@@ -178,40 +178,6 @@ export function useHorizontalSlider(
     const delayRecalc = setTimeout(recalcMax, 150);
     window.addEventListener('resize', recalcMax, { passive: true });
 
-    let wheelTimeout: NodeJS.Timeout;
-    let wheelVelocity = 0;
-    
-    const handleWheel = (e: WheelEvent) => {
-      const isOverSlider = wrapper.contains(e.target as Node) || 
-        (wrapper.parentElement && wrapper.parentElement.contains(e.target as Node));
-
-      if (!isOverSlider) return;
-
-      let delta = e.deltaX;
-      // Convert vertical scroll to horizontal scroll when hovering the slider (very helpful for traditional scroll wheels)
-      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-        delta = e.deltaY;
-      }
-
-      if (!delta) return;
-
-      isDraggingRef.current = true;
-      clearTimeout(wheelTimeout);
-      
-      wheelVelocity = delta;
-
-      targetRef.current += delta;
-      targetRef.current = Math.max(0, targetRef.current);
-      targetRef.current = Math.min(maxScrollRef.current, targetRef.current);
-      startAnimation();
-      
-      wheelTimeout = setTimeout(() => {
-        isDraggingRef.current = false;
-        forceSnap(wheelVelocity > 0 ? 5 : (wheelVelocity < 0 ? -5 : 0));
-        startAnimation();
-      }, 100);
-    };
-
     let touchStartX = 0;
     let touchStartY = 0;
     let touchStartTarget = 0;
@@ -272,7 +238,6 @@ export function useHorizontalSlider(
 
     const container = wrapper.parentElement || wrapper;
 
-    container.addEventListener('wheel', handleWheel, { passive: true });
     container.addEventListener('touchstart', handleTouchStart, { passive: true });
     container.addEventListener('touchmove', handleTouchMove, { passive: false });
     container.addEventListener('touchend', handleTouchEnd, { passive: true });
@@ -284,7 +249,6 @@ export function useHorizontalSlider(
       resizeObserver.disconnect();
       cancelAnimationFrame(rafRef.current);
       window.removeEventListener('resize', recalcMax);
-      container.removeEventListener('wheel', handleWheel);
       container.removeEventListener('touchstart', handleTouchStart);
       container.removeEventListener('touchmove', handleTouchMove);
       container.removeEventListener('touchend', handleTouchEnd);
