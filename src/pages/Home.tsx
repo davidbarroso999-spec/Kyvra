@@ -427,6 +427,9 @@ export function Home() {
           </div>
         </div>
 
+        {/* Gradiente na parede de baixo do vídeo para continuidade fluida das seções */}
+        <div className="absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-[#080814] via-[#080814]/60 to-transparent z-30 pointer-events-none" />
+
       </section>
 
       {/* Featured Musics section */}

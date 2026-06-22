@@ -247,6 +247,11 @@ export function useHorizontalSlider(
         isFirstMove = false;
       }
 
+      // Prevent standard vertical scrolling when horizontal swipe is detected
+      if (e.cancelable) {
+        e.preventDefault();
+      }
+
       touchVelocity = lastTouchX - currentX;
       lastTouchX = currentX;
 
@@ -265,10 +270,12 @@ export function useHorizontalSlider(
       startAnimation();
     };
 
-    window.addEventListener('wheel', handleWheel, { passive: true });
-    window.addEventListener('touchstart', handleTouchStart, { passive: true });
-    window.addEventListener('touchmove', handleTouchMove, { passive: true });
-    window.addEventListener('touchend', handleTouchEnd, { passive: true });
+    const container = wrapper.parentElement || wrapper;
+
+    container.addEventListener('wheel', handleWheel, { passive: true });
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchmove', handleTouchMove, { passive: false });
+    container.addEventListener('touchend', handleTouchEnd, { passive: true });
 
     startAnimation();
 
@@ -277,10 +284,10 @@ export function useHorizontalSlider(
       resizeObserver.disconnect();
       cancelAnimationFrame(rafRef.current);
       window.removeEventListener('resize', recalcMax);
-      window.removeEventListener('wheel', handleWheel);
-      window.removeEventListener('touchstart', handleTouchStart);
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', handleTouchEnd);
+      container.removeEventListener('wheel', handleWheel);
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
     };
   }, [startAnimation, wrapperRef, calculateSnapPoints, forceSnap]);
 

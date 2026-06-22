@@ -1,9 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Cormorant+Garamond:wght@300;400;500;600;700&family=Cormorant+SC:wght@300;400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Cormorant+Garamond:wght@300;400;500;600;700&family=Cormorant+SC:wght@300;400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-display: "Cinzel", serif;
   --font-sans: "DM Sans", sans-serif;
+  --font-inter: "Inter", sans-serif;
   --font-cormorant: "Cormorant Garamond", serif;
   --font-cormorant-sc: "Cormorant SC", serif;
   --font-sc: "Cinzel", serif;
@@ -265,6 +266,40 @@
     animation: gradientMove 8s ease infinite;
   }
 
+  .liquid-glass {
+    background: rgba(255, 255, 255, 0.01);
+    background-blend-mode: luminosity;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: none;
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .liquid-glass::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.4px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.15) 20%, rgba(255,255,255,0) 40%, rgba(255,255,255,0) 60%, rgba(255,255,255,0.15) 80%, rgba(255,255,255,0.45) 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .animate-blur-fade-up {
+    animation: blurFadeUp 1s ease-out forwards;
+    opacity: 0;
+  }
+
+  .mask-linear-top {
+    mask-image: linear-gradient(to top, black 0%, transparent 45%);
+    -webkit-mask-image: linear-gradient(to top, black 0%, transparent 45%);
+  }
+
   .mask-fade-bottom {
     mask-image: linear-gradient(to bottom, black 0%, black 70%, transparent 100%);
   }
@@ -325,6 +360,11 @@
   .animate-spin-reverse-slow {
     animation: spin-reverse 45s linear infinite;
   }
+}
+
+@keyframes blurFadeUp {
+  0% { opacity: 0; filter: blur(20px); transform: translateY(40px); }
+  100% { opacity: 1; filter: blur(0); transform: translateY(0); }
 }
 
 @keyframes shimmer {
