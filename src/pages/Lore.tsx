@@ -289,7 +289,7 @@ export function Lore() {
                   className="flex-1 text-center text-xs sm:text-sm text-white/50 font-light px-4 animate-blur-fade-up truncate whitespace-nowrap overflow-hidden self-center py-2 md:py-0"
                   style={{ animationDelay: '700ms' }}
                 >
-                  A história de como o universo de KYVRA nasceu.
+                  Seu portal para a história de como o universo de KYVRA nasceu.
                 </div>
 
                 {/* Right Side (Arrows) */}
