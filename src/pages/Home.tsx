@@ -6,6 +6,8 @@ import { FeaturedSlider } from '@/components/ui/FeaturedSlider';
 import { LampContainer } from '@/components/ui/lamp';
 import { cn } from '@/lib/utils';
 
+import { FeaturedFragmentSection } from '@/components/ui/FeaturedFragmentSection';
+
 const THEME_VIDEOS: Record<string, string> = {
   abissal: "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_abissal.webm",
   'sangue-de-drago': "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_sanguededrago.webm",
@@ -361,18 +363,8 @@ export function Home() {
           </div>
 
           {/* Bottom brand layout footer container */}
-          <div className="relative z-35 px-8 md:px-16 xl:px-24 pb-8 flex justify-between items-center w-full">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.5 }}
-              transition={{ delay: 0.8 }}
-              className="text-[10px] font-mono text-white/30 tracking-widest uppercase"
-            >
-              // REVELAÇÃO EXCLUSIVA
-            </motion.div>
-            <div className="text-[10px] font-mono text-white/20 tracking-wider">
-              ESTÉTICA PREMIUM V3.0
-            </div>
+          <div className="relative z-35 px-8 md:px-16 xl:px-24 pb-8 flex w-full">
+            <div className="flex-1" />
           </div>
         </div>
 
@@ -446,6 +438,9 @@ export function Home() {
           </div>
         </section>
       )}
+
+      {/* Featured Fragment Section */}
+      <FeaturedFragmentSection className="bg-void border-t border-white/5" />
     </div>
   );
 }

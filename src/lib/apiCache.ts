@@ -113,3 +113,44 @@ export async function getTrackSynopses(trackIds: string[], force = false) {
     .select('title, content')
     .in('title', synopsisTitles), force);
 }
+
+export async function getFeaturedFragmentData() {
+  try {
+    // Instead of using a predefined config or most recent track, 
+    // pick a random track that changes every 10 days.
+
+    const { data: allTracks } = await supabase
+      .from('tracks')
+      .select('*, albums(*)')
+      .order('id', { ascending: true }); // keep stable order
+
+    if (allTracks && allTracks.length > 0) {
+      // Calculate a consistently changing index every 10 days
+      const daysSinceEpoch = Math.floor(Date.now() / 86400000);
+      const cycle10Days = Math.floor(daysSinceEpoch / 10);
+      
+      // Simple pseudo-random using cycle10Days as a seed
+      // For more randomization we can multiply with a prime
+      const randomIndex = (cycle10Days * 17 + 13) % allTracks.length;
+      const track = allTracks[randomIndex];
+
+      return {
+        id: String(track.id),
+        title: track.title,
+        artist: track.artist || 'Kyvra',
+        vibe: track.vibe || 'Intuitivo',
+        duration: track.duration || '0:00',
+        coverUrl: track.albums?.cover_url || '',
+        audioUrl: track.audio_url,
+        narrativeNote: 'Esta é a recomendação periódica do abismo, um fragmento selecionado por forças além da nossa compreensão. A cada ciclo de 10 dias, os ventos cósmicos trazem uma nova vibração à tona.',
+        loreConnection: 'Essa recomendação abre portas para reinterpretar os símbolos perdidos da cosmogonia de Kyvra.',
+      };
+    }
+
+    return null;
+  } catch (err) {
+    console.error('Error fetching featured fragment:', err);
+    return null;
+  }
+}
+

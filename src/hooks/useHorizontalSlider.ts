@@ -163,24 +163,41 @@ export function useHorizontalSlider(
 
     // calcula o scroll máximo
     const recalcMax = () => {
-      maxScrollRef.current = wrapper.scrollWidth - window.innerWidth;
+      maxScrollRef.current = Math.max(0, wrapper.scrollWidth - window.innerWidth);
       calculateSnapPoints();
       startAnimation();
     };
 
-    const delayRecalc = setTimeout(recalcMax, 100);
+    // Use ResizeObserver to detect when items are loaded inside the wrapper
+    const resizeObserver = new ResizeObserver(() => {
+      recalcMax();
+    });
+    resizeObserver.observe(wrapper);
+
+    // Also observe the children/slides if they change
+    const delayRecalc = setTimeout(recalcMax, 150);
     window.addEventListener('resize', recalcMax, { passive: true });
 
     let wheelTimeout: NodeJS.Timeout;
     let wheelVelocity = 0;
     
     const handleWheel = (e: WheelEvent) => {
-      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) return;
+      const isOverSlider = wrapper.contains(e.target as Node) || 
+        (wrapper.parentElement && wrapper.parentElement.contains(e.target as Node));
+
+      if (!isOverSlider) return;
+
+      let delta = e.deltaX;
+      // Convert vertical scroll to horizontal scroll when hovering the slider (very helpful for traditional scroll wheels)
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        delta = e.deltaY;
+      }
+
+      if (!delta) return;
 
       isDraggingRef.current = true;
       clearTimeout(wheelTimeout);
       
-      const delta = e.deltaX;
       wheelVelocity = delta;
 
       targetRef.current += delta;
@@ -257,6 +274,7 @@ export function useHorizontalSlider(
 
     return () => {
       clearTimeout(delayRecalc);
+      resizeObserver.disconnect();
       cancelAnimationFrame(rafRef.current);
       window.removeEventListener('resize', recalcMax);
       window.removeEventListener('wheel', handleWheel);
