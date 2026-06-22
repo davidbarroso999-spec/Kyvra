@@ -197,7 +197,7 @@ export function Lore() {
       <div className="fixed inset-0 z-[1] backdrop-blur-xl mask-linear-top pointer-events-none" />
 
       {/* NAVBAR (z-index 40) */}
-      <nav className="relative z-40 flex items-center justify-center px-4 sm:px-6 md:px-12 py-4 md:py-6 pointer-events-none">
+      <nav className="relative z-40 md:flex hidden items-center justify-center px-4 sm:px-6 md:px-12 py-4 md:py-6 pointer-events-none">
         {/* Logo */}
         <Link 
           to="/" 

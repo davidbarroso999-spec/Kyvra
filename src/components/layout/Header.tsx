@@ -84,8 +84,24 @@ export function Header() {
         )}
       >
         <div className="max-w-7xl mx-auto px-4 md:px-6 flex items-center justify-between mt-[2px]">
-          <Link to="/" className="font-display text-xl md:text-2xl tracking-[0.1em] text-text-high z-50 relative pointer-events-auto">
-            KYVRA
+          <Link to="/" className="font-display flex flex-col items-start z-50 relative pointer-events-auto leading-none">
+            <span className="text-xl md:text-2xl tracking-[0.1em] text-text-high font-semibold">
+              KYVRA
+            </span>
+            {location.pathname === '/cosmogonia' && (
+              <div className="flex justify-between w-full text-[7.5px] font-semibold text-primary uppercase mt-1 md:hidden leading-none select-none">
+                <span>C</span>
+                <span>O</span>
+                <span>S</span>
+                <span>M</span>
+                <span>O</span>
+                <span>G</span>
+                <span>O</span>
+                <span>N</span>
+                <span>I</span>
+                <span>A</span>
+              </div>
+            )}
           </Link>
 
           {/* Actions */}
