@@ -79,17 +79,17 @@ export function Header() {
     <>
       <header
         className={cn(
-          'fixed top-0 left-0 w-full z-50 transition-all duration-500',
+          'fixed top-0 left-0 w-full z-50 transition-all duration-500 pointer-events-none',
           isScrolled ? 'py-3 glass-premium m-4 w-[calc(100%-2rem)] r-md' : 'py-6 bg-transparent'
         )}
       >
         <div className="max-w-7xl mx-auto px-4 md:px-6 flex items-center justify-between mt-[2px]">
-          <Link to="/" className="font-display text-xl md:text-2xl tracking-[0.1em] text-text-high z-50 relative">
+          <Link to="/" className="font-display text-xl md:text-2xl tracking-[0.1em] text-text-high z-50 relative pointer-events-auto">
             KYVRA
           </Link>
 
           {/* Actions */}
-          <div className="flex items-center gap-4 z-50 relative">
+          <div className="flex items-center gap-4 z-50 relative pointer-events-auto">
             {/* Sync Offline Button */}
             <div className="relative flex items-center">
               <button
