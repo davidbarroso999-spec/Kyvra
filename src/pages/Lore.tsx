@@ -8,7 +8,8 @@ import {
   ChevronLeft, 
   ChevronRight,
   X,
-  FileText
+  FileText,
+  Check
  } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
@@ -28,6 +29,28 @@ export function Lore() {
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const [activeVideoTheme, setActiveVideoTheme] = useState(theme);
   const fallbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [readChapters, setReadChapters] = useState<string[]>([]);
+
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem('kyvra-lore-read-chapters');
+      if (cached) {
+        setReadChapters(JSON.parse(cached));
+      }
+    } catch (e) {
+      console.error("Failed to load read chapters", e);
+    }
+  }, []);
+
+  const toggleChapterRead = (chapterId: string) => {
+    setReadChapters((prev) => {
+      const updated = prev.includes(chapterId)
+        ? prev.filter((id) => id !== chapterId)
+        : [...prev, chapterId];
+      localStorage.setItem('kyvra-lore-read-chapters', JSON.stringify(updated));
+      return updated;
+    });
+  };
 
   useEffect(() => {
     async function fetchLore() {
@@ -222,6 +245,12 @@ export function Lore() {
                     <Calendar size={16} />
                     <span>{currentChapter.timeline_date || 'Data Desconhecida'}</span>
                   </div>
+                  {readChapters.includes(String(currentChapter.id || currentChapter.title)) && (
+                    <div className="flex items-center gap-1.5 text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full text-xs">
+                      <Check size={12} className="stroke-[3px]" />
+                      <span>Lido</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Title */}
@@ -246,7 +275,7 @@ export function Lore() {
                 <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                   <button 
                     onClick={() => setReadingModalOpen(true)}
-                    className="bg-white text-black rounded-full font-medium px-6 sm:px-8 py-2.5 sm:py-3 flex items-center gap-2 hover:bg-gray-200 transition-colors animate-blur-fade-up shadow-lg"
+                    className="bg-white text-black rounded-full font-medium px-6 sm:px-8 py-2.5 sm:py-3 flex items-center gap-2 hover:bg-gray-200 transition-colors animate-blur-fade-up shadow-lg pointer-events-auto"
                     style={{ animationDelay: '600ms' }}
                   >
                     <FileText size={18} fill="currentColor" />
@@ -255,8 +284,17 @@ export function Lore() {
                 </div>
               </div>
 
+              {/* Brief explanation about KYVRA cosmogonia (between buttons and arrows) */}
+              <div 
+                className="text-xs sm:text-sm text-white/50 font-light max-w-sm border-l border-white/15 pl-4 py-0.5 animate-blur-fade-up shrink-0 md:mb-2 align-bottom self-start md:self-end"
+                style={{ animationDelay: '700ms' }}
+              >
+                <span className="font-medium text-white/85 block mb-0.5 font-sc tracking-wider uppercase text-[10px]">Cosmogonia de KYVRA</span>
+                A gênese mitológica que detalha as forças divinas e relíquias misteriosas na origem deste cosmo.
+              </div>
+
               {/* Right Side (Arrows) */}
-              <div className="flex items-center gap-3 justify-start md:justify-end w-full md:w-auto">
+              <div className="flex items-center gap-3 justify-start md:justify-end w-full md:w-auto pointer-events-auto">
                 <button 
                   onClick={handlePrev}
                   className="w-12 h-12 sm:w-auto sm:px-6 sm:py-3 flex items-center justify-center rounded-full liquid-glass hover:bg-white/10 transition-colors animate-blur-fade-up"
@@ -289,10 +327,11 @@ export function Lore() {
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className="fixed inset-0 z-[100] bg-black/98 backdrop-blur-3xl overflow-y-auto"
           >
-            <div className="absolute top-6 right-6 z-10">
+            {/* Fixed Close Button */}
+            <div className="fixed top-6 right-6 z-[110] pointer-events-auto">
               <button 
                 onClick={() => setReadingModalOpen(false)}
-                className="w-12 h-12 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white"
+                className="w-12 h-12 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-all duration-300 text-white shadow-lg backdrop-blur-md cursor-pointer"
               >
                 <X size={24} />
               </button>
@@ -304,12 +343,29 @@ export function Lore() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
               >
-                <span className="text-primary font-sc text-sm tracking-[0.3em] uppercase block mb-4">
-                  Capítulo {currentChapter.chapter_number || currentIndex + 1}
-                </span>
-                <h2 className="text-4xl md:text-6xl font-display font-medium text-white mb-16 leading-tight">
-                  {currentChapter.title}
-                </h2>
+                {/* Header with Title and "Mark as Read" Toggle Option */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-16 border-b border-white/10 pb-8">
+                  <div className="flex flex-col">
+                    <span className="text-primary font-sc text-sm tracking-[0.3em] uppercase block mb-2">
+                      Capítulo {currentChapter.chapter_number || currentIndex + 1}
+                    </span>
+                    <h2 className="text-4xl md:text-5xl lg:text-6xl font-display font-medium text-white leading-tight">
+                      {currentChapter.title}
+                    </h2>
+                  </div>
+                  <button
+                    onClick={() => toggleChapterRead(String(currentChapter.id || currentChapter.title))}
+                    className={cn(
+                      "shrink-0 flex items-center gap-2 px-6 py-3 rounded-full border text-sm font-medium transition-all duration-300 pointer-events-auto cursor-pointer self-start sm:self-center",
+                      readChapters.includes(String(currentChapter.id || currentChapter.title))
+                        ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.15)] hover:bg-emerald-500/20"
+                        : "bg-white/5 border-white/10 text-white/70 hover:bg-white/10 hover:border-white/20 hover:text-white"
+                    )}
+                  >
+                    <Check size={16} className={cn("transition-transform duration-300 stroke-[2.5px]", readChapters.includes(String(currentChapter.id || currentChapter.title)) ? "scale-110 text-emerald-400" : "scale-90 text-white/40")} />
+                    <span>{readChapters.includes(String(currentChapter.id || currentChapter.title)) ? 'Lido ✓' : 'Marcar como Lido'}</span>
+                  </button>
+                </div>
                 
                 {currentChapter.image_url && (
                   <img 
