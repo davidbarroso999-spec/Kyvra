@@ -228,7 +228,7 @@ export function Lore() {
               animate={{ opacity: 1, filter: 'blur(0)', y: 0 }}
               exit={{ opacity: 0, filter: 'blur(10px)', y: -20 }}
               transition={{ duration: 0.6, ease: "easeOut" }}
-              className="flex flex-col md:flex-row items-end gap-8"
+              className="flex flex-col w-full"
             >
               {/* Left Side */}
               <div className="flex-1 flex flex-col max-w-6xl">
@@ -261,8 +261,6 @@ export function Lore() {
                   {currentChapter.title}
                 </h1>
 
-
-
                 {/* Description */}
                 <p 
                   className="text-base sm:text-lg md:text-xl text-gray-300 font-light mb-6 md:mb-12 max-w-2xl animate-blur-fade-up line-clamp-3 leading-relaxed"
@@ -270,9 +268,12 @@ export function Lore() {
                 >
                   {currentChapter.content}
                 </p>
+              </div>
 
+              {/* Bottom Row Wrapper: explorador | explicação em uma linha | setas */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 w-full pt-6 border-t border-white/10 pointer-events-auto">
                 {/* CTA Buttons */}
-                <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                <div className="flex items-center gap-3 sm:gap-4 shrink-0">
                   <button 
                     onClick={() => setReadingModalOpen(true)}
                     className="bg-white text-black rounded-full font-medium px-6 sm:px-8 py-2.5 sm:py-3 flex items-center gap-2 hover:bg-gray-200 transition-colors animate-blur-fade-up shadow-lg pointer-events-auto"
@@ -282,35 +283,34 @@ export function Lore() {
                     Explorar Capítulo
                   </button>
                 </div>
-              </div>
 
-              {/* Brief explanation about KYVRA cosmogonia (between buttons and arrows) */}
-              <div 
-                className="text-xs sm:text-sm text-white/50 font-light max-w-sm border-l border-white/15 pl-4 py-0.5 animate-blur-fade-up shrink-0 md:mb-2 align-bottom self-start md:self-end"
-                style={{ animationDelay: '700ms' }}
-              >
-                <span className="font-medium text-white/85 block mb-0.5 font-sc tracking-wider uppercase text-[10px]">Cosmogonia de KYVRA</span>
-                A gênese mitológica que detalha as forças divinas e relíquias misteriosas na origem deste cosmo.
-              </div>
+                {/* Brief explanation occupying space between button and arrows in a single line */}
+                <div 
+                  className="flex-1 text-center text-xs sm:text-sm text-white/50 font-light px-4 animate-blur-fade-up truncate whitespace-nowrap overflow-hidden self-center py-2 md:py-0"
+                  style={{ animationDelay: '700ms' }}
+                >
+                  Explore as setas ao lado para navegar pela cronologia mitológica de KYVRA.
+                </div>
 
-              {/* Right Side (Arrows) */}
-              <div className="flex items-center gap-3 justify-start md:justify-end w-full md:w-auto pointer-events-auto">
-                <button 
-                  onClick={handlePrev}
-                  className="w-12 h-12 sm:w-auto sm:px-6 sm:py-3 flex items-center justify-center rounded-full liquid-glass hover:bg-white/10 transition-colors animate-blur-fade-up"
-                  style={{ animationDelay: '800ms' }}
-                  aria-label="Capítulo Anterior"
-                >
-                  <ChevronLeft size={20} />
-                </button>
-                <button 
-                  onClick={handleNext}
-                  className="w-12 h-12 sm:w-auto sm:px-6 sm:py-3 flex items-center justify-center rounded-full liquid-glass hover:bg-white/10 transition-colors animate-blur-fade-up"
-                  style={{ animationDelay: '900ms' }}
-                  aria-label="Próximo Capítulo"
-                >
-                  <ChevronRight size={20} />
-                </button>
+                {/* Right Side (Arrows) */}
+                <div className="flex items-center gap-3 justify-between md:justify-end shrink-0 pointer-events-auto">
+                  <button 
+                    onClick={handlePrev}
+                    className="w-12 h-12 sm:w-auto sm:px-6 sm:py-3 flex items-center justify-center rounded-full liquid-glass hover:bg-white/10 transition-colors animate-blur-fade-up"
+                    style={{ animationDelay: '800ms' }}
+                    aria-label="Capítulo Anterior"
+                  >
+                    <ChevronLeft size={20} />
+                  </button>
+                  <button 
+                    onClick={handleNext}
+                    className="w-12 h-12 sm:w-auto sm:px-6 sm:py-3 flex items-center justify-center rounded-full liquid-glass hover:bg-white/10 transition-colors animate-blur-fade-up"
+                    style={{ animationDelay: '900ms' }}
+                    aria-label="Próximo Capítulo"
+                  >
+                    <ChevronRight size={20} />
+                  </button>
+                </div>
               </div>
             </motion.div>
           )}
