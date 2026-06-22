@@ -289,7 +289,7 @@ export function Lore() {
                   className="flex-1 text-center text-xs sm:text-sm text-white/50 font-light px-4 animate-blur-fade-up truncate whitespace-nowrap overflow-hidden self-center py-2 md:py-0"
                   style={{ animationDelay: '700ms' }}
                 >
-                  Explore as setas ao lado para navegar pela cronologia mitológica de KYVRA.
+                  A história de como o universo de KYVRA nasceu.
                 </div>
 
                 {/* Right Side (Arrows) */}
@@ -343,8 +343,8 @@ export function Lore() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
               >
-                {/* Header with Title and "Mark as Read" Toggle Option */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-16 border-b border-white/10 pb-8">
+                {/* Header with Title */}
+                <div className="flex flex-col gap-6 mb-16 border-b border-white/10 pb-8">
                   <div className="flex flex-col">
                     <span className="text-primary font-sc text-sm tracking-[0.3em] uppercase block mb-2">
                       Capítulo {currentChapter.chapter_number || currentIndex + 1}
@@ -353,18 +353,6 @@ export function Lore() {
                       {currentChapter.title}
                     </h2>
                   </div>
-                  <button
-                    onClick={() => toggleChapterRead(String(currentChapter.id || currentChapter.title))}
-                    className={cn(
-                      "shrink-0 flex items-center gap-2 px-6 py-3 rounded-full border text-sm font-medium transition-all duration-300 pointer-events-auto cursor-pointer self-start sm:self-center",
-                      readChapters.includes(String(currentChapter.id || currentChapter.title))
-                        ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.15)] hover:bg-emerald-500/20"
-                        : "bg-white/5 border-white/10 text-white/70 hover:bg-white/10 hover:border-white/20 hover:text-white"
-                    )}
-                  >
-                    <Check size={16} className={cn("transition-transform duration-300 stroke-[2.5px]", readChapters.includes(String(currentChapter.id || currentChapter.title)) ? "scale-110 text-emerald-400" : "scale-90 text-white/40")} />
-                    <span>{readChapters.includes(String(currentChapter.id || currentChapter.title)) ? 'Lido ✓' : 'Marcar como Lido'}</span>
-                  </button>
                 </div>
                 
                 {currentChapter.image_url && (
@@ -375,10 +363,29 @@ export function Lore() {
                   />
                 )}
 
-                <div className="space-y-8 text-lg md:text-xl text-gray-300 font-light leading-relaxed">
+                <div className="space-y-8 text-lg md:text-xl text-gray-300 font-light leading-relaxed mb-20">
                   {currentChapter.content?.split('\n\n').map((para: string, idx: number) => (
                     <p key={idx}>{para}</p>
                   ))}
+                </div>
+
+                {/* Mark as Read Toggle Option at the bottom */}
+                <div className="flex flex-col items-center justify-center pt-12 border-t border-white/10 gap-4">
+                  <p className="text-sm text-white/40 font-light">
+                    Concluiu a leitura deste capítulo?
+                  </p>
+                  <button
+                    onClick={() => toggleChapterRead(String(currentChapter.id || currentChapter.title))}
+                    className={cn(
+                      "flex items-center gap-2 px-8 py-4 rounded-full border text-base font-medium transition-all duration-300 pointer-events-auto cursor-pointer shadow-lg",
+                      readChapters.includes(String(currentChapter.id || currentChapter.title))
+                        ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:bg-emerald-500/20"
+                        : "bg-white/5 border-white/10 text-white/80 hover:bg-white/10 hover:border-white/20 hover:text-white"
+                    )}
+                  >
+                    <Check size={18} className={cn("transition-transform duration-300 stroke-[2.5px]", readChapters.includes(String(currentChapter.id || currentChapter.title)) ? "scale-110 text-emerald-400" : "scale-90 text-white/40")} />
+                    <span>{readChapters.includes(String(currentChapter.id || currentChapter.title)) ? 'Lido ✓' : 'Marcar como Lido'}</span>
+                  </button>
                 </div>
               </motion.div>
             </div>
