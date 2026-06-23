@@ -89,7 +89,7 @@ export function Header() {
               KYVRA
             </span>
             {location.pathname === '/cosmogonia' && (
-              <div className="flex justify-between w-full text-[7.5px] font-semibold text-primary uppercase mt-1 md:hidden leading-none select-none">
+              <div className="flex justify-between w-full text-[7.5px] md:text-[9.5px] font-semibold text-primary uppercase mt-1 leading-none select-none tracking-[0.05em]">
                 <span>C</span>
                 <span>O</span>
                 <span>S</span>

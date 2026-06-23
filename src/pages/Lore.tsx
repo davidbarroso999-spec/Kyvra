@@ -109,13 +109,8 @@ export function Lore() {
     };
 
     if (theme !== activeVideoTheme) {
-      const activeSrc = LORE_THEME_VIDEOS[theme] || LORE_THEME_VIDEOS['abissal'];
-      
       if (activeVideo) {
         activeVideo.preload = "auto";
-        if (!activeVideo.src || !activeVideo.src.includes(activeSrc)) {
-          activeVideo.src = activeSrc;
-        }
         playVideo(activeVideo);
       }
 
@@ -277,10 +272,6 @@ export function Lore() {
                   setPlayingVideos(prev => ({ ...prev, [tName]: true }));
                 }
               }}
-              onWaiting={() => setPlayingVideos(prev => ({ ...prev, [tName]: false }))}
-              onPause={() => setPlayingVideos(prev => ({ ...prev, [tName]: false }))}
-              onError={() => setPlayingVideos(prev => ({ ...prev, [tName]: false }))}
-              onStalled={() => setPlayingVideos(prev => ({ ...prev, [tName]: false }))}
               className={cn(
                 "absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out bg-transparent",
                 (activeVideoTheme === tName && playingVideos[tName]) ? "opacity-90 z-10" : "opacity-0 z-0 pointer-events-none"
@@ -296,18 +287,6 @@ export function Lore() {
 
       {/* Bottom Blur Overlay (z-index 1) */}
       <div className="fixed inset-0 z-[1] backdrop-blur-xl mask-linear-top pointer-events-none" />
-
-      {/* NAVBAR (z-index 40) */}
-      <nav className="relative z-40 md:flex hidden items-center justify-center px-4 sm:px-6 md:px-12 py-4 md:py-6 pointer-events-none">
-        {/* Logo */}
-        <Link 
-          to="/" 
-          className="text-2xl font-display font-semibold tracking-wider text-white animate-blur-fade-up pointer-events-auto" 
-          style={{ animationDelay: '0ms' }}
-        >
-          COSMOGONIA
-        </Link>
-      </nav>
 
       {/* HERO CONTENT (z-index 10) */}
       <div className="flex-1 flex flex-col justify-end px-4 sm:px-6 md:px-12 pb-8 md:pb-16 z-10 relative">

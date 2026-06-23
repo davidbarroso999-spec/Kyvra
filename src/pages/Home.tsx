@@ -161,8 +161,6 @@ export function Home() {
 
     // If the chosen theme is not the visually active video theme, start caching/playing it in background
     if (theme !== activeVideoTheme) {
-      const activeSrc = videoSrcs[theme];
-      
       try {
         const startMark = `kyvra-change-start-${theme}`;
         performance.mark(startMark);
@@ -171,10 +169,6 @@ export function Home() {
 
       if (activeVideo) {
         activeVideo.preload = "auto";
-        // Only load if the source is different or not initialized to prevent reset stuttering
-        if (!activeVideo.src || !activeVideo.src.includes(activeSrc)) {
-          activeVideo.src = activeSrc;
-        }
         playVideo(activeVideo);
       }
 
@@ -394,10 +388,6 @@ export function Home() {
                     setPlayingVideos(prev => ({ ...prev, [tName]: true }));
                   }
                 }}
-                onWaiting={() => setPlayingVideos(prev => ({ ...prev, [tName]: false }))}
-                onPause={() => setPlayingVideos(prev => ({ ...prev, [tName]: false }))}
-                onError={() => setPlayingVideos(prev => ({ ...prev, [tName]: false }))}
-                onStalled={() => setPlayingVideos(prev => ({ ...prev, [tName]: false }))}
                 className={cn(
                   "absolute inset-0 w-full h-full object-cover object-[80%_center] md:object-center transition-opacity duration-1000 ease-in-out bg-transparent",
                   (activeVideoTheme === tName && playingVideos[tName]) ? "opacity-[0.78] md:opacity-[0.82] z-10" : "opacity-0 z-0 pointer-events-none"
