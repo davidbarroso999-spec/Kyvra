@@ -604,7 +604,7 @@ export function MiniPlayer() {
             <div className="absolute inset-0 z-[1] bg-void/60 pointer-events-none" />
             
             {/* Header */}
-            <div className="relative z-10 flex items-center justify-between p-6 pt-12 md:p-8 md:pt-12 shrink-0">
+            <div className="relative z-10 flex items-center justify-between p-6 pt-12 md:py-6 md:px-8 shrink-0">
               <Button
                 variant="ghost"
                 size="icon"
@@ -625,15 +625,15 @@ export function MiniPlayer() {
             </div>
 
             {/* Main Content */}
-            <div className="relative z-10 flex-1 flex flex-col md:flex-row items-center justify-center p-6 md:p-8 lg:p-12 gap-8 md:gap-12 lg:gap-16 xl:gap-20 overflow-y-auto md:overflow-hidden">
+            <div className="relative z-10 flex-1 flex flex-col md:flex-row items-center justify-center p-6 md:px-12 md:py-4 gap-8 md:gap-12 lg:gap-16 xl:gap-20 overflow-y-auto md:overflow-hidden">
               {/* Cover Art */}
               <motion.div 
                 layoutId={`cover-${currentTrack.id}`}
                 className={cn(
                   "w-full aspect-square rounded-xl overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,0.5)] shrink-0 transition-all duration-500",
                   showLyrics 
-                    ? "max-w-[260px] sm:max-w-[280px] md:max-w-[320px] lg:max-w-[360px] xl:max-w-[400px] opacity-40 md:opacity-100" 
-                    : "max-w-[300px] sm:max-w-[320px] md:max-w-[400px] lg:max-w-[450px] xl:max-w-[500px]"
+                    ? "max-w-[240px] sm:max-w-[260px] md:max-w-[280px] lg:max-w-[320px] xl:max-w-[380px] md:h-[28vh] lg:h-[34vh] xl:h-[40vh] opacity-40 md:opacity-100" 
+                    : "max-w-[280px] sm:max-w-[300px] md:max-w-[360px] lg:max-w-[420px] xl:max-w-[480px] md:h-[38vh] lg:h-[44vh] xl:h-[50vh]"
                 )}
               >
                 <img
@@ -641,7 +641,7 @@ export function MiniPlayer() {
                   alt={currentTrack.title}
                   loading="lazy"
                   decoding="async"
-                  className="w-full h-full object-contain bg-black/20"
+                  className="w-full h-full object-cover bg-black/20"
                   referrerPolicy="no-referrer"
                 />
               </motion.div>
@@ -654,7 +654,7 @@ export function MiniPlayer() {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 20, position: "absolute" }}
                     className={cn(
-                      "w-full md:w-[450px] lg:w-[500px] xl:w-[600px] h-[50dvh] md:h-[350px] lg:h-[420px] xl:h-[500px] md:max-h-[50vh] lg:max-h-[55vh] xl:max-h-[60vh] overflow-y-auto py-4 px-3 custom-scrollbar",
+                      "w-full md:w-[450px] lg:w-[500px] xl:w-[600px] h-[45dvh] md:h-[35vh] lg:h-[42vh] xl:h-[50vh] md:max-h-[50vh] lg:max-h-[55vh] xl:max-h-[60vh] overflow-y-auto py-4 px-3 custom-scrollbar",
                       "absolute md:relative inset-x-6 md:inset-auto z-20 md:z-auto bg-void/80 md:bg-transparent backdrop-blur-xl md:backdrop-blur-none p-6 md:p-0 rounded-2xl md:rounded-none"
                     )}
                   >
@@ -688,7 +688,7 @@ export function MiniPlayer() {
             </div>
 
             {/* Controls */}
-            <div className="relative z-10 w-full max-w-3xl mx-auto p-6 md:p-12 pb-12 shrink-0 flex flex-col gap-6">
+            <div className="relative z-10 w-full max-w-3xl mx-auto p-6 md:py-4 md:px-12 pb-8 shrink-0 flex flex-col gap-4">
               
               <div className="flex items-center justify-between w-full">
                 <div className="flex flex-col">
@@ -721,7 +721,7 @@ export function MiniPlayer() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between max-w-[400px] w-full mx-auto mt-4">
+              <div className="flex items-center justify-between max-w-[400px] w-full mx-auto mt-2 md:mt-1">
                 <Button
                   variant="ghost"
                   size="icon"

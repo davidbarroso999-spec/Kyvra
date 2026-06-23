@@ -11,7 +11,7 @@ import { FeaturedFragmentSection } from '@/components/ui/FeaturedFragmentSection
 const THEME_VIDEOS: Record<string, string> = {
   abissal: "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_abissal.webm",
   'sangue-de-drago': "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_sanguededrago.webm",
-  'floresta-negra': "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_floresta.webm",
+  'floresta-negra': "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_florestanegra.webm",
   'monolito': "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_monolito.webm"
 };
 
@@ -78,11 +78,29 @@ export function Home() {
   const theme = useStore((state) => state.theme);
   const [featuredTracks, setFeaturedTracks] = useState<any[]>([]);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
+  const videoRetries = useRef<Record<string, number>>({});
   
   const [currentVideoTheme, setCurrentVideoTheme] = useState(theme);
   const [previousVideoTheme, setPreviousVideoTheme] = useState<string | null>(null);
   const [fadeActive, setFadeActive] = useState(false);
   const prevThemeRef = useRef(theme);
+
+  const handleVideoError = (tName: string, e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+    const video = e.currentTarget;
+    const count = videoRetries.current[tName] || 0;
+    if (count < 3) {
+      videoRetries.current[tName] = count + 1;
+      console.warn(`[Kyvra Video Engine] Erro ao carregar vídeo do tema ${tName}. Tentando recarregar (${count + 1}/3)...`);
+      setTimeout(() => {
+        if (video) {
+          video.load();
+          video.play().catch(() => {});
+        }
+      }, 1500);
+    } else {
+      console.error(`[Kyvra Video Engine] Falha persistente ao carregar o vídeo para o tema ${tName}. Mantendo plano de fundo atmosférico.`);
+    }
+  };
 
   useEffect(() => {
     document.title = "KYVRA | Fragmentos de um universo sombrio";
@@ -128,7 +146,7 @@ export function Home() {
       const timer = setTimeout(() => {
         setPreviousVideoTheme(null);
         setFadeActive(false);
-      }, 1000);
+      }, 2000);
 
       return () => {
         cancelAnimationFrame(frame);
@@ -268,9 +286,9 @@ export function Home() {
         {/* UNIFIED HARDWARE-ACCELERATED BACKGROUND ENGINE */}
         <div className="absolute inset-0 w-full h-full bg-[#030303] z-0 overflow-hidden pointer-events-none select-none">
           {/* Cinematic Fallback Gradient Background */}
-          <div className="absolute inset-0 bg-[#030303] opacity-100 z-[1] transition-all duration-1000">
+          <div className="absolute inset-0 bg-[#030303] opacity-100 z-[1] transition-all duration-[2000ms]">
             <div 
-              className="absolute top-[20%] left-[20%] w-[70vw] h-[70vw] max-w-[800px] max-h-[800px] rounded-full transition-all duration-1000 ease-in-out mix-blend-screen opacity-25 md:opacity-25 animate-pulse"
+              className="absolute top-[20%] left-[20%] w-[70vw] h-[70vw] max-w-[800px] max-h-[800px] rounded-full transition-all duration-[2000ms] ease-in-out mix-blend-screen opacity-25 md:opacity-25 animate-pulse"
               style={{
                 background: theme === 'abissal' ? 'radial-gradient(circle, rgba(168,85,247,0.38) 0%, transparent 70%)' :
                             theme === 'sangue-de-drago' ? 'radial-gradient(circle, rgba(239,68,68,0.38) 0%, transparent 70%)' :
@@ -280,7 +298,7 @@ export function Home() {
               }}
             />
             <div 
-              className="absolute bottom-[20%] right-[10%] w-[60vw] h-[60vw] max-w-[700px] max-h-[700px] rounded-full transition-all duration-1000 ease-in-out mix-blend-screen opacity-15 md:opacity-15 animate-pulse"
+              className="absolute bottom-[20%] right-[10%] w-[60vw] h-[60vw] max-w-[700px] max-h-[700px] rounded-full transition-all duration-[2000ms] ease-in-out mix-blend-screen opacity-15 md:opacity-15 animate-pulse"
               style={{
                 background: theme === 'abissal' ? 'radial-gradient(circle, rgba(99,102,241,0.28) 0%, transparent 70%)' :
                             theme === 'sangue-de-drago' ? 'radial-gradient(circle, rgba(220,38,38,0.28) 0%, transparent 70%)' :
@@ -325,9 +343,8 @@ export function Home() {
                 muted={true}
                 playsInline={true}
                 preload="auto"
-                crossOrigin="anonymous"
                 className={cn(
-                  "absolute inset-0 w-full h-full object-cover object-[80%_center] md:object-center transition-opacity duration-1000 ease-in-out bg-transparent",
+                  "absolute inset-0 w-full h-full object-cover object-[80%_center] md:object-center transition-opacity duration-[2000ms] ease-in-out bg-transparent",
                   opacityClass
                 )}
                 style={{
@@ -336,9 +353,17 @@ export function Home() {
                   backfaceVisibility: "hidden"
                 }}
                 src={THEME_VIDEOS[tName]}
+                onError={(e) => handleVideoError(tName, e)}
+                onCanPlay={(e) => {
+                  if (tName === currentVideoTheme || tName === previousVideoTheme) {
+                    e.currentTarget.play().catch(() => {});
+                  }
+                }}
               />
             );
           })}
+
+
 
           {/* Unified Vignettes overlays to ensure readability responsive */}
           <div className="absolute inset-0 bg-gradient-to-r from-[#030303]/85 via-[#030303]/20 to-transparent md:block hidden z-20 pointer-events-none" />

@@ -79,10 +79,28 @@ export function Lore() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [readingModalOpen, setReadingModalOpen] = useState(false);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
+  const videoRetries = useRef<Record<string, number>>({});
   const [currentVideoTheme, setCurrentVideoTheme] = useState(theme);
   const [previousVideoTheme, setPreviousVideoTheme] = useState<string | null>(null);
   const [fadeActive, setFadeActive] = useState(false);
   const prevThemeRef = useRef(theme);
+
+  const handleVideoError = (tName: string, e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+    const video = e.currentTarget;
+    const count = videoRetries.current[tName] || 0;
+    if (count < 3) {
+      videoRetries.current[tName] = count + 1;
+      console.warn(`[Kyvra Video Engine] Erro ao carregar vídeo do tema ${tName}. Tentando recarregar (${count + 1}/3)...`);
+      setTimeout(() => {
+        if (video) {
+          video.load();
+          video.play().catch(() => {});
+        }
+      }, 1500);
+    } else {
+      console.error(`[Kyvra Video Engine] Falha persistente ao carregar o vídeo para o tema ${tName}. Mantendo plano de fundo atmosférico.`);
+    }
+  };
   const [readChapters, setReadChapters] = useState<string[]>([]);
   const [direction, setDirection] = useState<'next' | 'prev'>('next');
 
@@ -149,7 +167,7 @@ export function Lore() {
       const timer = setTimeout(() => {
         setPreviousVideoTheme(null);
         setFadeActive(false);
-      }, 1000);
+      }, 2000);
 
       return () => {
         cancelAnimationFrame(frame);
@@ -257,9 +275,9 @@ export function Lore() {
       {/* Background Video (z-index 0) */}
       <div className="fixed inset-0 z-0 flex items-center justify-center bg-black overflow-hidden">
         {/* Elegant Cinematic Fallback Background for Lore */}
-        <div className="absolute inset-0 bg-black opacity-100 z-[1] pointer-events-none transition-all duration-1000">
+        <div className="absolute inset-0 bg-black opacity-100 z-[1] pointer-events-none transition-all duration-[2000ms]">
           <div 
-            className="absolute top-[30%] left-[20%] w-[80vw] h-[80vw] rounded-full transition-all duration-1000 ease-in-out mix-blend-screen opacity-25 animate-pulse"
+            className="absolute top-[30%] left-[20%] w-[80vw] h-[80vw] rounded-full transition-all duration-[2000ms] ease-in-out mix-blend-screen opacity-25 animate-pulse"
             style={{
               background: theme === 'abissal' ? 'radial-gradient(circle, rgba(168,85,247,0.3) 0%, transparent 70%)' :
                           theme === 'sangue-de-drago' ? 'radial-gradient(circle, rgba(239,68,68,0.3) 0%, transparent 70%)' :
@@ -269,7 +287,7 @@ export function Lore() {
             }}
           />
           <div 
-            className="absolute bottom-[20%] right-[10%] w-[70vw] h-[70vw] rounded-full transition-all duration-1000 ease-in-out mix-blend-screen opacity-15 animate-pulse"
+            className="absolute bottom-[20%] right-[10%] w-[70vw] h-[70vw] rounded-full transition-all duration-[2000ms] ease-in-out mix-blend-screen opacity-15 animate-pulse"
             style={{
               background: theme === 'abissal' ? 'radial-gradient(circle, rgba(99,102,241,0.2) 0%, transparent 70%)' :
                           theme === 'sangue-de-drago' ? 'radial-gradient(circle, rgba(220,38,38,0.2) 0%, transparent 70%)' :
@@ -311,9 +329,8 @@ export function Lore() {
               muted={true}
               playsInline={true}
               preload="auto"
-              crossOrigin="anonymous"
               className={cn(
-                "absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out bg-transparent",
+                "absolute inset-0 w-full h-full object-cover transition-opacity duration-[2000ms] ease-in-out bg-transparent",
                 opacityClass
               )}
               style={{
@@ -321,9 +338,17 @@ export function Lore() {
                 transform: "translate3d(0,0,0)",
                 backfaceVisibility: "hidden"
               }}
+              onError={(e) => handleVideoError(tName, e)}
+              onCanPlay={(e) => {
+                if (tName === currentVideoTheme || tName === previousVideoTheme) {
+                  e.currentTarget.play().catch(() => {});
+                }
+              }}
             />
           );
         })}
+
+
       </div>
 
       {/* Bottom Blur Overlay (z-index 1) */}
