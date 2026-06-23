@@ -118,14 +118,16 @@ export function Preloader() {
         const url = THEME_VIDEOS[k];
         localThemeVideoUrls[k] = url;
         
-        // Native Link tag preloading for the browser to cache safely
-        const existingLink = document.querySelector(`link[href="${url}"]`);
-        if (!existingLink) {
-          const link = document.createElement('link');
-          link.rel = 'preload';
-          link.as = 'video';
-          link.href = url;
-          document.head.appendChild(link);
+        // Native Link tag preloading only for the ACTIVE theme to preserve massive bandwidth
+        if (k === theme) {
+          const existingLink = document.querySelector(`link[href="${url}"]`);
+          if (!existingLink) {
+            const link = document.createElement('link');
+            link.rel = 'preload';
+            link.as = 'video';
+            link.href = url;
+            document.head.appendChild(link);
+          }
         }
       });
 

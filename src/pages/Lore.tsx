@@ -94,7 +94,7 @@ export function Lore() {
       videoEl.muted = true;
       if (videoEl.paused) {
         videoEl.play().catch((err) => {
-          console.log("Auto-play prevented, waiting for user interaction", err);
+          console.log("Auto-play prevented, waiting to play on interaction", err);
           const startOnInteraction = () => {
             const actV = videoRefs.current[theme];
             if (actV && actV.paused) actV.play().catch(() => {});
@@ -151,6 +151,31 @@ export function Lore() {
     };
   }, [theme, activeVideoTheme]);
 
+  // Global user interaction gesture hook to bypass aggressive mobile/browser autoplay restrictions
+  useEffect(() => {
+    const forceAutoplay = () => {
+      try {
+        const activeVid = videoRefs.current[theme];
+        if (activeVid && activeVid.paused) {
+          activeVid.play().catch(() => {});
+        }
+      } catch (err) {
+        console.warn("[Kyvra Lore Autoplay Overrider] Play on interaction failed: ", err);
+      }
+    };
+
+    const interactionEvents = ['click', 'touchstart', 'pointerdown', 'scroll', 'keydown'];
+    interactionEvents.forEach(evt => {
+      document.addEventListener(evt, forceAutoplay, { once: true, passive: true });
+    });
+
+    return () => {
+      interactionEvents.forEach(evt => {
+        document.removeEventListener(evt, forceAutoplay);
+      });
+    };
+  }, [theme]);
+
   // Prevent background scroll when menu is open
   useEffect(() => {
     if (readingModalOpen) {
@@ -167,26 +192,59 @@ export function Lore() {
     <div className="w-full h-[100dvh] overflow-hidden bg-black text-white font-inter flex flex-col relative">
       {/* Background Video (z-index 0) */}
       <div className="fixed inset-0 z-0 flex items-center justify-center bg-black overflow-hidden">
+        {/* Elegant Cinematic Fallback Background for Lore */}
+        <div className="absolute inset-0 bg-black opacity-100 z-[1] pointer-events-none transition-all duration-1000">
+          <div 
+            className="absolute top-[30%] left-[20%] w-[80vw] h-[80vw] rounded-full transition-all duration-1000 ease-in-out mix-blend-screen opacity-25 animate-pulse"
+            style={{
+              background: theme === 'abissal' ? 'radial-gradient(circle, rgba(168,85,247,0.3) 0%, transparent 70%)' :
+                          theme === 'sangue-de-drago' ? 'radial-gradient(circle, rgba(239,68,68,0.3) 0%, transparent 70%)' :
+                          theme === 'floresta-negra' ? 'radial-gradient(circle, rgba(16,185,129,0.25) 0%, transparent 70%)' :
+                          'radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)',
+              transform: 'translateZ(0)'
+            }}
+          />
+          <div 
+            className="absolute bottom-[20%] right-[10%] w-[70vw] h-[70vw] rounded-full transition-all duration-1000 ease-in-out mix-blend-screen opacity-15 animate-pulse"
+            style={{
+              background: theme === 'abissal' ? 'radial-gradient(circle, rgba(99,102,241,0.2) 0%, transparent 70%)' :
+                          theme === 'sangue-de-drago' ? 'radial-gradient(circle, rgba(220,38,38,0.2) 0%, transparent 70%)' :
+                          theme === 'floresta-negra' ? 'radial-gradient(circle, rgba(5,150,105,0.18) 0%, transparent 70%)' :
+                          'radial-gradient(circle, rgba(148,163,184,0.1) 0%, transparent 70%)',
+              transform: 'translateZ(0)'
+            }}
+          />
+        </div>
+
         {Object.entries(LORE_THEME_VIDEOS)
           .filter(([tName]) => tName === theme || tName === activeVideoTheme)
           .map(([tName]) => (
             <video
               key={`lore-video-${tName}`}
-              ref={el => { videoRefs.current[tName] = el; }}
+              ref={el => {
+                videoRefs.current[tName] = el;
+                if (el && tName === theme) {
+                  el.muted = true;
+                  if (el.paused) {
+                    el.play().catch(() => {});
+                  }
+                }
+              }}
               src={LORE_THEME_VIDEOS[tName]}
-              autoPlay
-              loop
-              muted
-              playsInline
+              autoPlay={true}
+              loop={true}
+              muted={true}
+              playsInline={true}
               preload="auto"
+              crossOrigin="anonymous"
               onCanPlayThrough={() => handleCanPlayThrough(tName)}
               className={cn(
-                "absolute inset-0 w-[115%] sm:w-full h-full object-cover transition-opacity duration-1000 ease-in-out bg-black -translate-x-[7%] sm:translate-x-0 origin-center",
+                "absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out bg-transparent",
                 activeVideoTheme === tName ? "opacity-90 z-10" : "opacity-0 z-0 pointer-events-none"
               )}
               style={{
                 willChange: "opacity",
-                transform: "translateZ(0)",
+                transform: "translate3d(0,0,0)",
                 backfaceVisibility: "hidden"
               }}
             />
@@ -271,12 +329,12 @@ export function Lore() {
               </div>
 
               {/* Bottom Row Wrapper: explorador | explicação em uma linha | setas */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 w-full pt-6 border-t border-white/10 pointer-events-auto">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 md:gap-6 w-full pt-6 border-t border-white/10 pointer-events-auto">
                 {/* CTA Buttons */}
-                <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+                <div className="flex items-center justify-center md:justify-start gap-3 sm:gap-4 shrink-0 w-full md:w-auto">
                   <button 
                     onClick={() => setReadingModalOpen(true)}
-                    className="bg-white text-black rounded-full font-medium px-6 sm:px-8 py-2.5 sm:py-3 flex items-center gap-2 hover:bg-gray-200 transition-colors animate-blur-fade-up shadow-lg pointer-events-auto"
+                    className="w-full md:w-auto justify-center bg-white text-black rounded-full font-medium px-8 py-3 flex items-center gap-2 hover:bg-gray-200 transition-colors animate-blur-fade-up shadow-lg pointer-events-auto"
                     style={{ animationDelay: '600ms' }}
                   >
                     <FileText size={18} fill="currentColor" />
@@ -284,27 +342,36 @@ export function Lore() {
                   </button>
                 </div>
 
-                {/* Brief explanation occupying space between button and arrows in a single line */}
+                {/* Brief explanation occupying space between button and arrows in a single line (Desktop only) */}
                 <div 
-                  className="flex-1 text-center text-xs sm:text-sm text-white/50 font-light px-4 animate-blur-fade-up truncate whitespace-nowrap overflow-hidden self-center py-2 md:py-0"
+                  className="hidden md:block flex-1 text-center text-xs sm:text-sm text-white/50 font-light px-4 animate-blur-fade-up truncate whitespace-nowrap overflow-hidden self-center"
                   style={{ animationDelay: '700ms' }}
                 >
                   Seu portal para a história de como o universo de KYVRA nasceu.
                 </div>
 
-                {/* Right Side (Arrows) */}
-                <div className="flex items-center gap-3 justify-between md:justify-end shrink-0 pointer-events-auto">
+                {/* Right Side (Arrows with centered mobile phrase) */}
+                <div className="w-full md:w-auto flex items-center justify-between md:justify-end gap-3 md:gap-4 shrink-0 pointer-events-auto">
                   <button 
                     onClick={handlePrev}
-                    className="w-12 h-12 sm:w-auto sm:px-6 sm:py-3 flex items-center justify-center rounded-full liquid-glass hover:bg-white/10 transition-colors animate-blur-fade-up"
+                    className="w-12 h-12 flex items-center justify-center rounded-full liquid-glass hover:bg-white/10 transition-colors animate-blur-fade-up shrink-0"
                     style={{ animationDelay: '800ms' }}
                     aria-label="Capítulo Anterior"
                   >
                     <ChevronLeft size={20} />
                   </button>
+
+                  {/* Centered mobile phrase right between arrows */}
+                  <div 
+                    className="md:hidden flex-1 text-center text-[10px] sm:text-xs text-white/50 font-light px-2 leading-tight animate-blur-fade-up"
+                    style={{ animationDelay: '700ms' }}
+                  >
+                    Seu portal para a história de como o universo de KYVRA nasceu.
+                  </div>
+
                   <button 
                     onClick={handleNext}
-                    className="w-12 h-12 sm:w-auto sm:px-6 sm:py-3 flex items-center justify-center rounded-full liquid-glass hover:bg-white/10 transition-colors animate-blur-fade-up"
+                    className="w-12 h-12 flex items-center justify-center rounded-full liquid-glass hover:bg-white/10 transition-colors animate-blur-fade-up shrink-0"
                     style={{ animationDelay: '900ms' }}
                     aria-label="Próximo Capítulo"
                   >

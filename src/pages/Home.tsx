@@ -78,12 +78,18 @@ export function Home() {
   const theme = useStore((state) => state.theme);
   const themeVideoUrls = useStore((state) => state.themeVideoUrls);
   const [featuredTracks, setFeaturedTracks] = useState<any[]>([]);
-  const videoRefsDesktop = useRef<Record<string, HTMLVideoElement | null>>({});
-  const videoRefsMobile = useRef<Record<string, HTMLVideoElement | null>>({});
+  const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const [activeVideoTheme, setActiveVideoTheme] = useState(theme);
   const fallbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const videoSrcs = { ...THEME_VIDEOS, ...themeVideoUrls };
+  const videoSrcs: Record<string, string> = { ...THEME_VIDEOS };
+  if (themeVideoUrls) {
+    Object.entries(themeVideoUrls).forEach(([key, val]) => {
+      if (val && typeof val === 'string' && val.trim().startsWith('http')) {
+        videoSrcs[key] = val;
+      }
+    });
+  }
 
   useEffect(() => {
     document.title = "KYVRA | Fragmentos de um universo sombrio";
@@ -132,8 +138,7 @@ export function Home() {
 
   // Guarantee the active video plays programmatically and transition them elegantly
   useEffect(() => {
-    const activeDesktop = videoRefsDesktop.current[theme];
-    const activeMobile = videoRefsMobile.current[theme];
+    const activeVideo = videoRefs.current[theme];
 
     const playVideo = (videoEl: HTMLVideoElement | null) => {
       if (!videoEl) return;
@@ -142,10 +147,8 @@ export function Home() {
         videoEl.play().catch((err) => {
           console.log("Auto-play prevented, waiting for user interaction", err);
           const startOnInteraction = () => {
-            const actD = videoRefsDesktop.current[theme];
-            const actM = videoRefsMobile.current[theme];
-            if (actD && actD.paused) actD.play().catch(() => {});
-            if (actM && actM.paused) actM.play().catch(() => {});
+            const actV = videoRefs.current[theme];
+            if (actV && actV.paused) actV.play().catch(() => {});
             document.removeEventListener('click', startOnInteraction);
             document.removeEventListener('touchstart', startOnInteraction);
           };
@@ -165,26 +168,17 @@ export function Home() {
         trackFPSSlowdown(theme, performance.now());
       } catch (e) {}
 
-      if (activeDesktop) {
-        activeDesktop.preload = "auto";
+      if (activeVideo) {
+        activeVideo.preload = "auto";
         // Only load if the source is different or not initialized to prevent reset stuttering
-        if (!activeDesktop.src || !activeDesktop.src.includes(activeSrc)) {
-          activeDesktop.load();
+        if (!activeVideo.src || !activeVideo.src.includes(activeSrc)) {
+          activeVideo.load();
         }
-        playVideo(activeDesktop);
-      }
-      if (activeMobile) {
-        activeMobile.preload = "auto";
-        if (!activeMobile.src || !activeMobile.src.includes(activeSrc)) {
-          activeMobile.load();
-        }
-        playVideo(activeMobile);
+        playVideo(activeVideo);
       }
 
       // If already fully buffered, transition immediately
-      const isAlreadyReady = 
-        (activeDesktop && activeDesktop.readyState >= 3) || 
-        (activeMobile && activeMobile.readyState >= 3);
+      const isAlreadyReady = activeVideo && activeVideo.readyState >= 3;
 
       if (isAlreadyReady) {
         setActiveVideoTheme(theme);
@@ -217,18 +211,15 @@ export function Home() {
       }
     } else {
       // Make sure current theme video is active and running
-      playVideo(activeDesktop);
-      playVideo(activeMobile);
+      playVideo(activeVideo);
     }
 
     // Ensure inactive themes pause to save CPU/GPU overhead
     const pauseTimer = setTimeout(() => {
       Object.entries(THEME_VIDEOS).forEach(([tName]) => {
         if (tName !== theme) {
-          const dVid = videoRefsDesktop.current[tName];
-          const mVid = videoRefsMobile.current[tName];
-          if (dVid && !dVid.paused) dVid.pause();
-          if (mVid && !mVid.paused) mVid.pause();
+          const vid = videoRefs.current[tName];
+          if (vid && !vid.paused) vid.pause();
         }
       });
     }, 1200);
@@ -240,6 +231,31 @@ export function Home() {
       }
     };
   }, [theme, activeVideoTheme]);
+
+  // Global user interaction gesture hook to bypass aggressive mobile/browser autoplay restrictions
+  useEffect(() => {
+    const forceAutoplay = () => {
+      try {
+        const activeVideo = videoRefs.current[theme];
+        if (activeVideo && activeVideo.paused) {
+          activeVideo.play().catch(() => {});
+        }
+      } catch (err) {
+        console.warn("[Kyvra Autoplay Overrider] Play on interaction failed: ", err);
+      }
+    };
+
+    const interactionEvents = ['click', 'touchstart', 'pointerdown', 'scroll', 'keydown'];
+    interactionEvents.forEach(evt => {
+      document.addEventListener(evt, forceAutoplay, { once: true, passive: true });
+    });
+
+    return () => {
+      interactionEvents.forEach(evt => {
+        document.removeEventListener(evt, forceAutoplay);
+      });
+    };
+  }, [theme]);
 
   useEffect(() => {
     async function fetchFeatured() {
@@ -287,38 +303,79 @@ export function Home() {
       {/* Immersive Responsive Hero Section */}
       <section className="relative min-h-[100vh] lg:h-[100vh] w-full bg-[#030303] text-white overflow-hidden pb-10 lg:pb-0">
         
-        {/* DESKTOP/WIDE LANDSCAPE IMMERSIVE LAYOUT */}
-        <div className="hidden md:flex landscape:flex md:flex-col justify-between md:h-full landscape:h-full w-full h-[100vh] relative overflow-hidden select-none">
-          
-          {/* Full-width widescreen background video */}
-          <div className="absolute inset-0 w-full h-full bg-black z-0 overflow-hidden">
-            {Object.entries(THEME_VIDEOS)
-              .filter(([tName]) => tName === theme || tName === activeVideoTheme)
-              .map(([tName]) => (
-                <video
-                  key={`desktop-${tName}`}
-                  ref={el => { videoRefsDesktop.current[tName] = el; }}
-                  loop
-                  muted
-                  playsInline
-                  preload="auto"
-                  onCanPlayThrough={() => handleCanPlayThrough(tName)}
-                  className={cn(
-                    "absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out bg-black",
-                    activeVideoTheme === tName ? "opacity-[0.82] z-10" : "opacity-0 z-0 pointer-events-none"
-                  )}
-                  style={{
-                    willChange: "opacity",
-                    transform: "translateZ(0)",
-                    backfaceVisibility: "hidden"
-                  }}
-                  src={videoSrcs[tName]}
-                />
-              ))}
-            {/* Multi-directional premium vignette overlays to ensure text readability */}
-            <div className="absolute inset-0 bg-gradient-to-r from-[#030303]/85 via-[#030303]/20 to-transparent z-20 pointer-events-none" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#030303]/60 via-transparent to-[#030303]/20 z-20 pointer-events-none" />
+        {/* UNIFIED HARDWARE-ACCELERATED BACKGROUND ENGINE */}
+        <div className="absolute inset-0 w-full h-full bg-[#030303] z-0 overflow-hidden pointer-events-none select-none">
+          {/* Cinematic Fallback Gradient Background */}
+          <div className="absolute inset-0 bg-[#030303] opacity-100 z-[1] transition-all duration-1000">
+            <div 
+              className="absolute top-[20%] left-[20%] w-[70vw] h-[70vw] max-w-[800px] max-h-[800px] rounded-full transition-all duration-1000 ease-in-out mix-blend-screen opacity-25 md:opacity-25 animate-pulse"
+              style={{
+                background: theme === 'abissal' ? 'radial-gradient(circle, rgba(168,85,247,0.38) 0%, transparent 70%)' :
+                            theme === 'sangue-de-drago' ? 'radial-gradient(circle, rgba(239,68,68,0.38) 0%, transparent 70%)' :
+                            theme === 'floresta-negra' ? 'radial-gradient(circle, rgba(16,185,129,0.33) 0%, transparent 70%)' :
+                            'radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%)',
+                transform: 'translateZ(0)'
+              }}
+            />
+            <div 
+              className="absolute bottom-[20%] right-[10%] w-[60vw] h-[60vw] max-w-[700px] max-h-[700px] rounded-full transition-all duration-1000 ease-in-out mix-blend-screen opacity-15 md:opacity-15 animate-pulse"
+              style={{
+                background: theme === 'abissal' ? 'radial-gradient(circle, rgba(99,102,241,0.28) 0%, transparent 70%)' :
+                            theme === 'sangue-de-drago' ? 'radial-gradient(circle, rgba(220,38,38,0.28) 0%, transparent 70%)' :
+                            theme === 'floresta-negra' ? 'radial-gradient(circle, rgba(5,150,105,0.28) 0%, transparent 70%)' :
+                            'radial-gradient(circle, rgba(148,163,184,0.15) 0%, transparent 70%)',
+                transform: 'translateZ(0)'
+              }}
+            />
+            {/* Subtle noise grains for luxury texturing */}
+            <div className="absolute inset-0 opacity-[0.035] pointer-events-none" style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`
+            }} />
           </div>
+
+          {/* Render ONLY active or transitioning themes! High-performance game design */}
+          {Object.entries(THEME_VIDEOS)
+            .filter(([tName]) => tName === theme || tName === activeVideoTheme)
+            .map(([tName]) => (
+              <video
+                key={`unified-video-${tName}`}
+                ref={el => {
+                  videoRefs.current[tName] = el;
+                  if (el && tName === theme) {
+                    el.muted = true;
+                    if (el.paused) {
+                      el.play().catch(() => {});
+                    }
+                  }
+                }}
+                autoPlay={true}
+                loop={true}
+                muted={true}
+                playsInline={true}
+                preload="auto"
+                crossOrigin="anonymous"
+                onCanPlayThrough={() => handleCanPlayThrough(tName)}
+                className={cn(
+                  "absolute inset-0 w-full h-full object-cover object-[80%_center] md:object-center transition-opacity duration-1000 ease-in-out bg-transparent",
+                  activeVideoTheme === tName ? "opacity-[0.78] md:opacity-[0.82] z-10" : "opacity-0 z-0 pointer-events-none"
+                )}
+                style={{
+                  willChange: "opacity",
+                  transform: "translate3d(0,0,0)",
+                  backfaceVisibility: "hidden"
+                }}
+                src={videoSrcs[tName]}
+              />
+            ))}
+
+          {/* Unified Vignettes overlays to ensure readability responsive */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#030303]/85 via-[#030303]/20 to-transparent md:block hidden z-20 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#030303]/60 via-transparent to-[#030303]/20 md:block hidden z-20 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#030303]/85 via-transparent to-[#030303]/35 md:hidden block z-20 pointer-events-none" />
+        </div>
+
+        {/* DESKTOP/WIDE LANDSCAPE IMMERSIVE LAYOUT */}
+        <div className="hidden md:flex landscape:flex md:flex-col justify-between md:h-full landscape:h-full w-full h-[100vh] relative overflow-hidden select-none z-10">
 
           {/* Left Aligned Content overlapping the video */}
           <div className="relative z-35 flex-1 flex flex-col justify-center px-8 md:px-16 xl:px-24 pt-20 max-w-[900px]">
@@ -370,34 +427,6 @@ export function Home() {
 
         {/* MOBILE PORTRAIT LAYOUT (Strictly vertical below md and portrait) */}
         <div className="md:hidden landscape:hidden flex flex-col justify-between min-h-[100vh] relative z-10 px-6 pt-24 pb-8 h-[100vh] overflow-hidden">
-          {/* Background video overlay for mobile */}
-          <div className="absolute inset-0 w-full h-full bg-[#030303] -z-10 overflow-hidden">
-            {Object.entries(THEME_VIDEOS)
-              .filter(([tName]) => tName === theme || tName === activeVideoTheme)
-              .map(([tName]) => (
-                <video
-                  key={`mobile-${tName}`}
-                  ref={el => { videoRefsMobile.current[tName] = el; }}
-                  loop
-                  muted
-                  playsInline
-                  preload="auto"
-                  onCanPlayThrough={() => handleCanPlayThrough(tName)}
-                  className={cn(
-                    "absolute inset-0 w-full h-full object-cover object-[80%_center] transition-opacity duration-1000 ease-in-out bg-[#030303]",
-                    activeVideoTheme === tName ? "opacity-[0.78] z-10" : "opacity-0 z-0 pointer-events-none"
-                  )}
-                  style={{
-                    willChange: "opacity",
-                    transform: "translateZ(0)",
-                    backfaceVisibility: "hidden"
-                  }}
-                  src={videoSrcs[tName]}
-                />
-              ))}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#030303]/85 via-transparent to-[#030303]/35 z-20 pointer-events-none" />
-          </div>
-
           {/* Empty spacer on mobile to keep top clean */}
           <div className="flex-1" />
 
