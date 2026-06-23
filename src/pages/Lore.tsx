@@ -21,6 +21,58 @@ const LORE_THEME_VIDEOS: Record<string, string> = {
   'monolito': "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/LOREVIDEO/YouCut_LOREMONOLITO.webm"
 };
 
+// Framer motion animation variants for ultra-smooth staggered slide transitions
+const containerVariants = {
+  initial: (dir: 'next' | 'prev') => ({
+    opacity: 0,
+    x: dir === 'next' ? 60 : -60,
+    filter: 'blur(8px)',
+  }),
+  animate: {
+    opacity: 1,
+    x: 0,
+    filter: 'blur(0px)',
+    transition: {
+      duration: 0.6,
+      ease: [0.16, 1, 0.3, 1] as const, // custom smooth cubic bezier
+      staggerChildren: 0.08,
+      delayChildren: 0.05,
+    }
+  },
+  exit: (dir: 'next' | 'prev') => ({
+    opacity: 0,
+    x: dir === 'next' ? -60 : 60,
+    filter: 'blur(8px)',
+    transition: {
+      duration: 0.5,
+      ease: [0.16, 1, 0.3, 1] as const,
+    }
+  })
+};
+
+const childVariants = {
+  initial: {
+    opacity: 0,
+    y: 20,
+  },
+  animate: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.5,
+      ease: [0.16, 1, 0.3, 1] as const,
+    }
+  },
+  exit: {
+    opacity: 0,
+    y: -15,
+    transition: {
+      duration: 0.4,
+      ease: "easeIn" as const,
+    }
+  }
+};
+
 export function Lore() {
   const theme = useStore((state) => state.theme);
   const [chapters, setChapters] = useState<any[]>([]);
@@ -32,6 +84,7 @@ export function Lore() {
   const [fadeActive, setFadeActive] = useState(false);
   const prevThemeRef = useRef(theme);
   const [readChapters, setReadChapters] = useState<string[]>([]);
+  const [direction, setDirection] = useState<'next' | 'prev'>('next');
 
   useEffect(() => {
     try {
@@ -68,12 +121,14 @@ export function Lore() {
 
   const handleNext = () => {
     if (chapters.length > 0) {
+      setDirection('next');
       setCurrentIndex((prev) => (prev + 1) % chapters.length);
     }
   };
 
   const handlePrev = () => {
     if (chapters.length > 0) {
+      setDirection('prev');
       setCurrentIndex((prev) => (prev - 1 + chapters.length) % chapters.length);
     }
   };
@@ -276,120 +331,117 @@ export function Lore() {
 
       {/* HERO CONTENT (z-index 10) */}
       <div className="flex-1 flex flex-col justify-end px-4 sm:px-6 md:px-12 pb-8 md:pb-16 z-10 relative">
-        <AnimatePresence mode="wait">
-          {!currentChapter ? (
-            <motion.div 
-              key="loading" 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              exit={{ opacity: 0 }}
-              className="text-white/50 text-xl font-light"
-            >
-              Sincronizando registros da cosmogonia...
-            </motion.div>
-          ) : (
-            <motion.div 
-              key={currentChapter.id}
-              initial={{ opacity: 0, filter: 'blur(10px)', y: 20 }}
-              animate={{ opacity: 1, filter: 'blur(0)', y: 0 }}
-              exit={{ opacity: 0, filter: 'blur(10px)', y: -20 }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-              className="flex flex-col w-full"
-            >
-              {/* Left Side */}
-              <div className="flex-1 flex flex-col max-w-6xl">
-                {/* Metadata row */}
-                <div 
-                  className="flex flex-wrap items-center gap-4 sm:gap-6 mb-6 md:mb-8 text-xs sm:text-sm font-medium animate-blur-fade-up text-white/80"
-                  style={{ animationDelay: '300ms' }}
-                >
-                  <div className="flex items-center gap-2">
-                    <BookOpen size={16} className="text-white" fill="currentColor" />
-                    <span>Capítulo {currentChapter.chapter_number || currentIndex + 1}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar size={16} />
-                    <span>{currentChapter.timeline_date || 'Data Desconhecida'}</span>
-                  </div>
-                  {readChapters.includes(String(currentChapter.id || currentChapter.title)) && (
-                    <div className="flex items-center gap-1.5 text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full text-xs">
-                      <Check size={12} className="stroke-[3px]" />
-                      <span>Lido</span>
+        <div className="min-h-[260px] sm:min-h-[300px] md:min-h-[340px] flex flex-col justify-end w-full">
+          <AnimatePresence mode="wait" custom={direction}>
+            {!currentChapter ? (
+              <motion.div 
+                key="loading" 
+                initial={{ opacity: 0 }} 
+                animate={{ opacity: 1 }} 
+                exit={{ opacity: 0 }}
+                className="text-white/50 text-xl font-light"
+              >
+                Sincronizando registros da cosmogonia...
+              </motion.div>
+            ) : (
+              <motion.div 
+                key={currentChapter.id}
+                custom={direction}
+                variants={containerVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                className="flex flex-col w-full"
+              >
+                {/* Left Side */}
+                <div className="flex-1 flex flex-col max-w-6xl">
+                  {/* Metadata row */}
+                  <motion.div 
+                    variants={childVariants}
+                    className="flex flex-wrap items-center gap-4 sm:gap-6 mb-6 md:mb-8 text-xs sm:text-sm font-medium text-white/80"
+                  >
+                    <div className="flex items-center gap-2">
+                      <BookOpen size={16} className="text-white" fill="currentColor" />
+                      <span>Capítulo {currentChapter.chapter_number || currentIndex + 1}</span>
                     </div>
-                  )}
+                    <div className="flex items-center gap-2">
+                      <Calendar size={16} />
+                      <span>{currentChapter.timeline_date || 'Data Desconhecida'}</span>
+                    </div>
+                    {readChapters.includes(String(currentChapter.id || currentChapter.title)) && (
+                      <div className="flex items-center gap-1.5 text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full text-xs">
+                        <Check size={12} className="stroke-[3px]" />
+                        <span>Lido</span>
+                      </div>
+                    )}
+                  </motion.div>
+
+                  {/* Title */}
+                  <motion.h1 
+                    variants={childVariants}
+                    className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-normal mb-4 md:mb-6 leading-tight"
+                    style={{ letterSpacing: '-0.04em' }}
+                  >
+                    {currentChapter.title}
+                  </motion.h1>
+
+                  {/* Description */}
+                  <motion.p 
+                    variants={childVariants}
+                    className="text-base sm:text-lg md:text-xl text-gray-300 font-light mb-6 md:mb-12 max-w-2xl line-clamp-3 leading-relaxed"
+                  >
+                    {currentChapter.content}
+                  </motion.p>
                 </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
-                {/* Title */}
-                <h1 
-                  className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-normal mb-4 md:mb-6 animate-blur-fade-up leading-tight"
-                  style={{ letterSpacing: '-0.04em', animationDelay: '400ms' }}
-                >
-                  {currentChapter.title}
-                </h1>
+        {/* Persistent Bottom Row (remains stable and does not slide during transition) */}
+        {currentChapter && (
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 md:gap-6 w-full pt-6 border-t border-white/10 pointer-events-auto">
+            {/* CTA Buttons */}
+            <div className="flex items-center justify-center md:justify-start gap-3 sm:gap-4 shrink-0 w-full md:w-auto">
+              <button 
+                onClick={() => setReadingModalOpen(true)}
+                className="w-full md:w-auto justify-center bg-white text-black rounded-full font-medium px-8 py-3 flex items-center gap-2 hover:bg-gray-200 transition-colors shadow-lg pointer-events-auto"
+              >
+                <FileText size={18} fill="currentColor" />
+                Explorar Capítulo
+              </button>
+            </div>
 
-                {/* Description */}
-                <p 
-                  className="text-base sm:text-lg md:text-xl text-gray-300 font-light mb-6 md:mb-12 max-w-2xl animate-blur-fade-up line-clamp-3 leading-relaxed"
-                  style={{ animationDelay: '500ms' }}
-                >
-                  {currentChapter.content}
-                </p>
+            {/* Brief explanation occupying space between button and arrows in a single line (Desktop only) */}
+            <div className="hidden md:block flex-1 text-center text-xs sm:text-sm text-white/50 font-light px-4 truncate whitespace-nowrap overflow-hidden self-center">
+              Seu portal para a história de como o universo de KYVRA nasceu.
+            </div>
+
+            {/* Right Side (Arrows with centered mobile phrase) */}
+            <div className="w-full md:w-auto flex items-center justify-between md:justify-end gap-3 md:gap-4 shrink-0 pointer-events-auto">
+              <button 
+                onClick={handlePrev}
+                className="w-12 h-12 flex items-center justify-center rounded-full liquid-glass hover:bg-white/10 transition-colors shrink-0"
+                aria-label="Capítulo Anterior"
+              >
+                <ChevronLeft size={20} />
+              </button>
+
+              {/* Centered mobile phrase right between arrows */}
+              <div className="md:hidden flex-1 text-center text-[10px] sm:text-xs text-white/50 font-light px-2 leading-tight">
+                Seu portal para a história de como o universo de KYVRA nasceu.
               </div>
 
-              {/* Bottom Row Wrapper: explorador | explicação em uma linha | setas */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 md:gap-6 w-full pt-6 border-t border-white/10 pointer-events-auto">
-                {/* CTA Buttons */}
-                <div className="flex items-center justify-center md:justify-start gap-3 sm:gap-4 shrink-0 w-full md:w-auto">
-                  <button 
-                    onClick={() => setReadingModalOpen(true)}
-                    className="w-full md:w-auto justify-center bg-white text-black rounded-full font-medium px-8 py-3 flex items-center gap-2 hover:bg-gray-200 transition-colors animate-blur-fade-up shadow-lg pointer-events-auto"
-                    style={{ animationDelay: '600ms' }}
-                  >
-                    <FileText size={18} fill="currentColor" />
-                    Explorar Capítulo
-                  </button>
-                </div>
-
-                {/* Brief explanation occupying space between button and arrows in a single line (Desktop only) */}
-                <div 
-                  className="hidden md:block flex-1 text-center text-xs sm:text-sm text-white/50 font-light px-4 animate-blur-fade-up truncate whitespace-nowrap overflow-hidden self-center"
-                  style={{ animationDelay: '700ms' }}
-                >
-                  Seu portal para a história de como o universo de KYVRA nasceu.
-                </div>
-
-                {/* Right Side (Arrows with centered mobile phrase) */}
-                <div className="w-full md:w-auto flex items-center justify-between md:justify-end gap-3 md:gap-4 shrink-0 pointer-events-auto">
-                  <button 
-                    onClick={handlePrev}
-                    className="w-12 h-12 flex items-center justify-center rounded-full liquid-glass hover:bg-white/10 transition-colors animate-blur-fade-up shrink-0"
-                    style={{ animationDelay: '800ms' }}
-                    aria-label="Capítulo Anterior"
-                  >
-                    <ChevronLeft size={20} />
-                  </button>
-
-                  {/* Centered mobile phrase right between arrows */}
-                  <div 
-                    className="md:hidden flex-1 text-center text-[10px] sm:text-xs text-white/50 font-light px-2 leading-tight animate-blur-fade-up"
-                    style={{ animationDelay: '700ms' }}
-                  >
-                    Seu portal para a história de como o universo de KYVRA nasceu.
-                  </div>
-
-                  <button 
-                    onClick={handleNext}
-                    className="w-12 h-12 flex items-center justify-center rounded-full liquid-glass hover:bg-white/10 transition-colors animate-blur-fade-up shrink-0"
-                    style={{ animationDelay: '900ms' }}
-                    aria-label="Próximo Capítulo"
-                  >
-                    <ChevronRight size={20} />
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              <button 
+                onClick={handleNext}
+                className="w-12 h-12 flex items-center justify-center rounded-full liquid-glass hover:bg-white/10 transition-colors shrink-0"
+                aria-label="Próximo Capítulo"
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Reading Modal (z-index 100) */}

@@ -625,13 +625,15 @@ export function MiniPlayer() {
             </div>
 
             {/* Main Content */}
-            <div className="relative z-10 flex-1 flex flex-col md:flex-row items-center justify-center p-6 md:p-12 gap-10 md:gap-20 overflow-y-auto">
+            <div className="relative z-10 flex-1 flex flex-col md:flex-row items-center justify-center p-6 md:p-8 lg:p-12 gap-8 md:gap-12 lg:gap-16 xl:gap-20 overflow-y-auto md:overflow-hidden">
               {/* Cover Art */}
               <motion.div 
                 layoutId={`cover-${currentTrack.id}`}
                 className={cn(
-                  "w-full max-w-[320px] md:max-w-[450px] aspect-square rounded-xl overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,0.5)] shrink-0 transition-all duration-700",
-                  showLyrics ? "md:scale-90 opacity-40 md:opacity-100" : ""
+                  "w-full aspect-square rounded-xl overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,0.5)] shrink-0 transition-all duration-500",
+                  showLyrics 
+                    ? "max-w-[260px] sm:max-w-[280px] md:max-w-[320px] lg:max-w-[360px] xl:max-w-[400px] opacity-40 md:opacity-100" 
+                    : "max-w-[300px] sm:max-w-[320px] md:max-w-[400px] lg:max-w-[450px] xl:max-w-[500px]"
                 )}
               >
                 <img
@@ -652,8 +654,8 @@ export function MiniPlayer() {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 20, position: "absolute" }}
                     className={cn(
-                      "w-full md:w-[400px] h-[50dvh] md:h-full max-h-[500px] overflow-y-auto py-4 px-2 custom-scrollbar",
-                      "absolute md:relative inset-x-6 md:inset-auto z-20 md:z-auto bg-void/60 md:bg-transparent backdrop-blur-xl md:backdrop-blur-none p-6 md:p-0 rounded-2xl md:rounded-none"
+                      "w-full md:w-[450px] lg:w-[500px] xl:w-[600px] h-[50dvh] md:h-[350px] lg:h-[420px] xl:h-[500px] md:max-h-[50vh] lg:max-h-[55vh] xl:max-h-[60vh] overflow-y-auto py-4 px-3 custom-scrollbar",
+                      "absolute md:relative inset-x-6 md:inset-auto z-20 md:z-auto bg-void/80 md:bg-transparent backdrop-blur-xl md:backdrop-blur-none p-6 md:p-0 rounded-2xl md:rounded-none"
                     )}
                   >
                     <AnimatePresence mode="popLayout">
@@ -662,7 +664,7 @@ export function MiniPlayer() {
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
                           exit={{ opacity: 0 }}
-                          className="flex flex-col gap-4 text-white/80 text-lg md:text-xl font-medium leading-relaxed"
+                          className="flex flex-col gap-5 text-white/90 text-base md:text-lg lg:text-xl font-medium leading-relaxed"
                           style={{ whiteSpace: "pre-wrap" }}
                         >
                           {currentTrack.lyrics}
