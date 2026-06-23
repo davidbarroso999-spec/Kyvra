@@ -28,6 +28,7 @@ export function Lore() {
   const [readingModalOpen, setReadingModalOpen] = useState(false);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const [activeVideoTheme, setActiveVideoTheme] = useState(theme);
+  const [playingVideos, setPlayingVideos] = useState<Record<string, boolean>>({});
   const fallbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [readChapters, setReadChapters] = useState<string[]>([]);
 
@@ -269,9 +270,20 @@ export function Lore() {
               preload="auto"
               crossOrigin="anonymous"
               onCanPlayThrough={() => handleCanPlayThrough(tName)}
+              onPlaying={() => setPlayingVideos(prev => ({ ...prev, [tName]: true }))}
+              onTimeUpdate={(e) => {
+                const vid = e.currentTarget;
+                if (vid.currentTime > 0.05 && !playingVideos[tName]) {
+                  setPlayingVideos(prev => ({ ...prev, [tName]: true }));
+                }
+              }}
+              onWaiting={() => setPlayingVideos(prev => ({ ...prev, [tName]: false }))}
+              onPause={() => setPlayingVideos(prev => ({ ...prev, [tName]: false }))}
+              onError={() => setPlayingVideos(prev => ({ ...prev, [tName]: false }))}
+              onStalled={() => setPlayingVideos(prev => ({ ...prev, [tName]: false }))}
               className={cn(
                 "absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out bg-transparent",
-                activeVideoTheme === tName ? "opacity-90 z-10" : "opacity-0 z-0 pointer-events-none"
+                (activeVideoTheme === tName && playingVideos[tName]) ? "opacity-90 z-10" : "opacity-0 z-0 pointer-events-none"
               )}
               style={{
                 willChange: "opacity",
