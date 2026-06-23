@@ -351,19 +351,15 @@ export function Home() {
 
           {/* Left Aligned Content overlapping the video */}
           <div className="relative z-35 flex-1 flex flex-col justify-center px-8 md:px-16 xl:px-24 pt-20 max-w-[900px]">
-            {/* Ambient subtle glow box positioned behind logo to accentuate its deep theme */}
+            {/* Logo container without backglow */}
             <div className="relative overflow-visible pointer-events-none mb-2 md:mb-4 flex flex-col items-start justify-center">
-              <div 
-                className="absolute top-1/2 left-20 -translate-y-1/2 w-[400px] h-[300px] rounded-full pointer-events-none opacity-[0.25]"
-                style={{ background: 'radial-gradient(ellipse at center, var(--primary) 0%, transparent 65%)' }}
-              />
               <motion.div
                 initial={{ opacity: 0, scale: 0.95, x: -30 }}
                 animate={{ opacity: 1, scale: 1, x: 0 }}
                 transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
                 className="relative flex flex-col items-start"
               >
-                <h2 className="font-display font-medium text-[5.5rem] md:text-[6.5rem] lg:text-[8rem] xl:text-[9.5rem] tracking-[0.05em] text-gradient m-0 p-0 text-left drop-shadow-[0_20px_50px_rgba(102,51,153,0.4)] leading-none">
+                <h2 className="font-display font-medium text-[5.5rem] md:text-[6.5rem] lg:text-[8rem] xl:text-[9.5rem] tracking-[0.05em] text-gradient m-0 p-0 text-left leading-none">
                   KYVRA
                 </h2>
               </motion.div>
@@ -411,7 +407,7 @@ export function Home() {
               transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
               className="w-full relative flex justify-start items-center overflow-visible"
             >
-              <h1 className="font-display font-medium text-[22vw] leading-none text-gradient m-0 p-0 drop-shadow-2xl tracking-[0.01em] text-left select-none">
+              <h1 className="font-display font-medium text-[22vw] leading-none text-gradient m-0 p-0 tracking-[0.01em] text-left select-none">
                 KYVRA
               </h1>
             </motion.div>
