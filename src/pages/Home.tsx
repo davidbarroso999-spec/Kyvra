@@ -76,21 +76,13 @@ const trackFPSSlowdown = (themeName: string, startTime: number) => {
 
 export function Home() {
   const theme = useStore((state) => state.theme);
-  const themeVideoUrls = useStore((state) => state.themeVideoUrls);
   const [featuredTracks, setFeaturedTracks] = useState<any[]>([]);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
-  const [activeVideoTheme, setActiveVideoTheme] = useState(theme);
-  const [playingVideos, setPlayingVideos] = useState<Record<string, boolean>>({});
-  const fallbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const videoSrcs: Record<string, string> = { ...THEME_VIDEOS };
-  if (themeVideoUrls) {
-    Object.entries(themeVideoUrls).forEach(([key, val]) => {
-      if (val && typeof val === 'string' && val.trim().startsWith('http')) {
-        videoSrcs[key] = val;
-      }
-    });
-  }
+  
+  const [currentVideoTheme, setCurrentVideoTheme] = useState(theme);
+  const [previousVideoTheme, setPreviousVideoTheme] = useState<string | null>(null);
+  const [fadeActive, setFadeActive] = useState(false);
+  const prevThemeRef = useRef(theme);
 
   useEffect(() => {
     document.title = "KYVRA | Fragmentos de um universo sombrio";
@@ -116,127 +108,71 @@ export function Home() {
     }
   }, []);
 
-  // Set the correct active video theme when fully ready, avoiding stuttering
-  const handleCanPlayThrough = (tName: string) => {
-    if (tName === theme && activeVideoTheme !== theme) {
+  // Handle smooth dual-video crossfade transition on theme change
+  useEffect(() => {
+    if (theme !== prevThemeRef.current) {
+      setPreviousVideoTheme(prevThemeRef.current);
+      setCurrentVideoTheme(theme);
+      setFadeActive(false);
+      prevThemeRef.current = theme;
+
       try {
-        const markName = `kyvra-can-play-${tName}`;
-        performance.mark(markName);
-        logPerformanceMeasure(
-          `kyvra-buffering-lag-${tName}`,
-          `kyvra-change-start-${tName}`,
-          markName
-        );
+        trackFPSSlowdown(theme, performance.now());
       } catch (e) {}
 
-      if (fallbackTimeoutRef.current) {
-        clearTimeout(fallbackTimeoutRef.current);
-        fallbackTimeoutRef.current = null;
-      }
-      setActiveVideoTheme(tName);
+      // Trigger animation on next paint
+      const frame = requestAnimationFrame(() => {
+        setFadeActive(true);
+      });
+
+      const timer = setTimeout(() => {
+        setPreviousVideoTheme(null);
+        setFadeActive(false);
+      }, 1000);
+
+      return () => {
+        cancelAnimationFrame(frame);
+        clearTimeout(timer);
+      };
     }
-  };
+  }, [theme]);
 
-  // Guarantee the active video plays programmatically and transition them elegantly
+  // Handle playing of current and transitioning videos programmatically
   useEffect(() => {
-    const activeVideo = videoRefs.current[theme];
-
     const playVideo = (videoEl: HTMLVideoElement | null) => {
       if (!videoEl) return;
       videoEl.muted = true;
       if (videoEl.paused) {
         videoEl.play().catch((err) => {
-          console.log("Auto-play prevented, waiting for user interaction", err);
-          const startOnInteraction = () => {
-            const actV = videoRefs.current[theme];
-            if (actV && actV.paused) actV.play().catch(() => {});
-            document.removeEventListener('click', startOnInteraction);
-            document.removeEventListener('touchstart', startOnInteraction);
-          };
-          document.addEventListener('click', startOnInteraction, { passive: true });
-          document.addEventListener('touchstart', startOnInteraction, { passive: true });
+          console.log("[Kyvra Video Engine] Playback promise rejected, waiting for user interaction.", err);
         });
       }
     };
 
-    // If the chosen theme is not the visually active video theme, start caching/playing it in background
-    if (theme !== activeVideoTheme) {
-      try {
-        const startMark = `kyvra-change-start-${theme}`;
-        performance.mark(startMark);
-        trackFPSSlowdown(theme, performance.now());
-      } catch (e) {}
-
-      if (activeVideo) {
-        activeVideo.preload = "auto";
-        playVideo(activeVideo);
-      }
-
-      // If already fully buffered, transition immediately
-      const isAlreadyReady = activeVideo && activeVideo.readyState >= 3;
-
-      if (isAlreadyReady) {
-        setActiveVideoTheme(theme);
-        try {
-          const appliedMark = `kyvra-transition-applied-${theme}`;
-          performance.mark(appliedMark);
-          logPerformanceMeasure(
-            `kyvra-total-transition-${theme}`,
-            `kyvra-change-start-${theme}`,
-            appliedMark
-          );
-        } catch (e) {}
-      } else {
-        // Fallback timer: 1200ms limit to switch theme video visually even under network failure
-        if (fallbackTimeoutRef.current) {
-          clearTimeout(fallbackTimeoutRef.current);
-        }
-        fallbackTimeoutRef.current = setTimeout(() => {
-          setActiveVideoTheme(theme);
-          try {
-            const appliedMark = `kyvra-transition-applied-${theme}`;
-            performance.mark(appliedMark);
-            logPerformanceMeasure(
-              `kyvra-total-transition-${theme}`,
-              `kyvra-change-start-${theme}`,
-              appliedMark
-            );
-          } catch (e) {}
-        }, 1200);
-      }
-    } else {
-      // Make sure current theme video is active and running
+    const activeVideo = videoRefs.current[currentVideoTheme];
+    if (activeVideo) {
+      activeVideo.preload = "auto";
       playVideo(activeVideo);
     }
 
-    // Ensure inactive themes pause to save CPU/GPU overhead
-    const pauseTimer = setTimeout(() => {
-      Object.entries(THEME_VIDEOS).forEach(([tName]) => {
-        if (tName !== theme) {
-          const vid = videoRefs.current[tName];
-          if (vid && !vid.paused) vid.pause();
-        }
-      });
-    }, 1200);
-
-    return () => {
-      clearTimeout(pauseTimer);
-      if (fallbackTimeoutRef.current) {
-        clearTimeout(fallbackTimeoutRef.current);
+    if (previousVideoTheme) {
+      const prevVideo = videoRefs.current[previousVideoTheme];
+      if (prevVideo) {
+        playVideo(prevVideo);
       }
-    };
-  }, [theme, activeVideoTheme]);
+    }
+  }, [currentVideoTheme, previousVideoTheme]);
 
-  // Global user interaction gesture hook to bypass aggressive mobile/browser autoplay restrictions
+  // Global click & touch interaction overrider to satisfy strict browser autoplay requirements
   useEffect(() => {
     const forceAutoplay = () => {
       try {
-        const activeVideo = videoRefs.current[theme];
+        const activeVideo = videoRefs.current[currentVideoTheme];
         if (activeVideo && activeVideo.paused) {
           activeVideo.play().catch(() => {});
         }
       } catch (err) {
-        console.warn("[Kyvra Autoplay Overrider] Play on interaction failed: ", err);
+        console.warn("[Kyvra Video Engine] Interaction-triggered autoplay failed: ", err);
       }
     };
 
@@ -250,7 +186,7 @@ export function Home() {
         document.removeEventListener(evt, forceAutoplay);
       });
     };
-  }, [theme]);
+  }, [currentVideoTheme]);
 
   // Self-healing / keep-alive heartbeat for background suspension recovery & focus recovery
   useEffect(() => {
@@ -359,32 +295,50 @@ export function Home() {
             }} />
           </div>
 
-          {/* Render all theme videos so they stay cached and mounted, preventing black flashes and load stutters */}
-          {Object.entries(THEME_VIDEOS).map(([tName]) => (
-            <video
-              key={`unified-video-${tName}`}
-              ref={el => {
-                videoRefs.current[tName] = el;
-              }}
-              autoPlay={tName === theme}
-              loop={true}
-              muted={true}
-              playsInline={true}
-              preload="auto"
-              crossOrigin="anonymous"
-              onCanPlayThrough={() => handleCanPlayThrough(tName)}
-              className={cn(
-                "absolute inset-0 w-full h-full object-cover object-[80%_center] md:object-center transition-opacity duration-1000 ease-in-out bg-transparent",
-                activeVideoTheme === tName ? "opacity-[0.78] md:opacity-[0.82] z-10" : "opacity-0 z-0 pointer-events-none"
-              )}
-              style={{
-                willChange: "opacity",
-                transform: "translate3d(0,0,0)",
-                backfaceVisibility: "hidden"
-              }}
-              src={videoSrcs[tName]}
-            />
-          ))}
+          {/* Dual-Video Hardware-Accelerated Crossfade Engine (Max 2 simultaneous players to satisfy low-resource devices and browser limits) */}
+          {[previousVideoTheme, currentVideoTheme].map((tName) => {
+            if (!tName) return null;
+            const isCurrent = tName === currentVideoTheme;
+            const isTransitionActive = previousVideoTheme !== null;
+            
+            // Determine dynamic opacity during crossfade transition
+            let opacityClass = "opacity-0 z-0 pointer-events-none";
+            if (isCurrent) {
+              if (isTransitionActive) {
+                opacityClass = fadeActive ? "opacity-[0.78] md:opacity-[0.82] z-10" : "opacity-0 z-10";
+              } else {
+                opacityClass = "opacity-[0.78] md:opacity-[0.82] z-10";
+              }
+            } else {
+              // This is the previous video fading out
+              opacityClass = fadeActive ? "opacity-0 z-0 pointer-events-none" : "opacity-[0.78] md:opacity-[0.82] z-0";
+            }
+
+            return (
+              <video
+                key={`unified-video-${tName}`}
+                ref={el => {
+                  videoRefs.current[tName] = el;
+                }}
+                autoPlay={isCurrent}
+                loop={true}
+                muted={true}
+                playsInline={true}
+                preload="auto"
+                crossOrigin="anonymous"
+                className={cn(
+                  "absolute inset-0 w-full h-full object-cover object-[80%_center] md:object-center transition-opacity duration-1000 ease-in-out bg-transparent",
+                  opacityClass
+                )}
+                style={{
+                  willChange: "opacity",
+                  transform: "translate3d(0,0,0)",
+                  backfaceVisibility: "hidden"
+                }}
+                src={THEME_VIDEOS[tName]}
+              />
+            );
+          })}
 
           {/* Unified Vignettes overlays to ensure readability responsive */}
           <div className="absolute inset-0 bg-gradient-to-r from-[#030303]/85 via-[#030303]/20 to-transparent md:block hidden z-20 pointer-events-none" />

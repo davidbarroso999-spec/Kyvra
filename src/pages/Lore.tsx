@@ -27,9 +27,10 @@ export function Lore() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [readingModalOpen, setReadingModalOpen] = useState(false);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
-  const [activeVideoTheme, setActiveVideoTheme] = useState(theme);
-  const [playingVideos, setPlayingVideos] = useState<Record<string, boolean>>({});
-  const fallbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [currentVideoTheme, setCurrentVideoTheme] = useState(theme);
+  const [previousVideoTheme, setPreviousVideoTheme] = useState<string | null>(null);
+  const [fadeActive, setFadeActive] = useState(false);
+  const prevThemeRef = useRef(theme);
   const [readChapters, setReadChapters] = useState<string[]>([]);
 
   useEffect(() => {
@@ -77,86 +78,67 @@ export function Lore() {
     }
   };
 
-  const handleCanPlayThrough = (tName: string) => {
-    if (tName === theme && activeVideoTheme !== theme) {
-      if (fallbackTimeoutRef.current) {
-        clearTimeout(fallbackTimeoutRef.current);
-        fallbackTimeoutRef.current = null;
-      }
-      setActiveVideoTheme(tName);
-    }
-  };
-
+  // Handle smooth dual-video crossfade transition on theme change
   useEffect(() => {
-    const activeVideo = videoRefs.current[theme];
+    if (theme !== prevThemeRef.current) {
+      setPreviousVideoTheme(prevThemeRef.current);
+      setCurrentVideoTheme(theme);
+      setFadeActive(false);
+      prevThemeRef.current = theme;
 
+      // Trigger animation on next paint
+      const frame = requestAnimationFrame(() => {
+        setFadeActive(true);
+      });
+
+      const timer = setTimeout(() => {
+        setPreviousVideoTheme(null);
+        setFadeActive(false);
+      }, 1000);
+
+      return () => {
+        cancelAnimationFrame(frame);
+        clearTimeout(timer);
+      };
+    }
+  }, [theme]);
+
+  // Handle playing of current and transitioning videos programmatically
+  useEffect(() => {
     const playVideo = (videoEl: HTMLVideoElement | null) => {
       if (!videoEl) return;
       videoEl.muted = true;
       if (videoEl.paused) {
         videoEl.play().catch((err) => {
-          console.log("Auto-play prevented, waiting to play on interaction", err);
-          const startOnInteraction = () => {
-            const actV = videoRefs.current[theme];
-            if (actV && actV.paused) actV.play().catch(() => {});
-            document.removeEventListener('click', startOnInteraction);
-            document.removeEventListener('touchstart', startOnInteraction);
-          };
-          document.addEventListener('click', startOnInteraction, { passive: true });
-          document.addEventListener('touchstart', startOnInteraction, { passive: true });
+          console.log("[Kyvra Video Engine] Playback promise rejected, waiting for user interaction.", err);
         });
       }
     };
 
-    if (theme !== activeVideoTheme) {
-      if (activeVideo) {
-        activeVideo.preload = "auto";
-        playVideo(activeVideo);
-      }
-
-      const isAlreadyReady = activeVideo && activeVideo.readyState >= 3;
-
-      if (isAlreadyReady) {
-        setActiveVideoTheme(theme);
-      } else {
-        if (fallbackTimeoutRef.current) {
-          clearTimeout(fallbackTimeoutRef.current);
-        }
-        fallbackTimeoutRef.current = setTimeout(() => {
-          setActiveVideoTheme(theme);
-        }, 1200);
-      }
-    } else {
+    const activeVideo = videoRefs.current[currentVideoTheme];
+    if (activeVideo) {
+      activeVideo.preload = "auto";
       playVideo(activeVideo);
     }
 
-    const pauseTimer = setTimeout(() => {
-      Object.entries(LORE_THEME_VIDEOS).forEach(([tName]) => {
-        if (tName !== theme) {
-          const vid = videoRefs.current[tName];
-          if (vid && !vid.paused) vid.pause();
-        }
-      });
-    }, 1200);
-
-    return () => {
-      clearTimeout(pauseTimer);
-      if (fallbackTimeoutRef.current) {
-        clearTimeout(fallbackTimeoutRef.current);
+    if (previousVideoTheme) {
+      const prevVideo = videoRefs.current[previousVideoTheme];
+      if (prevVideo) {
+        playVideo(prevVideo);
       }
-    };
-  }, [theme, activeVideoTheme]);
+    }
+  }, [currentVideoTheme, previousVideoTheme]);
 
-  // Global user interaction gesture hook to bypass aggressive mobile/browser autoplay restrictions
+  // Global click & touch interaction overrider to satisfy strict browser autoplay requirements
   useEffect(() => {
     const forceAutoplay = () => {
       try {
-        const activeVid = videoRefs.current[theme];
-        if (activeVid && activeVid.paused) {
-          activeVid.play().catch(() => {});
+        const activeVideo = videoRefs.current[currentVideoTheme];
+        if (activeVideo && activeVideo.paused) {
+          activeVideo.play().catch(() => {});
         }
       } catch (err) {
-        console.warn("[Kyvra Lore Autoplay Overrider] Play on interaction failed: ", err);
+        console.warn("[Kyvra Video Engine] Interaction-triggered autoplay failed: ", err);
       }
     };
 
@@ -170,7 +152,7 @@ export function Lore() {
         document.removeEventListener(evt, forceAutoplay);
       });
     };
-  }, [theme]);
+  }, [currentVideoTheme]);
 
   // Self-healing / keep-alive heartbeat for background suspension recovery & focus recovery
   useEffect(() => {
@@ -243,31 +225,50 @@ export function Lore() {
           />
         </div>
 
-        {Object.entries(LORE_THEME_VIDEOS).map(([tName]) => (
-          <video
-            key={`lore-video-${tName}`}
-            ref={el => {
-              videoRefs.current[tName] = el;
-            }}
-            src={LORE_THEME_VIDEOS[tName]}
-            autoPlay={tName === theme}
-            loop={true}
-            muted={true}
-            playsInline={true}
-            preload="auto"
-            crossOrigin="anonymous"
-            onCanPlayThrough={() => handleCanPlayThrough(tName)}
-            className={cn(
-              "absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out bg-transparent",
-              activeVideoTheme === tName ? "opacity-90 z-10" : "opacity-0 z-0 pointer-events-none"
-            )}
-            style={{
-              willChange: "opacity",
-              transform: "translate3d(0,0,0)",
-              backfaceVisibility: "hidden"
-            }}
-          />
-        ))}
+        {/* Dual-Video Hardware-Accelerated Crossfade Engine (Max 2 simultaneous players to satisfy low-resource devices and browser limits) */}
+        {[previousVideoTheme, currentVideoTheme].map((tName) => {
+          if (!tName) return null;
+          const isCurrent = tName === currentVideoTheme;
+          const isTransitionActive = previousVideoTheme !== null;
+          
+          // Determine dynamic opacity during crossfade transition
+          let opacityClass = "opacity-0 z-0 pointer-events-none";
+          if (isCurrent) {
+            if (isTransitionActive) {
+              opacityClass = fadeActive ? "opacity-90 z-10" : "opacity-0 z-10";
+            } else {
+              opacityClass = "opacity-90 z-10";
+            }
+          } else {
+            // This is the previous video fading out
+            opacityClass = fadeActive ? "opacity-0 z-0 pointer-events-none" : "opacity-90 z-0";
+          }
+
+          return (
+            <video
+              key={`lore-video-${tName}`}
+              ref={el => {
+                videoRefs.current[tName] = el;
+              }}
+              src={LORE_THEME_VIDEOS[tName]}
+              autoPlay={isCurrent}
+              loop={true}
+              muted={true}
+              playsInline={true}
+              preload="auto"
+              crossOrigin="anonymous"
+              className={cn(
+                "absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out bg-transparent",
+                opacityClass
+              )}
+              style={{
+                willChange: "opacity",
+                transform: "translate3d(0,0,0)",
+                backfaceVisibility: "hidden"
+              }}
+            />
+          );
+        })}
       </div>
 
       {/* Bottom Blur Overlay (z-index 1) */}
