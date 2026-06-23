@@ -243,46 +243,31 @@ export function Lore() {
           />
         </div>
 
-        {Object.entries(LORE_THEME_VIDEOS)
-          .filter(([tName]) => tName === theme || tName === activeVideoTheme)
-          .map(([tName]) => (
-            <video
-              key={`lore-video-${tName}`}
-              ref={el => {
-                videoRefs.current[tName] = el;
-                if (el && tName === theme) {
-                  el.muted = true;
-                  if (el.paused) {
-                    el.play().catch(() => {});
-                  }
-                }
-              }}
-              src={LORE_THEME_VIDEOS[tName]}
-              autoPlay={true}
-              loop={true}
-              muted={true}
-              playsInline={true}
-              preload="auto"
-              crossOrigin="anonymous"
-              onCanPlayThrough={() => handleCanPlayThrough(tName)}
-              onPlaying={() => setPlayingVideos(prev => ({ ...prev, [tName]: true }))}
-              onTimeUpdate={(e) => {
-                const vid = e.currentTarget;
-                if (vid.currentTime > 0.05 && !playingVideos[tName]) {
-                  setPlayingVideos(prev => ({ ...prev, [tName]: true }));
-                }
-              }}
-              className={cn(
-                "absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out bg-transparent",
-                (activeVideoTheme === tName && playingVideos[tName]) ? "opacity-90 z-10" : "opacity-0 z-0 pointer-events-none"
-              )}
-              style={{
-                willChange: "opacity",
-                transform: "translate3d(0,0,0)",
-                backfaceVisibility: "hidden"
-              }}
-            />
-          ))}
+        {Object.entries(LORE_THEME_VIDEOS).map(([tName]) => (
+          <video
+            key={`lore-video-${tName}`}
+            ref={el => {
+              videoRefs.current[tName] = el;
+            }}
+            src={LORE_THEME_VIDEOS[tName]}
+            autoPlay={tName === theme}
+            loop={true}
+            muted={true}
+            playsInline={true}
+            preload="auto"
+            crossOrigin="anonymous"
+            onCanPlayThrough={() => handleCanPlayThrough(tName)}
+            className={cn(
+              "absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out bg-transparent",
+              activeVideoTheme === tName ? "opacity-90 z-10" : "opacity-0 z-0 pointer-events-none"
+            )}
+            style={{
+              willChange: "opacity",
+              transform: "translate3d(0,0,0)",
+              backfaceVisibility: "hidden"
+            }}
+          />
+        ))}
       </div>
 
       {/* Bottom Blur Overlay (z-index 1) */}

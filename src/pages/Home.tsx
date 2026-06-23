@@ -359,47 +359,32 @@ export function Home() {
             }} />
           </div>
 
-          {/* Render ONLY active or transitioning themes! High-performance game design */}
-          {Object.entries(THEME_VIDEOS)
-            .filter(([tName]) => tName === theme || tName === activeVideoTheme)
-            .map(([tName]) => (
-              <video
-                key={`unified-video-${tName}`}
-                ref={el => {
-                  videoRefs.current[tName] = el;
-                  if (el && tName === theme) {
-                    el.muted = true;
-                    if (el.paused) {
-                      el.play().catch(() => {});
-                    }
-                  }
-                }}
-                autoPlay={true}
-                loop={true}
-                muted={true}
-                playsInline={true}
-                preload="auto"
-                crossOrigin="anonymous"
-                onCanPlayThrough={() => handleCanPlayThrough(tName)}
-                onPlaying={() => setPlayingVideos(prev => ({ ...prev, [tName]: true }))}
-                onTimeUpdate={(e) => {
-                  const vid = e.currentTarget;
-                  if (vid.currentTime > 0.05 && !playingVideos[tName]) {
-                    setPlayingVideos(prev => ({ ...prev, [tName]: true }));
-                  }
-                }}
-                className={cn(
-                  "absolute inset-0 w-full h-full object-cover object-[80%_center] md:object-center transition-opacity duration-1000 ease-in-out bg-transparent",
-                  (activeVideoTheme === tName && playingVideos[tName]) ? "opacity-[0.78] md:opacity-[0.82] z-10" : "opacity-0 z-0 pointer-events-none"
-                )}
-                style={{
-                  willChange: "opacity",
-                  transform: "translate3d(0,0,0)",
-                  backfaceVisibility: "hidden"
-                }}
-                src={videoSrcs[tName]}
-              />
-            ))}
+          {/* Render all theme videos so they stay cached and mounted, preventing black flashes and load stutters */}
+          {Object.entries(THEME_VIDEOS).map(([tName]) => (
+            <video
+              key={`unified-video-${tName}`}
+              ref={el => {
+                videoRefs.current[tName] = el;
+              }}
+              autoPlay={tName === theme}
+              loop={true}
+              muted={true}
+              playsInline={true}
+              preload="auto"
+              crossOrigin="anonymous"
+              onCanPlayThrough={() => handleCanPlayThrough(tName)}
+              className={cn(
+                "absolute inset-0 w-full h-full object-cover object-[80%_center] md:object-center transition-opacity duration-1000 ease-in-out bg-transparent",
+                activeVideoTheme === tName ? "opacity-[0.78] md:opacity-[0.82] z-10" : "opacity-0 z-0 pointer-events-none"
+              )}
+              style={{
+                willChange: "opacity",
+                transform: "translate3d(0,0,0)",
+                backfaceVisibility: "hidden"
+              }}
+              src={videoSrcs[tName]}
+            />
+          ))}
 
           {/* Unified Vignettes overlays to ensure readability responsive */}
           <div className="absolute inset-0 bg-gradient-to-r from-[#030303]/85 via-[#030303]/20 to-transparent md:block hidden z-20 pointer-events-none" />
