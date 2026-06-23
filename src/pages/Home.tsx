@@ -172,7 +172,7 @@ export function Home() {
         activeVideo.preload = "auto";
         // Only load if the source is different or not initialized to prevent reset stuttering
         if (!activeVideo.src || !activeVideo.src.includes(activeSrc)) {
-          activeVideo.load();
+          activeVideo.src = activeSrc;
         }
         playVideo(activeVideo);
       }
@@ -254,6 +254,37 @@ export function Home() {
       interactionEvents.forEach(evt => {
         document.removeEventListener(evt, forceAutoplay);
       });
+    };
+  }, [theme]);
+
+  // Self-healing / keep-alive heartbeat for background suspension recovery & focus recovery
+  useEffect(() => {
+    const handleAutoplayRecovery = () => {
+      if (document.visibilityState === 'visible') {
+        const activeVid = videoRefs.current[theme];
+        if (activeVid && activeVid.paused) {
+          activeVid.play().catch(() => {});
+        }
+      }
+    };
+
+    const heartbeatTimer = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        const activeVid = videoRefs.current[theme];
+        if (activeVid && activeVid.paused) {
+          activeVid.muted = true;
+          activeVid.play().catch(() => {});
+        }
+      }
+    }, 1500);
+
+    document.addEventListener('visibilitychange', handleAutoplayRecovery, { passive: true });
+    window.addEventListener('focus', handleAutoplayRecovery, { passive: true });
+
+    return () => {
+      clearInterval(heartbeatTimer);
+      document.removeEventListener('visibilitychange', handleAutoplayRecovery);
+      window.removeEventListener('focus', handleAutoplayRecovery);
     };
   }, [theme]);
 
