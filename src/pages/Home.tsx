@@ -87,6 +87,7 @@ export function Home() {
   const [currentVideoTheme, setCurrentVideoTheme] = useState(theme);
   const [previousVideoTheme, setPreviousVideoTheme] = useState<string | null>(null);
   const [fadeActive, setFadeActive] = useState(false);
+  const [videoLoaded, setVideoLoaded] = useState<Record<string, boolean>>({});
   const prevThemeRef = useRef(theme);
 
   const handleVideoError = (tName: string, e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
@@ -345,16 +346,17 @@ export function Home() {
             if (!tName) return null;
             const isCurrent = tName === currentVideoTheme;
             const isTransitionActive = previousVideoTheme !== null;
+            const isLoaded = videoLoaded[tName];
             
             // Determine dynamic opacity during crossfade transition
             let opacityClass = "opacity-0 z-0 pointer-events-none";
-            if (isCurrent) {
+            if (isCurrent && isLoaded) {
               if (isTransitionActive) {
                 opacityClass = fadeActive ? "opacity-[0.78] md:opacity-[0.82] z-10" : "opacity-0 z-10";
               } else {
                 opacityClass = "opacity-[0.78] md:opacity-[0.82] z-10";
               }
-            } else {
+            } else if (!isCurrent) {
               // This is the previous video fading out
               opacityClass = fadeActive ? "opacity-0 z-0 pointer-events-none" : "opacity-[0.78] md:opacity-[0.82] z-0";
             }
@@ -365,7 +367,7 @@ export function Home() {
                 ref={el => {
                   videoRefs.current[tName] = el;
                 }}
-                autoPlay={isCurrent}
+                autoPlay={false}
                 loop={true}
                 muted={true}
                 playsInline={true}
@@ -382,9 +384,14 @@ export function Home() {
                 src={THEME_VIDEOS[tName]}
                 onError={(e) => handleVideoError(tName, e)}
                 onCanPlay={(e) => {
-                  if (tName === currentVideoTheme || tName === previousVideoTheme) {
-                    e.currentTarget.play().catch(() => {});
-                  }
+                  e.currentTarget.play().catch(() => {});
+                }}
+                onCanPlayThrough={(e) => {
+                  setVideoLoaded(prev => ({ ...prev, [tName]: true }));
+                  e.currentTarget.play().catch(() => {});
+                }}
+                onPlaying={(e) => {
+                  setVideoLoaded(prev => ({ ...prev, [tName]: true }));
                 }}
               />
             );

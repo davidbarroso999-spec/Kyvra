@@ -103,6 +103,7 @@ export function Lore() {
   };
   const [readChapters, setReadChapters] = useState<string[]>([]);
   const [direction, setDirection] = useState<'next' | 'prev'>('next');
+  const [videoLoaded, setVideoLoaded] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     try {
@@ -303,16 +304,17 @@ export function Lore() {
           if (!tName) return null;
           const isCurrent = tName === currentVideoTheme;
           const isTransitionActive = previousVideoTheme !== null;
+          const isLoaded = videoLoaded[tName];
           
           // Determine dynamic opacity during crossfade transition
           let opacityClass = "opacity-0 z-0 pointer-events-none";
-          if (isCurrent) {
+          if (isCurrent && isLoaded) {
             if (isTransitionActive) {
               opacityClass = fadeActive ? "opacity-90 z-10" : "opacity-0 z-10";
             } else {
               opacityClass = "opacity-90 z-10";
             }
-          } else {
+          } else if (!isCurrent) {
             // This is the previous video fading out
             opacityClass = fadeActive ? "opacity-0 z-0 pointer-events-none" : "opacity-90 z-0";
           }
@@ -324,7 +326,7 @@ export function Lore() {
                 videoRefs.current[tName] = el;
               }}
               src={LORE_THEME_VIDEOS[tName]}
-              autoPlay={isCurrent}
+              autoPlay={false}
               loop={true}
               muted={true}
               playsInline={true}
@@ -340,9 +342,14 @@ export function Lore() {
               }}
               onError={(e) => handleVideoError(tName, e)}
               onCanPlay={(e) => {
-                if (tName === currentVideoTheme || tName === previousVideoTheme) {
-                  e.currentTarget.play().catch(() => {});
-                }
+                e.currentTarget.play().catch(() => {});
+              }}
+              onCanPlayThrough={(e) => {
+                setVideoLoaded(prev => ({ ...prev, [tName]: true }));
+                e.currentTarget.play().catch(() => {});
+              }}
+              onPlaying={(e) => {
+                setVideoLoaded(prev => ({ ...prev, [tName]: true }));
               }}
             />
           );
@@ -477,10 +484,10 @@ export function Lore() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed inset-0 z-[100] bg-black/98 backdrop-blur-3xl overflow-y-auto"
+            className="fixed inset-0 z-[100] bg-black/98 backdrop-blur-3xl overflow-hidden"
           >
-            {/* Fixed Close Button */}
-            <div className="fixed top-6 right-6 z-[110] pointer-events-auto">
+            {/* Fixed Close Button - Positioned absolutely inside the overflow-hidden parent wrapper */}
+            <div className="absolute top-6 right-6 z-[110] pointer-events-auto">
               <button 
                 onClick={() => setReadingModalOpen(false)}
                 className="w-12 h-12 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-all duration-300 text-white shadow-lg backdrop-blur-md cursor-pointer"
@@ -489,57 +496,60 @@ export function Lore() {
               </button>
             </div>
             
-            <div className="max-w-4xl mx-auto px-6 py-20 md:py-32">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                {/* Header with Title */}
-                <div className="flex flex-col gap-6 mb-16 border-b border-white/10 pb-8">
-                  <div className="flex flex-col">
-                    <span className="text-primary font-sc text-sm tracking-[0.3em] uppercase block mb-2">
-                      Capítulo {currentChapter.chapter_number || currentIndex + 1}
-                    </span>
-                    <h2 className="text-4xl md:text-5xl lg:text-6xl font-display font-medium text-white leading-tight">
-                      {currentChapter.title}
-                    </h2>
+            {/* Dedicated scroll container that allows content to scroll freely without affecting the close button */}
+            <div className="w-full h-full overflow-y-auto scrollbar-thin">
+              <div className="max-w-4xl mx-auto px-6 py-20 md:py-32">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  {/* Header with Title */}
+                  <div className="flex flex-col gap-6 mb-16 border-b border-white/10 pb-8">
+                    <div className="flex flex-col">
+                      <span className="text-primary font-sc text-sm tracking-[0.3em] uppercase block mb-2">
+                        Capítulo {currentChapter.chapter_number || currentIndex + 1}
+                      </span>
+                      <h2 className="text-4xl md:text-5xl lg:text-6xl font-display font-medium text-white leading-tight">
+                        {currentChapter.title}
+                      </h2>
+                    </div>
                   </div>
-                </div>
-                
-                {currentChapter.image_url ? (
-                  <img 
-                    src={currentChapter.image_url || undefined} 
-                    alt={currentChapter.title} 
-                    className="w-full h-auto max-h-[50vh] object-cover rounded-xl mb-16 opacity-80"
-                  />
-                ) : null}
+                  
+                  {currentChapter.image_url ? (
+                    <img 
+                      src={currentChapter.image_url || undefined} 
+                      alt={currentChapter.title} 
+                      className="w-full h-auto max-h-[50vh] object-cover rounded-xl mb-16 opacity-80"
+                    />
+                  ) : null}
 
-                <div className="space-y-8 text-lg md:text-xl text-gray-300 font-light leading-relaxed mb-20">
-                  {currentChapter.content?.split('\n\n').map((para: string, idx: number) => (
-                    <p key={idx}>{para}</p>
-                  ))}
-                </div>
+                  <div className="space-y-8 text-lg md:text-xl text-gray-300 font-light leading-relaxed mb-20">
+                    {currentChapter.content?.split('\n\n').map((para: string, idx: number) => (
+                      <p key={idx}>{para}</p>
+                    ))}
+                  </div>
 
-                {/* Mark as Read Toggle Option at the bottom */}
-                <div className="flex flex-col items-center justify-center pt-12 border-t border-white/10 gap-4">
-                  <p className="text-sm text-white/40 font-light">
-                    Concluiu a leitura deste capítulo?
-                  </p>
-                  <button
-                    onClick={() => toggleChapterRead(String(currentChapter.id || currentChapter.title))}
-                    className={cn(
-                      "flex items-center gap-2 px-8 py-4 rounded-full border text-base font-medium transition-all duration-300 pointer-events-auto cursor-pointer shadow-lg",
-                      readChapters.includes(String(currentChapter.id || currentChapter.title))
-                        ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:bg-emerald-500/20"
-                        : "bg-white/5 border-white/10 text-white/80 hover:bg-white/10 hover:border-white/20 hover:text-white"
-                    )}
-                  >
-                    <Check size={18} className={cn("transition-transform duration-300 stroke-[2.5px]", readChapters.includes(String(currentChapter.id || currentChapter.title)) ? "scale-110 text-emerald-400" : "scale-90 text-white/40")} />
-                    <span>{readChapters.includes(String(currentChapter.id || currentChapter.title)) ? 'Lido ✓' : 'Marcar como Lido'}</span>
-                  </button>
-                </div>
-              </motion.div>
+                  {/* Mark as Read Toggle Option at the bottom */}
+                  <div className="flex flex-col items-center justify-center pt-12 border-t border-white/10 gap-4">
+                    <p className="text-sm text-white/40 font-light">
+                      Concluiu a leitura deste capítulo?
+                    </p>
+                    <button
+                      onClick={() => toggleChapterRead(String(currentChapter.id || currentChapter.title))}
+                      className={cn(
+                        "flex items-center gap-2 px-8 py-4 rounded-full border text-base font-medium transition-all duration-300 pointer-events-auto cursor-pointer shadow-lg",
+                        readChapters.includes(String(currentChapter.id || currentChapter.title))
+                          ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:bg-emerald-500/20"
+                          : "bg-white/5 border-white/10 text-white/80 hover:bg-white/10 hover:border-white/20 hover:text-white"
+                      )}
+                    >
+                      <Check size={18} className={cn("transition-transform duration-300 stroke-[2.5px]", readChapters.includes(String(currentChapter.id || currentChapter.title)) ? "scale-110 text-emerald-400" : "scale-90 text-white/40")} />
+                      <span>{readChapters.includes(String(currentChapter.id || currentChapter.title)) ? 'Lido ✓' : 'Marcar como Lido'}</span>
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
             </div>
           </motion.div>
         )}
