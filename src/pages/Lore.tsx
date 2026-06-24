@@ -104,6 +104,14 @@ export function Lore() {
   const [readChapters, setReadChapters] = useState<string[]>([]);
   const [direction, setDirection] = useState<'next' | 'prev'>('next');
   const [videoLoaded, setVideoLoaded] = useState<Record<string, boolean>>({});
+  const [initialDelayOver, setInitialDelayOver] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setInitialDelayOver(true);
+    }, 800);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     try {
@@ -179,6 +187,8 @@ export function Lore() {
 
   // Handle playing of current and transitioning videos programmatically
   useEffect(() => {
+    if (!initialDelayOver) return;
+
     const playVideo = (videoEl: HTMLVideoElement | null) => {
       if (!videoEl) return;
       videoEl.muted = true;
@@ -201,10 +211,12 @@ export function Lore() {
         playVideo(prevVideo);
       }
     }
-  }, [currentVideoTheme, previousVideoTheme]);
+  }, [currentVideoTheme, previousVideoTheme, initialDelayOver]);
 
   // Global click & touch interaction overrider to satisfy strict browser autoplay requirements
   useEffect(() => {
+    if (!initialDelayOver) return;
+
     const forceAutoplay = () => {
       try {
         const activeVideo = videoRefs.current[currentVideoTheme];
@@ -226,10 +238,12 @@ export function Lore() {
         document.removeEventListener(evt, forceAutoplay);
       });
     };
-  }, [currentVideoTheme]);
+  }, [currentVideoTheme, initialDelayOver]);
 
   // Self-healing / keep-alive heartbeat for background suspension recovery & focus recovery
   useEffect(() => {
+    if (!initialDelayOver) return;
+
     const handleAutoplayRecovery = () => {
       if (document.visibilityState === 'visible') {
         const activeVid = videoRefs.current[theme];
@@ -257,7 +271,7 @@ export function Lore() {
       document.removeEventListener('visibilitychange', handleAutoplayRecovery);
       window.removeEventListener('focus', handleAutoplayRecovery);
     };
-  }, [theme]);
+  }, [theme, initialDelayOver]);
 
   // Prevent background scroll when menu is open
   useEffect(() => {
@@ -300,7 +314,7 @@ export function Lore() {
         </div>
 
         {/* Dual-Video Hardware-Accelerated Crossfade Engine (Max 2 simultaneous players to satisfy low-resource devices and browser limits) */}
-        {[previousVideoTheme, currentVideoTheme].map((tName) => {
+        {initialDelayOver && [previousVideoTheme, currentVideoTheme].map((tName) => {
           if (!tName) return null;
           const isCurrent = tName === currentVideoTheme;
           const isTransitionActive = previousVideoTheme !== null;
