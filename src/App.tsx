@@ -30,6 +30,19 @@ export default function App() {
     }
     // Apply theme to document
     document.documentElement.className = theme === 'abissal' ? '' : `theme-${theme}`;
+
+    // Update Android status bar / PWA theme color dynamically
+    const themeColors: Record<string, string> = {
+      'abissal': '#020205',
+      'sangue-de-drago': '#080202',
+      'floresta-negra': '#020503',
+      'monolito': '#050505',
+    };
+    const color = themeColors[theme] || '#020205';
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute('content', color);
+    }
   }, [theme, setTheme]);
 
   React.useEffect(() => {

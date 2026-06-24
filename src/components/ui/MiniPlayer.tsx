@@ -200,6 +200,16 @@ export const AudioSpectrum = ({ audioRef }: { audioRef: React.RefObject<HTMLAudi
   );
 };
 
+const hapticFeedback = (duration = 10) => {
+  if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+    try {
+      navigator.vibrate(duration);
+    } catch (e) {
+      // Ignored
+    }
+  }
+};
+
 export function MiniPlayer() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isActive, setIsActive] = useState(false);
@@ -225,7 +235,91 @@ export function MiniPlayer() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
+  // Media Session API integration for Android control center, lock screen, and bluetooth actions
+  useEffect(() => {
+    if (!('mediaSession' in navigator) || !currentTrack) return;
+
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: currentTrack.title,
+        artist: currentTrack.artist || 'O Arquivista',
+        album: currentTrack.albumTitle || 'Kyvra',
+        artwork: [
+          { src: currentTrack.coverUrl || '/pwa-192x192.png', sizes: '96x96', type: 'image/png' },
+          { src: currentTrack.coverUrl || '/pwa-192x192.png', sizes: '128x128', type: 'image/png' },
+          { src: currentTrack.coverUrl || '/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: currentTrack.coverUrl || '/pwa-512x512.png', sizes: '256x256', type: 'image/png' },
+          { src: currentTrack.coverUrl || '/pwa-512x512.png', sizes: '384x384', type: 'image/png' },
+          { src: currentTrack.coverUrl || '/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+        ]
+      });
+    } catch (e) {
+      console.warn("Kyvra: Media Session Metadata registration failed", e);
+    }
+  }, [currentTrack]);
+
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+    navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+  }, [isPlaying]);
+
+  useEffect(() => {
+    if (!('mediaSession' in navigator) || !currentTrack) return;
+
+    try {
+      navigator.mediaSession.setActionHandler('play', () => {
+        setIsPlaying(true);
+      });
+      navigator.mediaSession.setActionHandler('pause', () => {
+        setIsPlaying(false);
+      });
+      navigator.mediaSession.setActionHandler('previoustrack', () => {
+        hapticFeedback(10);
+        playPrevious();
+      });
+      navigator.mediaSession.setActionHandler('nexttrack', () => {
+        hapticFeedback(10);
+        playNext();
+      });
+      navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+        if (audioRef.current) {
+          hapticFeedback(8);
+          const offset = details.seekOffset || 10;
+          audioRef.current.currentTime = Math.max(audioRef.current.currentTime - offset, 0);
+        }
+      });
+      navigator.mediaSession.setActionHandler('seekforward', (details) => {
+        if (audioRef.current) {
+          hapticFeedback(8);
+          const offset = details.seekOffset || 10;
+          audioRef.current.currentTime = Math.min(audioRef.current.currentTime + offset, audioRef.current.duration || 0);
+        }
+      });
+      navigator.mediaSession.setActionHandler('seekto', (details) => {
+        if (audioRef.current && details.seekTime !== undefined) {
+          audioRef.current.currentTime = details.seekTime;
+        }
+      });
+    } catch (e) {
+      console.warn("Kyvra: Media Session Action Handlers registration failed", e);
+    }
+
+    return () => {
+      if (!('mediaSession' in navigator)) return;
+      try {
+        navigator.mediaSession.setActionHandler('play', null);
+        navigator.mediaSession.setActionHandler('pause', null);
+        navigator.mediaSession.setActionHandler('previoustrack', null);
+        navigator.mediaSession.setActionHandler('nexttrack', null);
+        navigator.mediaSession.setActionHandler('seekbackward', null);
+        navigator.mediaSession.setActionHandler('seekforward', null);
+        navigator.mediaSession.setActionHandler('seekto', null);
+      } catch (e) {}
+    };
+  }, [currentTrack, playNext, playPrevious, setIsPlaying]);
+
   const togglePlay = () => {
+    hapticFeedback(12);
     setIsPlaying(!isPlaying);
   };
 
@@ -235,11 +329,25 @@ export function MiniPlayer() {
       setProgress(isFinite(prog) ? prog : 0);
       setCurrentTime(audioRef.current.currentTime);
       setDuration(audioRef.current.duration);
+
+      // Keep media session position state in sync
+      if ('mediaSession' in navigator && 'setPositionState' in navigator.mediaSession) {
+        try {
+          navigator.mediaSession.setPositionState({
+            duration: audioRef.current.duration || 0,
+            playbackRate: audioRef.current.playbackRate || 1,
+            position: audioRef.current.currentTime || 0
+          });
+        } catch (e) {
+          // Ignore if values are temporarily out of sync
+        }
+      }
     }
   };
 
   const handleSeek = (value: number) => {
     if (audioRef.current && audioRef.current.duration) {
+      hapticFeedback(6);
       const time = (value / 100) * audioRef.current.duration;
       if (isFinite(time)) {
         audioRef.current.currentTime = time;
@@ -402,6 +510,7 @@ export function MiniPlayer() {
                               size="icon"
                               onClick={(e) => {
                                 e.stopPropagation();
+                                hapticFeedback(8);
                                 toggleShuffle();
                               }}
                               className={cn(
@@ -416,6 +525,7 @@ export function MiniPlayer() {
                               size="icon"
                               onClick={(e) => {
                                 e.stopPropagation();
+                                hapticFeedback(10);
                                 playPrevious();
                               }}
                               className="text-white hover:bg-white/20 hover:text-white h-7 w-7 rounded-full transition-colors"
@@ -442,6 +552,7 @@ export function MiniPlayer() {
                               size="icon"
                               onClick={(e) => {
                                 e.stopPropagation();
+                                hapticFeedback(10);
                                 playNext();
                               }}
                               className="text-white hover:bg-white/20 hover:text-white h-7 w-7 rounded-full transition-colors"
@@ -453,6 +564,7 @@ export function MiniPlayer() {
                               size="icon"
                               onClick={(e) => {
                                 e.stopPropagation();
+                                hapticFeedback(8);
                                 toggleRepeat();
                               }}
                               className={cn(
@@ -468,6 +580,7 @@ export function MiniPlayer() {
                               size="icon"
                               onClick={(e) => {
                                 e.stopPropagation();
+                                hapticFeedback(5);
                                 setPlayerHidden(true);
                               }}
                               className="text-white hover:text-primary hover:bg-white/20 h-7 w-7 rounded-full transition-colors"
@@ -480,6 +593,7 @@ export function MiniPlayer() {
                               size="icon"
                               onClick={(e) => {
                                 e.stopPropagation();
+                                hapticFeedback(5);
                                 setIsActive(false);
                               }}
                               className="text-white hover:bg-white/20 hover:text-white h-7 w-7 rounded-full transition-colors"
@@ -513,6 +627,7 @@ export function MiniPlayer() {
                         size="icon"
                         onClick={(e) => {
                           e.stopPropagation();
+                          hapticFeedback(10);
                           playPrevious();
                         }}
                         className="text-white hover:bg-white/20 hover:text-white h-8 w-8 rounded-full transition-colors ml-1"
@@ -539,6 +654,7 @@ export function MiniPlayer() {
                         size="icon"
                         onClick={(e) => {
                           e.stopPropagation();
+                          hapticFeedback(10);
                           playNext();
                         }}
                         className="text-white hover:bg-white/20 hover:text-white h-8 w-8 rounded-full transition-colors mr-1"
@@ -551,6 +667,7 @@ export function MiniPlayer() {
                         size="icon"
                         onClick={(e) => {
                           e.stopPropagation();
+                          hapticFeedback(5);
                           setPlayerHidden(true);
                         }}
                         className="text-white hover:text-primary hover:bg-white/20 h-8 w-8 rounded-full transition-colors"
@@ -563,6 +680,7 @@ export function MiniPlayer() {
                         size="icon"
                         onClick={(e) => {
                           e.stopPropagation();
+                          hapticFeedback(5);
                           setIsActive(true);
                         }}
                         className="text-white hover:bg-white/20 hover:text-white h-8 w-8 rounded-full transition-colors mr-1"
@@ -727,6 +845,7 @@ export function MiniPlayer() {
                   size="icon"
                   onClick={(e) => {
                     e.stopPropagation();
+                    hapticFeedback(8);
                     toggleShuffle();
                   }}
                   className={cn(
@@ -742,6 +861,7 @@ export function MiniPlayer() {
                   size="icon"
                   onClick={(e) => {
                     e.stopPropagation();
+                    hapticFeedback(10);
                     playPrevious();
                   }}
                   className="text-white/90 hover:text-white hover:bg-white/10 h-14 w-14 rounded-full transition-colors"
@@ -770,6 +890,7 @@ export function MiniPlayer() {
                   size="icon"
                   onClick={(e) => {
                     e.stopPropagation();
+                    hapticFeedback(10);
                     playNext();
                   }}
                   className="text-white/90 hover:text-white hover:bg-white/10 h-14 w-14 rounded-full transition-colors"
@@ -782,6 +903,7 @@ export function MiniPlayer() {
                   size="icon"
                   onClick={(e) => {
                     e.stopPropagation();
+                    hapticFeedback(8);
                     toggleRepeat();
                   }}
                   className={cn(
