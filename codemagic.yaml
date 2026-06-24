@@ -1,0 +1,29 @@
+# Codemagic Configuration for Kyvra Android Build
+workflows:
+  android-workflow:
+    name: Android APK Build
+    max_build_duration: 60
+    instance_type: mac_mini_m1
+    environment:
+      node: latest
+    triggering:
+      events:
+        - push
+      branches:
+        - main
+    scripts:
+      - name: Install dependencies
+        script: |
+          npm install --legacy-peer-deps
+      - name: Build web assets
+        script: |
+          npm run build
+      - name: Sync Capacitor Android
+        script: |
+          npx cap sync android
+      - name: Build Android APK
+        script: |
+          cd android
+          ./gradlew assembleDebug
+    artifacts:
+      - android/app/build/outputs/apk/**/*.apk
