@@ -95,7 +95,7 @@ export function AlbumSlider({ albums }: AlbumSliderProps) {
                 style={{ borderRadius: 'var(--radius-md)', aspectRatio: '1 / 1' }}
               >
                 <img
-                  src={album.coverUrl}
+                  src={album.coverUrl || undefined}
                   alt={album.title}
                   loading="lazy"
                   decoding="async"

@@ -507,13 +507,13 @@ export function Lore() {
                   </div>
                 </div>
                 
-                {currentChapter.image_url && (
+                {currentChapter.image_url ? (
                   <img 
-                    src={currentChapter.image_url} 
+                    src={currentChapter.image_url || undefined} 
                     alt={currentChapter.title} 
                     className="w-full h-auto max-h-[50vh] object-cover rounded-xl mb-16 opacity-80"
                   />
-                )}
+                ) : null}
 
                 <div className="space-y-8 text-lg md:text-xl text-gray-300 font-light leading-relaxed mb-20">
                   {currentChapter.content?.split('\n\n').map((para: string, idx: number) => (

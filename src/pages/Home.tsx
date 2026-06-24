@@ -5,6 +5,7 @@ import { useStore } from '@/store/useStore';
 import { FeaturedSlider } from '@/components/ui/FeaturedSlider';
 import { LampContainer } from '@/components/ui/lamp';
 import { cn } from '@/lib/utils';
+import { useIdleCallback, useGPUAcceleration } from '@/modules/performance-optimization';
 
 import { FeaturedFragmentSection } from '@/components/ui/FeaturedFragmentSection';
 
@@ -80,6 +81,9 @@ export function Home() {
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const videoRetries = useRef<Record<string, number>>({});
   
+  const backgroundEngineRef = useRef<HTMLDivElement>(null);
+  useGPUAcceleration(backgroundEngineRef);
+
   const [currentVideoTheme, setCurrentVideoTheme] = useState(theme);
   const [previousVideoTheme, setPreviousVideoTheme] = useState<string | null>(null);
   const [fadeActive, setFadeActive] = useState(false);
@@ -278,13 +282,34 @@ export function Home() {
     fetchFeatured();
   }, []);
 
+  // Preload featured cover images when browser has idle CPU cycles to enhance "first paint" smoothness
+  useEffect(() => {
+    if (featuredTracks.length === 0) return;
+    const preloadImg = () => {
+      featuredTracks.forEach(track => {
+        if (track.coverUrl) {
+          const img = new Image();
+          img.src = track.coverUrl;
+        }
+      });
+    };
+
+    if ('requestIdleCallback' in window) {
+      const id = (window as any).requestIdleCallback(preloadImg, { timeout: 2000 });
+      return () => (window as any).cancelIdleCallback(id);
+    } else {
+      const id = setTimeout(preloadImg, 2000);
+      return () => clearTimeout(id);
+    }
+  }, [featuredTracks]);
+
   return (
     <div className="w-full bg-[#030303]">
       {/* Immersive Responsive Hero Section */}
       <section className="relative min-h-[100vh] lg:h-[100vh] w-full bg-[#030303] text-white overflow-hidden pb-10 lg:pb-0">
         
         {/* UNIFIED HARDWARE-ACCELERATED BACKGROUND ENGINE */}
-        <div className="absolute inset-0 w-full h-full bg-[#030303] z-0 overflow-hidden pointer-events-none select-none">
+        <div ref={backgroundEngineRef} className="absolute inset-0 w-full h-full bg-[#030303] z-0 overflow-hidden pointer-events-none select-none">
           {/* Cinematic Fallback Gradient Background */}
           <div className="absolute inset-0 bg-[#030303] opacity-100 z-[1] transition-all duration-[2000ms]">
             <div 
@@ -294,7 +319,8 @@ export function Home() {
                             theme === 'sangue-de-drago' ? 'radial-gradient(circle, rgba(239,68,68,0.38) 0%, transparent 70%)' :
                             theme === 'floresta-negra' ? 'radial-gradient(circle, rgba(16,185,129,0.33) 0%, transparent 70%)' :
                             'radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%)',
-                transform: 'translateZ(0)'
+                transform: 'translate3d(0,0,0)',
+                willChange: 'transform'
               }}
             />
             <div 
@@ -304,7 +330,8 @@ export function Home() {
                             theme === 'sangue-de-drago' ? 'radial-gradient(circle, rgba(220,38,38,0.28) 0%, transparent 70%)' :
                             theme === 'floresta-negra' ? 'radial-gradient(circle, rgba(5,150,105,0.28) 0%, transparent 70%)' :
                             'radial-gradient(circle, rgba(148,163,184,0.15) 0%, transparent 70%)',
-                transform: 'translateZ(0)'
+                transform: 'translate3d(0,0,0)',
+                willChange: 'transform'
               }}
             />
             {/* Subtle noise grains for luxury texturing */}
@@ -348,7 +375,7 @@ export function Home() {
                   opacityClass
                 )}
                 style={{
-                  willChange: "opacity",
+                  willChange: "opacity, transform",
                   transform: "translate3d(0,0,0)",
                   backfaceVisibility: "hidden"
                 }}

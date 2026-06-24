@@ -1320,7 +1320,7 @@ export function Admin() {
                     onClick={() => setExpandedAlbumId(expandedAlbumId === album.id ? null : album.id)}
                   >
                     <div className="flex items-center gap-4">
-                      <img src={album.cover_url} alt={album.title} loading="lazy" decoding="async" className="w-12 h-12 rounded object-cover" referrerPolicy="no-referrer" />
+                      <img src={album.cover_url || undefined} alt={album.title} loading="lazy" decoding="async" className="w-12 h-12 rounded object-cover" referrerPolicy="no-referrer" />
                       <div>
                         <h3 className="font-medium text-text-high">{album.title}</h3>
                         <p className="text-xs text-text-low">{album.release_year} • {album.tracks?.length || 0} faixas</p>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useStore } from '@/store/useStore';
+import { getLoreChapters, getAlbums, getAllTracks, getFeaturedTracksSettings } from '@/lib/apiCache';
 
 const CRYPTIC_PHRASES = [
   "INICIANDO RITUAL DE CONEXÃO...",
@@ -43,6 +44,12 @@ export function Preloader() {
   // Real-time active resource checking and pre-buffer cycle
   useEffect(() => {
     let active = true;
+
+    // 0. Proactively query and warm up memory cache with database assets
+    getLoreChapters().catch(() => {});
+    getAlbums().catch(() => {});
+    getAllTracks().catch(() => {});
+    getFeaturedTracksSettings().catch(() => {});
 
     // 1. Preload and warm up active theme's video element natively
     const videoElement = document.createElement('video');
@@ -87,12 +94,16 @@ export function Preloader() {
       if (!active) return;
 
       const currentSteps = loadedStepsRef.current;
+      const allLoaded = currentSteps.fonts && currentSteps.video && currentSteps.audio;
       const targetMax = 
         (currentSteps.fonts ? 40 : 25) + 
         (currentSteps.video ? 35 : 20) + 
         (currentSteps.audio ? 25 : 15);
 
-      if (currentProgress < targetMax) {
+      if (allLoaded) {
+        // Boost progression rate if all hardware resources are buffered and validated
+        currentProgress += Math.random() * 8 + 8;
+      } else if (currentProgress < targetMax) {
         currentProgress += Math.random() * 3 + 1.5;
       } else if (currentProgress < 99) {
         currentProgress += 0.3; // Micro crawl while awaiting assets
@@ -142,11 +153,31 @@ export function Preloader() {
           console.error("[Kyvra Preloader] Error updating store with video URLs:", stateErr);
         }
       }
+
+      // 4. Lazy double-buffering: Silent load non-active themes' videos after 1.5s delay
+      setTimeout(() => {
+        keys.forEach(k => {
+          if (k !== theme) {
+            const v = document.createElement('video');
+            v.preload = "auto";
+            v.muted = true;
+            v.playsInline = true;
+            v.src = THEME_VIDEOS[k];
+            v.load();
+            
+            // Safeguard from garbage collection to ensure steady network caching
+            if (!(window as any).__kyvra_background_videos) {
+              (window as any).__kyvra_background_videos = [];
+            }
+            (window as any).__kyvra_background_videos.push(v);
+          }
+        });
+      }, 1500);
     };
 
     startPreload();
 
-    // Safety fallback: ensure loading closes after 3 seconds maximum to protect UX
+    // Safety fallback: ensure loading closes after 3.5 seconds maximum to protect UX
     const forceReadyTimer = setTimeout(() => {
       if (active) {
         setProgress(100);

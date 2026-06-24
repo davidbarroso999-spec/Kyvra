@@ -356,7 +356,7 @@ export function MiniPlayer() {
                           onClick={() => setIsFullPlayerOpen(true)}
                         >
                           <img
-                            src={currentTrack.coverUrl}
+                            src={currentTrack.coverUrl || undefined}
                             alt="cover"
                             loading="lazy"
                             decoding="async"
@@ -502,7 +502,7 @@ export function MiniPlayer() {
                     >
                       {currentTrack.coverUrl && (
                         <img
-                          src={currentTrack.coverUrl}
+                          src={currentTrack.coverUrl || undefined}
                           alt="cover"
                           className="w-8 h-8 rounded-full object-cover shrink-0 ml-1 pointer-events-none"
                           referrerPolicy="no-referrer"
@@ -637,7 +637,7 @@ export function MiniPlayer() {
                 )}
               >
                 <img
-                  src={currentTrack.coverUrl}
+                  src={currentTrack.coverUrl || undefined}
                   alt={currentTrack.title}
                   loading="lazy"
                   decoding="async"

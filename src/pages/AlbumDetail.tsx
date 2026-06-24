@@ -213,7 +213,7 @@ export function AlbumDetail() {
           <motion.img 
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            src={album.coverUrl} 
+            src={album.coverUrl || undefined} 
             alt={album.title} 
             fetchPriority="high"
             decoding="async"

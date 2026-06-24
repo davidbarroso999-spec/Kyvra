@@ -129,7 +129,7 @@ export function FeaturedSlider({ tracks }: FeaturedSliderProps) {
                 style={{ borderRadius: 'var(--radius-md)', aspectRatio: '3/4' }}
               >
                 <img
-                  src={track.coverUrl}
+                  src={track.coverUrl || undefined}
                   alt={track.title}
                   loading="lazy"
                   decoding="async"

@@ -127,7 +127,7 @@ export function FeaturedFragmentSection({ className }: FeaturedFragmentSectionPr
             {/* Image */}
             <div className="relative aspect-square lg:aspect-auto overflow-hidden bg-black/40">
               <img
-                src={fragment.coverUrl}
+                src={fragment.coverUrl || undefined}
                 alt={fragment.title}
                 className="w-full h-full object-cover transition-transform duration-700"
                 style={{ transform: isHovered ? 'scale(1.05)' : 'scale(1)' }}
