@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, useScroll, useSpring } from 'motion/react';
 import { useStore, Theme } from '@/store/useStore';
-import { Menu, X, Moon, Sun, Droplet, Leaf, Square, DownloadCloud, RefreshCw, CheckCircle, Smartphone } from 'lucide-react';
+import { Menu, X, Moon, Sun, Droplet, Leaf, Square, DownloadCloud, RefreshCw, CheckCircle, Smartphone, Maximize, Minimize } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { syncEverythingForOffline, OfflineProgress } from '@/lib/offlineManager';
 
@@ -29,6 +29,28 @@ export function Header() {
   const theme = useStore((state) => state.theme);
   const setTheme = useStore((state) => state.setTheme);
   const location = useLocation();
+
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch (err) {
+      console.warn("Kyvra: Erro ao alternar tela cheia:", err);
+    }
+  };
 
   const handleOfflineSync = async () => {
     setSyncStatus('syncing');
@@ -129,6 +151,17 @@ export function Header() {
                 ) : (
                   <DownloadCloud size={18} />
                 )}
+              </button>
+            </div>
+
+            {/* Fullscreen Toggle Button */}
+            <div className="relative flex items-center">
+              <button
+                onClick={toggleFullscreen}
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-overlay transition-colors text-text-mid hover:text-primary"
+                title={isFullscreen ? "Sair da Tela Cheia" : "Entrar em Tela Cheia"}
+              >
+                {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
               </button>
             </div>
 

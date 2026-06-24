@@ -22,13 +22,44 @@ interface FeaturedSliderProps {
   tracks: FeaturedTrack[];
 }
 
-const CARD_W = 320;
-const CARD_GAP = 48;
-
 export function FeaturedSlider({ tracks }: FeaturedSliderProps) {
   const setCurrentTrack = useStore((state) => state.setCurrentTrack);
   const setIsPlaying = useStore((state) => state.setIsPlaying);
   const setQueue = useStore((state) => state.setQueue);
+
+  const [dimensions, setDimensions] = React.useState({
+    cardWidth: 320,
+    cardGap: 48,
+    sectionHeight: 750
+  });
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      const h = window.innerHeight;
+      const w = window.innerWidth;
+      const isShort = h < 600;
+      
+      if (isShort) {
+        setDimensions({
+          cardWidth: w < 480 ? 180 : 220,
+          cardGap: w < 480 ? 16 : 24,
+          sectionHeight: w < 480 ? 330 : 410
+        });
+      } else {
+        setDimensions({
+          cardWidth: 320,
+          cardGap: 48,
+          sectionHeight: 750
+        });
+      }
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const CARD_W = dimensions.cardWidth;
+  const CARD_GAP = dimensions.cardGap;
 
   const wrapperRef  = useRef<HTMLDivElement>(null);
   const slideRefs   = useRef<HTMLDivElement[]>([]);
@@ -67,7 +98,7 @@ export function FeaturedSlider({ tracks }: FeaturedSliderProps) {
   const sidePad = `calc(50vw - ${CARD_W / 2}px)`;
 
   return (
-    <section className="relative w-full overflow-hidden" style={{ height: 750 }}>
+    <section className="relative w-full overflow-hidden" style={{ height: dimensions.sectionHeight }}>
       {/* label da seção */}
       <div className="absolute top-12 left-12 z-20">
         <span className="font-sc text-[11px] tracking-[0.3em] text-primary/80 block uppercase">

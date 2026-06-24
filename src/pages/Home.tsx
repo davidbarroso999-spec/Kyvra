@@ -423,28 +423,28 @@ export function Home() {
         <div className="hidden md:flex landscape:flex md:flex-col justify-between md:h-full landscape:h-full w-full h-[100vh] relative overflow-hidden select-none z-10">
 
           {/* Left Aligned Content overlapping the video */}
-          <div className="relative z-35 flex-1 flex flex-col justify-center px-8 md:px-16 xl:px-24 pt-20 max-w-[900px]">
+          <div className="relative z-35 flex-1 flex flex-col justify-center px-8 md:px-16 xl:px-24 pt-20 max-w-[900px] landscape:pt-14 landscape:gap-y-1">
             {/* Logo container without backglow */}
-            <div className="relative overflow-visible pointer-events-none mb-2 md:mb-4 flex flex-col items-start justify-center">
+            <div className="relative overflow-visible pointer-events-none mb-2 md:mb-4 flex flex-col items-start justify-center landscape:mb-1">
               <motion.div
                 initial={{ opacity: 0, scale: 0.95, x: -30 }}
                 animate={{ opacity: 1, scale: 1, x: 0 }}
                 transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
                 className="relative flex flex-col items-start"
               >
-                <h2 className="font-display font-medium text-[5.5rem] md:text-[6.5rem] lg:text-[8rem] xl:text-[9.5rem] tracking-[0.05em] text-gradient m-0 p-0 text-left leading-none">
+                <h2 className="font-display font-medium text-[3.2rem] xs:text-[4rem] sm:text-[5rem] md:text-[6.5rem] lg:text-[8rem] xl:text-[9.5rem] tracking-[0.05em] text-gradient m-0 p-0 text-left leading-none landscape:text-[2.6rem] landscape:sm:text-[4rem] landscape:md:text-[6.5rem]">
                   KYVRA
                 </h2>
               </motion.div>
             </div>
 
             {/* Poetry & Description positioned BELOW the logo */}
-            <div className="space-y-4 md:space-y-6 w-full max-w-[550px] md:max-w-[650px] xl:max-w-[720px] text-left mt-2 md:-mt-1 lg:mt-2">
+            <div className="space-y-4 md:space-y-6 w-full max-w-[550px] md:max-w-[650px] xl:max-w-[720px] text-left mt-2 md:-mt-1 lg:mt-2 landscape:mt-0.5 landscape:space-y-2">
               <motion.h1 
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1.2, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                className="font-cormorant text-white text-[1.6rem] md:text-[2rem] lg:text-[2.5rem] xl:text-[3rem] leading-[1.12] tracking-tight font-light"
+                className="font-cormorant text-white text-[1.2rem] xs:text-[1.4rem] sm:text-[1.8rem] md:text-[2rem] lg:text-[2.5rem] xl:text-[3rem] leading-[1.12] tracking-tight font-light landscape:text-[1.1rem] landscape:sm:text-[1.5rem] landscape:md:text-[2rem]"
               >
                 Onde as estrelas morrem, a poesia ecoa.
               </motion.h1>
@@ -453,7 +453,7 @@ export function Home() {
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1.2, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                className="font-sans text-white/75 text-xs md:text-sm lg:text-[15px] xl:text-base leading-relaxed font-light"
+                className="font-sans text-white/75 text-[10px] xs:text-xs md:text-sm lg:text-[15px] xl:text-base leading-relaxed font-light landscape:text-[9.5px] landscape:sm:text-xs landscape:md:text-sm"
               >
                 Kyvra é um projeto de metal sinfônico melancólico e profundo. Um portal imersivo desenhado para guiar a alma através de arranjos grandiosos, crônicas sombrias e elegias visuais.
               </motion.p>
