@@ -65,7 +65,7 @@ public class MainActivity extends BridgeActivity {
     }
 
     @Override
-    protected void onPause() {
+    public void onPause() {
         super.onPause();
         // Para garantir que o áudio HTML5 e os handlers da API MediaSession
         // continuem ativos em segundo plano e com a tela desligada, retomamos
