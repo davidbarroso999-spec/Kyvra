@@ -25,8 +25,15 @@ workflows:
           npx cap sync android
       - name: Repair Gradle Wrapper
         script: |
-          cd android/gradle/wrapper
-          curl -sS -O https://raw.githubusercontent.com/gradle/gradle/v8.5/gradle/wrapper/gradle-wrapper.jar
+          cd android
+          if command -v gradle &> /dev/null; then
+            echo "Gradle is installed. Regenerating wrapper..."
+            gradle wrapper --gradle-version 8.14.3
+          else
+            echo "Gradle not found. Downloading wrapper jar via LFS-resolved endpoint..."
+            cd gradle/wrapper
+            curl -sSL -o gradle-wrapper.jar https://github.com/gradle/gradle/raw/v8.14.3/gradle/wrapper/gradle-wrapper.jar
+          fi
       - name: Build Android APK
         script: |
           cd android
