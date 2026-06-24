@@ -215,6 +215,18 @@ export function MiniPlayer() {
   const [isActive, setIsActive] = useState(false);
   const [isFullPlayerOpen, setIsFullPlayerOpen] = useState(false);
   const [showLyrics, setShowLyrics] = useState(false);
+  const [isMobileLandscape, setIsMobileLandscape] = useState(false);
+
+  useEffect(() => {
+    const checkOrientation = () => {
+      setIsMobileLandscape(
+        window.innerWidth > window.innerHeight && window.innerHeight < 600
+      );
+    };
+    checkOrientation();
+    window.addEventListener('resize', checkOrientation);
+    return () => window.removeEventListener('resize', checkOrientation);
+  }, []);
 
   const {
     currentTrack,
@@ -234,6 +246,19 @@ export function MiniPlayer() {
   const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+
+  // Request notifications permission for Android 13+ media control center support
+  useEffect(() => {
+    if (isPlaying && typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        try {
+          Notification.requestPermission();
+        } catch (e) {
+          console.warn("Kyvra: Notification request permission failed", e);
+        }
+      }
+    }
+  }, [isPlaying]);
 
   // Media Session API integration for Android control center, lock screen, and bluetooth actions
   useEffect(() => {
@@ -428,7 +453,7 @@ export function MiniPlayer() {
                 className={cn(
                   "flex mx-auto overflow-hidden shadow-[0_40px_80px_rgba(0,0,0,0.6)] cursor-grab active:cursor-grabbing transition-colors duration-700 glass-premium origin-bottom-right",
                   isActive 
-                    ? "flex-col rounded-2xl p-3 w-[290px] h-auto" 
+                    ? (isMobileLandscape ? "flex-row rounded-2xl p-2.5 w-[380px] h-[110px] items-center gap-3" : "flex-col rounded-2xl p-3 w-[290px] h-auto") 
                     : "flex-row rounded-full p-2 w-auto h-[60px] items-center justify-center"
                 )}
                 initial={{ opacity: 0, filter: "blur(10px)", y: 50 }}
@@ -450,7 +475,7 @@ export function MiniPlayer() {
                   {isActive ? (
                     <motion.div
                       key="full-player-mini"
-                      className="flex flex-col relative"
+                      className={cn("relative w-full h-full", isMobileLandscape ? "flex flex-row items-center gap-3" : "flex flex-col")}
                       layout
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
@@ -460,7 +485,10 @@ export function MiniPlayer() {
                       {/* Cover */}
                       {currentTrack.coverUrl && (
                         <motion.div 
-                          className="bg-white/20 overflow-hidden rounded-2xl aspect-square w-full relative group cursor-pointer"
+                          className={cn(
+                            "bg-white/20 overflow-hidden rounded-2xl relative group cursor-pointer",
+                            isMobileLandscape ? "w-20 h-20 shrink-0" : "aspect-square w-full"
+                          )}
                           onClick={() => setIsFullPlayerOpen(true)}
                         >
                           <img
@@ -477,34 +505,34 @@ export function MiniPlayer() {
                         </motion.div>
                       )}
 
-                      <motion.div className="flex flex-col w-full gap-y-2 pointer-events-auto">
+                      <motion.div className={cn("pointer-events-auto", isMobileLandscape ? "flex flex-col flex-1 gap-y-1 mt-0 justify-between h-full py-0.5" : "flex flex-col w-full gap-y-2")}>
                         {/* Title */}
                         {currentTrack.title && (
-                          <motion.h3 className="text-white font-bold text-sm text-center mt-2 truncate px-2">
+                          <motion.h3 className={cn("text-white font-bold text-sm truncate px-1", isMobileLandscape ? "text-left mt-0 text-xs" : "text-center mt-2 px-2")}>
                             {currentTrack.title}
                           </motion.h3>
                         )}
 
                         {/* Slider */}
-                        <motion.div className="flex flex-col gap-y-1">
+                        <motion.div className="flex flex-col gap-y-0.5">
                           <CustomSlider
                             value={progress}
                             onChange={handleSeek}
                             className="w-full"
                           />
-                          <div className="flex items-center justify-between mt-0.5">
-                            <span className="text-white text-[10px] opacity-80">
+                          <div className="flex items-center justify-between mt-0 leading-none">
+                            <span className="text-white text-[9px] opacity-80 leading-none">
                               {formatTime(currentTime)}
                             </span>
-                            <span className="text-white text-[10px] opacity-80">
+                            <span className="text-white text-[9px] opacity-80 leading-none">
                               {formatTime(duration)}
                             </span>
                           </div>
                         </motion.div>
 
                         {/* Controls */}
-                        <motion.div className="flex items-center justify-center w-full mt-1">
-                          <div className="flex items-center gap-1.5 w-fit bg-black/40 rounded-[16px] p-1.5">
+                        <motion.div className={cn("flex items-center w-full", isMobileLandscape ? "justify-start mt-0.5" : "justify-center mt-1")}>
+                          <div className={cn("flex items-center w-fit bg-black/40 rounded-full", isMobileLandscape ? "p-1 gap-1" : "p-1.5 gap-1.5")}>
                             <Button
                               variant="ghost"
                               size="icon"
@@ -514,11 +542,12 @@ export function MiniPlayer() {
                                 toggleShuffle();
                               }}
                               className={cn(
-                                "text-white hover:bg-white/20 hover:text-white h-7 w-7 rounded-full transition-colors",
+                                "text-white hover:bg-white/20 hover:text-white rounded-full transition-colors",
+                                isMobileLandscape ? "h-6 w-6" : "h-7 w-7",
                                 isShuffle && "bg-white/20 text-white"
                               )}
                             >
-                              <Shuffle className="h-4 w-4" />
+                              <Shuffle className={isMobileLandscape ? "h-3 w-3" : "h-4 w-4"} />
                             </Button>
                             <Button
                               variant="ghost"
@@ -528,9 +557,9 @@ export function MiniPlayer() {
                                 hapticFeedback(10);
                                 playPrevious();
                               }}
-                              className="text-white hover:bg-white/20 hover:text-white h-7 w-7 rounded-full transition-colors"
+                              className={cn("text-white hover:bg-white/20 hover:text-white rounded-full transition-colors", isMobileLandscape ? "h-6 w-6" : "h-7 w-7")}
                             >
-                              <SkipBack className="h-4 w-4" />
+                              <SkipBack className={isMobileLandscape ? "h-3 w-3" : "h-4 w-4"} />
                             </Button>
                             <Button
                               onClick={(e) => {
@@ -539,12 +568,12 @@ export function MiniPlayer() {
                               }}
                               variant="ghost"
                               size="icon"
-                              className="text-white bg-primary/20 hover:bg-primary/40 hover:text-white h-9 w-9 rounded-full transition-colors"
+                              className={cn("text-white bg-primary/20 hover:bg-primary/40 hover:text-white rounded-full transition-colors", isMobileLandscape ? "h-7 w-7" : "h-9 w-9")}
                             >
                               {isPlaying ? (
-                                <Pause className="h-5 w-5" />
+                                <Pause className={isMobileLandscape ? "h-4 w-4" : "h-5 w-5"} />
                               ) : (
-                                <Play className="h-5 w-5 ml-0.5" />
+                                <Play className={cn(isMobileLandscape ? "h-4 w-4" : "h-5 w-5", isMobileLandscape ? "ml-0" : "ml-0.5")} />
                               )}
                             </Button>
                             <Button
@@ -555,9 +584,9 @@ export function MiniPlayer() {
                                 hapticFeedback(10);
                                 playNext();
                               }}
-                              className="text-white hover:bg-white/20 hover:text-white h-7 w-7 rounded-full transition-colors"
+                              className={cn("text-white hover:bg-white/20 hover:text-white rounded-full transition-colors", isMobileLandscape ? "h-6 w-6" : "h-7 w-7")}
                             >
-                              <SkipForward className="h-4 w-4" />
+                              <SkipForward className={isMobileLandscape ? "h-3 w-3" : "h-4 w-4"} />
                             </Button>
                             <Button
                               variant="ghost"
@@ -568,13 +597,14 @@ export function MiniPlayer() {
                                 toggleRepeat();
                               }}
                               className={cn(
-                                "text-white hover:bg-white/20 hover:text-white h-7 w-7 rounded-full transition-colors",
+                                "text-white hover:bg-white/20 hover:text-white rounded-full transition-colors",
+                                isMobileLandscape ? "h-6 w-6" : "h-7 w-7",
                                 repeatMode !== 'off' && "bg-white/20 text-white"
                               )}
                             >
-                              {repeatMode === 'one' ? <Repeat1 className="h-4 w-4 stroke-[3px]" /> : <Repeat className="h-4 w-4" />}
+                              {repeatMode === 'one' ? <Repeat1 className={cn("stroke-[3px]", isMobileLandscape ? "h-3 w-3" : "h-4 w-4")} /> : <Repeat className={isMobileLandscape ? "h-3 w-3" : "h-4 w-4"} />}
                             </Button>
-                            <div className="w-[1px] h-5 bg-white/20 mx-0.5" />
+                            <div className={cn("bg-white/20 mx-0.5", isMobileLandscape ? "w-[1px] h-4" : "w-[1px] h-5")} />
                             <Button
                               variant="ghost"
                               size="icon"
@@ -583,10 +613,10 @@ export function MiniPlayer() {
                                 hapticFeedback(5);
                                 setPlayerHidden(true);
                               }}
-                              className="text-white hover:text-primary hover:bg-white/20 h-7 w-7 rounded-full transition-colors"
+                              className={cn("text-white hover:text-primary hover:bg-white/20 rounded-full transition-colors", isMobileLandscape ? "h-6 w-6" : "h-7 w-7")}
                               title="Ocultar Player"
                             >
-                              <EyeOff className="h-4 w-4" />
+                              <EyeOff className={isMobileLandscape ? "h-3 w-3" : "h-4 w-4"} />
                             </Button>
                             <Button
                               variant="ghost"
@@ -596,9 +626,9 @@ export function MiniPlayer() {
                                 hapticFeedback(5);
                                 setIsActive(false);
                               }}
-                              className="text-white hover:bg-white/20 hover:text-white h-7 w-7 rounded-full transition-colors"
+                              className={cn("text-white hover:bg-white/20 hover:text-white rounded-full transition-colors", isMobileLandscape ? "h-6 w-6" : "h-7 w-7")}
                             >
-                              <Minimize2 className="h-4 w-4" />
+                              <Minimize2 className={isMobileLandscape ? "h-3 w-3" : "h-4 w-4"} />
                             </Button>
                           </div>
                         </motion.div>
@@ -722,7 +752,7 @@ export function MiniPlayer() {
             <div className="absolute inset-0 z-[1] bg-void/60 pointer-events-none" />
             
             {/* Header */}
-            <div className="relative z-10 flex items-center justify-between p-6 pt-12 md:py-6 md:px-8 shrink-0">
+            <div className="relative z-10 flex items-center justify-between p-6 pt-12 md:py-6 md:px-8 shrink-0 landscape:py-3 landscape:pt-4">
               <Button
                 variant="ghost"
                 size="icon"
@@ -732,188 +762,352 @@ export function MiniPlayer() {
                 <ChevronDown className="h-6 w-6" />
               </Button>
               <div className="flex flex-col items-center">
-                <span className="text-[10px] tracking-[0.2em] font-sc text-primary uppercase">
+                <span className="text-[10px] tracking-[0.2em] font-sc text-primary uppercase leading-none mb-1">
                   TOCANDO AGORA
                 </span>
-                <span className="text-white/80 text-sm font-medium">
+                <span className="text-white/80 text-sm font-medium leading-none">
                   {currentTrack.albumTitle || currentTrack.artist}
                 </span>
               </div>
               <div className="w-10"> {/* Balance header */} </div>
             </div>
 
-            {/* Main Content */}
-            <div className="relative z-10 flex-1 flex flex-col md:flex-row items-center justify-center p-6 md:px-12 md:py-4 gap-8 md:gap-12 lg:gap-16 xl:gap-20 overflow-y-auto md:overflow-hidden">
-              {/* Cover Art */}
-              <motion.div 
-                layoutId={`cover-${currentTrack.id}`}
-                className={cn(
-                  "w-full aspect-square rounded-xl overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,0.5)] shrink-0 transition-all duration-500",
-                  showLyrics 
-                    ? "max-w-[240px] sm:max-w-[260px] md:max-w-[280px] lg:max-w-[320px] xl:max-w-[380px] md:h-[28vh] lg:h-[34vh] xl:h-[40vh] opacity-40 md:opacity-100" 
-                    : "max-w-[280px] sm:max-w-[300px] md:max-w-[360px] lg:max-w-[420px] xl:max-w-[480px] md:h-[38vh] lg:h-[44vh] xl:h-[50vh]"
-                )}
-              >
-                <img
-                  src={currentTrack.coverUrl || undefined}
-                  alt={currentTrack.title}
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full h-full object-cover bg-black/20"
-                  referrerPolicy="no-referrer"
-                />
-              </motion.div>
+            {/* Main Content Wrapper */}
+            <div className={cn(
+              "relative z-10 flex-1 flex",
+              isMobileLandscape ? "flex-row p-4 gap-6 items-center justify-center overflow-hidden h-[calc(100vh-60px)]" : "flex-col overflow-y-auto"
+            )}>
+              {/* RETRATO / DESKTOP (Padrão) */}
+              {!isMobileLandscape ? (
+                <>
+                  {/* Main Content */}
+                  <div className="flex-1 flex flex-col md:flex-row items-center justify-center p-6 md:px-12 md:py-4 gap-8 md:gap-12 lg:gap-16 xl:gap-20 md:overflow-hidden">
+                    {/* Cover Art */}
+                    <motion.div 
+                      layoutId={`cover-${currentTrack.id}`}
+                      className={cn(
+                        "w-full aspect-square rounded-xl overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,0.5)] shrink-0 transition-all duration-500",
+                        showLyrics 
+                          ? "max-w-[240px] sm:max-w-[260px] md:max-w-[280px] lg:max-w-[320px] xl:max-w-[380px] md:h-[28vh] lg:h-[34vh] xl:h-[40vh] opacity-40 md:opacity-100" 
+                          : "max-w-[280px] sm:max-w-[300px] md:max-w-[360px] lg:max-w-[420px] xl:max-w-[480px] md:h-[38vh] lg:h-[44vh] xl:h-[50vh]"
+                      )}
+                    >
+                      <img
+                        src={currentTrack.coverUrl || undefined}
+                        alt={currentTrack.title}
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-full object-cover bg-black/20"
+                        referrerPolicy="no-referrer"
+                      />
+                    </motion.div>
 
-              {/* Lyrics Panel */}
-              <AnimatePresence>
-                {showLyrics && (
-                  <motion.div 
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20, position: "absolute" }}
-                    className={cn(
-                      "w-full md:w-[450px] lg:w-[500px] xl:w-[600px] h-[45dvh] md:h-[35vh] lg:h-[42vh] xl:h-[50vh] md:max-h-[50vh] lg:max-h-[55vh] xl:max-h-[60vh] overflow-y-auto py-4 px-3 custom-scrollbar",
-                      "absolute md:relative inset-x-6 md:inset-auto z-20 md:z-auto bg-void/80 md:bg-transparent backdrop-blur-xl md:backdrop-blur-none p-6 md:p-0 rounded-2xl md:rounded-none"
-                    )}
-                  >
-                    <AnimatePresence mode="popLayout">
-                      {currentTrack.lyrics ? (
-                        <motion.div
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          className="flex flex-col gap-5 text-white/90 text-base md:text-lg lg:text-xl font-medium leading-relaxed"
-                          style={{ whiteSpace: "pre-wrap" }}
+                    {/* Lyrics Panel */}
+                    <AnimatePresence>
+                      {showLyrics && (
+                        <motion.div 
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 20, position: "absolute" }}
+                          className={cn(
+                            "w-full md:w-[450px] lg:w-[500px] xl:w-[600px] h-[45dvh] md:h-[35vh] lg:h-[42vh] xl:h-[50vh] md:max-h-[50vh] lg:max-h-[55vh] xl:max-h-[60vh] overflow-y-auto py-4 px-3 custom-scrollbar",
+                            "absolute md:relative inset-x-6 md:inset-auto z-20 md:z-auto bg-void/80 md:bg-transparent backdrop-blur-xl md:backdrop-blur-none p-6 md:p-0 rounded-2xl md:rounded-none"
+                          )}
                         >
-                          {currentTrack.lyrics}
-                        </motion.div>
-                      ) : (
-                        <motion.div
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          className="flex h-full items-center justify-center"
-                        >
-                          <p className="text-white/50 text-center text-sm font-sans">
-                            Letra não disponível para este fragmento.
-                          </p>
+                          <AnimatePresence mode="popLayout">
+                            {currentTrack.lyrics ? (
+                              <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="flex flex-col gap-5 text-white/90 text-base md:text-lg lg:text-xl font-medium leading-relaxed"
+                                style={{ whiteSpace: "pre-wrap" }}
+                              >
+                                {currentTrack.lyrics}
+                              </motion.div>
+                            ) : (
+                              <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="flex h-full items-center justify-center"
+                              >
+                                <p className="text-white/50 text-center text-sm font-sans">
+                                  Letra não disponível para este fragmento.
+                                </p>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </motion.div>
                       )}
                     </AnimatePresence>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+                  </div>
 
-            {/* Controls */}
-            <div className="relative z-10 w-full max-w-3xl mx-auto p-6 md:py-4 md:px-12 pb-8 shrink-0 flex flex-col gap-4">
-              
-              <div className="flex items-center justify-between w-full">
-                <div className="flex flex-col">
-                  <h2 className="text-2xl md:text-3xl font-display text-white">{currentTrack.title}</h2>
-                  <p className="text-white/60 text-sm md:text-base">{currentTrack.artist}</p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowLyrics(!showLyrics)}
-                  className={cn(
-                    "rounded-full h-10 w-10 transition-colors",
-                    showLyrics ? "bg-primary text-white" : "text-white/60 hover:text-white bg-white/5 hover:bg-white/10"
-                  )}
-                  title="Mostrar Letra"
-                >
-                  <AlignLeft className="h-5 w-5" />
-                </Button>
-              </div>
+                  {/* Controls */}
+                  <div className="w-full max-w-3xl mx-auto p-6 md:py-4 md:px-12 pb-8 shrink-0 flex flex-col gap-4">
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex flex-col">
+                        <h2 className="text-2xl md:text-3xl font-display text-white">{currentTrack.title}</h2>
+                        <p className="text-white/60 text-sm md:text-base">{currentTrack.artist}</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setShowLyrics(!showLyrics)}
+                        className={cn(
+                          "rounded-full h-10 w-10 transition-colors",
+                          showLyrics ? "bg-primary text-white" : "text-white/60 hover:text-white bg-white/5 hover:bg-white/10"
+                        )}
+                        title="Mostrar Letra"
+                      >
+                        <AlignLeft className="h-5 w-5" />
+                      </Button>
+                    </div>
 
-              <div className="flex flex-col gap-2 w-full">
-                <CustomSlider
-                  value={progress}
-                  onChange={handleSeek}
-                  className="w-full h-[4px] hover:h-[6px]"
-                />
-                <div className="flex items-center justify-between text-white/50 text-xs font-mono">
-                  <span>{formatTime(currentTime)}</span>
-                  <span>{formatTime(duration)}</span>
-                </div>
-              </div>
+                    <div className="flex flex-col gap-2 w-full">
+                      <CustomSlider
+                        value={progress}
+                        onChange={handleSeek}
+                        className="w-full h-[4px] hover:h-[6px]"
+                      />
+                      <div className="flex items-center justify-between text-white/50 text-xs font-mono">
+                        <span>{formatTime(currentTime)}</span>
+                        <span>{formatTime(duration)}</span>
+                      </div>
+                    </div>
 
-              <div className="flex items-center justify-between max-w-[400px] w-full mx-auto mt-2 md:mt-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    hapticFeedback(8);
-                    toggleShuffle();
-                  }}
-                  className={cn(
-                    "text-white/60 hover:text-white h-12 w-12 rounded-full transition-colors",
-                    isShuffle && "text-primary"
-                  )}
-                >
-                  <Shuffle className="h-5 w-5" />
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    hapticFeedback(10);
-                    playPrevious();
-                  }}
-                  className="text-white/90 hover:text-white hover:bg-white/10 h-14 w-14 rounded-full transition-colors"
-                >
-                  <SkipBack className="h-6 w-6" />
-                </Button>
-                
-                <Button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    togglePlay();
-                  }}
-                  variant="ghost"
-                  size="icon"
-                  className="text-void bg-primary hover:bg-primary/90 hover:scale-105 h-20 w-20 rounded-full transition-all shadow-[0_0_30px_rgba(var(--color-primary),0.4)]"
-                >
-                  {isPlaying ? (
-                    <Pause className="h-8 w-8" />
-                  ) : (
-                    <Play className="h-8 w-8 ml-1" />
-                  )}
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    hapticFeedback(10);
-                    playNext();
-                  }}
-                  className="text-white/90 hover:text-white hover:bg-white/10 h-14 w-14 rounded-full transition-colors"
-                >
-                  <SkipForward className="h-6 w-6" />
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    hapticFeedback(8);
-                    toggleRepeat();
-                  }}
-                  className={cn(
-                    "text-white/60 hover:text-white h-12 w-12 rounded-full transition-colors",
-                    repeatMode !== 'off' && "text-primary"
-                  )}
-                >
-                  {repeatMode === 'one' ? <Repeat1 className="h-5 w-5 stroke-[2px]" /> : <Repeat className="h-5 w-5" />}
-                </Button>
-              </div>
+                    <div className="flex items-center justify-between max-w-[400px] w-full mx-auto mt-2 md:mt-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          hapticFeedback(8);
+                          toggleShuffle();
+                        }}
+                        className={cn(
+                          "text-white/60 hover:text-white h-12 w-12 rounded-full transition-colors",
+                          isShuffle && "text-primary"
+                        )}
+                      >
+                        <Shuffle className="h-5 w-5" />
+                      </Button>
+                      
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          hapticFeedback(10);
+                          playPrevious();
+                        }}
+                        className="text-white/90 hover:text-white hover:bg-white/10 h-14 w-14 rounded-full transition-colors"
+                      >
+                        <SkipBack className="h-6 w-6" />
+                      </Button>
+                      
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          togglePlay();
+                        }}
+                        variant="ghost"
+                        size="icon"
+                        className="text-void bg-primary hover:bg-primary/90 hover:scale-105 h-20 w-20 rounded-full transition-all shadow-[0_0_30px_rgba(var(--color-primary),0.4)]"
+                      >
+                        {isPlaying ? (
+                          <Pause className="h-8 w-8" />
+                        ) : (
+                          <Play className="h-8 w-8 ml-1" />
+                        )}
+                      </Button>
+                      
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          hapticFeedback(10);
+                          playNext();
+                        }}
+                        className="text-white/90 hover:text-white hover:bg-white/10 h-14 w-14 rounded-full transition-colors"
+                      >
+                        <SkipForward className="h-6 w-6" />
+                      </Button>
+                      
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          hapticFeedback(8);
+                          toggleRepeat();
+                        }}
+                        className={cn(
+                          "text-white/60 hover:text-white h-12 w-12 rounded-full transition-colors",
+                          repeatMode !== 'off' && "text-primary"
+                        )}
+                      >
+                        {repeatMode === 'one' ? <Repeat1 className="h-5 w-5 stroke-[2px]" /> : <Repeat className="h-5 w-5" />}
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* PAISAGEM MÓVEL (Duas Colunas) */
+                <>
+                  {/* Coluna da Esquerda: Sempre a Capa */}
+                  <div className="w-[40%] flex items-center justify-center p-2 shrink-0">
+                    <motion.div 
+                      layoutId={`cover-${currentTrack.id}`}
+                      className="w-[170px] sm:w-[200px] aspect-square rounded-xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.5)] shrink-0 transition-all duration-300"
+                    >
+                      <img
+                        src={currentTrack.coverUrl || undefined}
+                        alt={currentTrack.title}
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-full object-cover bg-black/20"
+                        referrerPolicy="no-referrer"
+                      />
+                    </motion.div>
+                  </div>
+
+                  {/* Coluna da Direita: Controles OU Letras */}
+                  <div className="w-[60%] h-full flex flex-col justify-center px-4 gap-3 relative overflow-hidden flex-1">
+                    {showLyrics ? (
+                      /* Painel de Letras Otimizado para Landscape */
+                      <div className="flex-1 flex flex-col overflow-hidden min-h-0 pt-2 pb-1">
+                        <div className="flex items-center justify-between mb-1 shrink-0">
+                          <h3 className="text-white font-bold text-sm truncate">{currentTrack.title}</h3>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowLyrics(false)}
+                            className="text-primary hover:bg-white/10 text-xs h-7 px-2 rounded-md shrink-0"
+                          >
+                            Voltar
+                          </Button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto py-2 px-3 bg-void/30 backdrop-blur-md rounded-xl custom-scrollbar border border-white/5 text-left text-xs sm:text-sm">
+                          {currentTrack.lyrics ? (
+                            <div className="text-white/90 font-medium leading-relaxed" style={{ whiteSpace: "pre-wrap" }}>
+                              {currentTrack.lyrics}
+                            </div>
+                          ) : (
+                            <div className="flex h-full items-center justify-center">
+                              <p className="text-white/50 font-sans">
+                                Letra não disponível para este fragmento.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                        {/* Controles simplificados sob a letra */}
+                        <div className="flex items-center justify-center gap-4 mt-2 shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => { e.stopPropagation(); hapticFeedback(10); playPrevious(); }}
+                            className="text-white/80 hover:text-white h-8 w-8 rounded-full"
+                          >
+                            <SkipBack className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            onClick={(e) => { e.stopPropagation(); togglePlay(); }}
+                            variant="ghost"
+                            size="icon"
+                            className="text-void bg-primary hover:bg-primary/95 h-9 w-9 rounded-full flex items-center justify-center"
+                          >
+                            {isPlaying ? <Pause className="h-4.5 w-4.5" /> : <Play className="h-4.5 w-4.5 ml-0.5" />}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => { e.stopPropagation(); hapticFeedback(10); playNext(); }}
+                            className="text-white/80 hover:text-white h-8 w-8 rounded-full"
+                          >
+                            <SkipForward className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Painel de Controles Padrão em Landscape */
+                      <div className="flex flex-col gap-3 py-2 justify-center h-full">
+                        <div className="flex items-center justify-between w-full text-left">
+                          <div className="flex flex-col max-w-[75%]">
+                            <h2 className="text-lg md:text-xl font-display text-white truncate">{currentTrack.title}</h2>
+                            <p className="text-white/60 text-xs truncate">{currentTrack.artist}</p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setShowLyrics(true)}
+                            className="rounded-full h-9 w-9 text-white/60 hover:text-white bg-white/5 hover:bg-white/10 shrink-0"
+                            title="Mostrar Letra"
+                          >
+                            <AlignLeft className="h-4.5 w-4.5" />
+                          </Button>
+                        </div>
+
+                        <div className="flex flex-col gap-1 w-full">
+                          <CustomSlider
+                            value={progress}
+                            onChange={handleSeek}
+                            className="w-full h-[3px]"
+                          />
+                          <div className="flex items-center justify-between text-white/50 text-[10px] font-mono leading-none">
+                            <span>{formatTime(currentTime)}</span>
+                            <span>{formatTime(duration)}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between max-w-[320px] w-full mx-auto mt-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => { e.stopPropagation(); hapticFeedback(8); toggleShuffle(); }}
+                            className={cn("text-white/60 hover:text-white h-9 w-9 rounded-full", isShuffle && "text-primary")}
+                          >
+                            <Shuffle className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => { e.stopPropagation(); hapticFeedback(10); playPrevious(); }}
+                            className="text-white/95 hover:text-white hover:bg-white/10 h-10 w-10 rounded-full"
+                          >
+                            <SkipBack className="h-5 w-5" />
+                          </Button>
+                          <Button
+                            onClick={(e) => { e.stopPropagation(); togglePlay(); }}
+                            variant="ghost"
+                            size="icon"
+                            className="text-void bg-primary hover:bg-primary/90 h-14 w-14 rounded-full flex items-center justify-center shadow-lg"
+                          >
+                            {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6 ml-0.5" />}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => { e.stopPropagation(); hapticFeedback(10); playNext(); }}
+                            className="text-white/95 hover:text-white hover:bg-white/10 h-10 w-10 rounded-full"
+                          >
+                            <SkipForward className="h-5 w-5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => { e.stopPropagation(); hapticFeedback(8); toggleRepeat(); }}
+                            className={cn("text-white/60 hover:text-white h-9 w-9 rounded-full", repeatMode !== 'off' && "text-primary")}
+                          >
+                            {repeatMode === 'one' ? <Repeat1 className="h-4 w-4 stroke-[2px]" /> : <Repeat className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </motion.div>
         )}
