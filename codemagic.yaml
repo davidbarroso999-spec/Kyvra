@@ -6,6 +6,7 @@ workflows:
     instance_type: mac_mini_m1
     environment:
       node: latest
+      java: 21
     triggering:
       events:
         - push
@@ -25,6 +26,7 @@ workflows:
           npx cap sync android
       - name: Repair Gradle Wrapper
         script: |
+          export JAVA_HOME=$(/usr/libexec/java_home -v 21)
           cd android
           if command -v gradle &> /dev/null; then
             echo "Gradle is installed. Regenerating wrapper..."
@@ -36,6 +38,7 @@ workflows:
           fi
       - name: Build Android APK
         script: |
+          export JAVA_HOME=$(/usr/libexec/java_home -v 21)
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
