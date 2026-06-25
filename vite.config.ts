@@ -29,27 +29,27 @@ export default defineConfig(({mode}) => {
           categories: ['music', 'entertainment', 'audio'],
           icons: [
             {
-              src: 'pwa-192x192.png',
+              src: 'https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/LOGOANDSCREENSHOOT/1782392271638.jpg',
               sizes: '192x192',
-              type: 'image/png',
+              type: 'image/jpeg',
               purpose: 'any'
             },
             {
-              src: 'pwa-192x192.png',
+              src: 'https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/LOGOANDSCREENSHOOT/1782392271638.jpg',
               sizes: '192x192',
-              type: 'image/png',
+              type: 'image/jpeg',
               purpose: 'maskable'
             },
             {
-              src: 'pwa-512x512.png',
+              src: 'https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/LOGOANDSCREENSHOOT/1782392271638.jpg',
               sizes: '512x512',
-              type: 'image/png',
+              type: 'image/jpeg',
               purpose: 'any'
             },
             {
-              src: 'pwa-512x512.png',
+              src: 'https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/LOGOANDSCREENSHOOT/1782392271638.jpg',
               sizes: '512x512',
-              type: 'image/png',
+              type: 'image/jpeg',
               purpose: 'maskable'
             }
           ],
@@ -59,23 +59,23 @@ export default defineConfig(({mode}) => {
               short_name: 'Player',
               description: 'Acesse diretamente o reprodutor imersivo de Kyvra',
               url: '/',
-              icons: [{ src: 'pwa-192x192.png', sizes: '192x192' }]
+              icons: [{ src: 'https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/LOGOANDSCREENSHOOT/1782392271638.jpg', sizes: '192x192', type: 'image/jpeg' }]
             }
           ],
           screenshots: [
             {
-              src: 'screenshot-mobile.jpg',
-              sizes: '1080x1920',
-              type: 'image/jpeg',
+              src: 'https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/LOGOANDSCREENSHOOT/Screenshot_20260625-090009.png',
+              sizes: '1080x2400',
+              type: 'image/png',
               form_factor: 'narrow',
-              label: 'Reprodutor imersivo Kyvra - Mobile'
+              label: 'Reprodutor imersivo Kyvra - Tela 1'
             },
             {
-              src: 'screenshot-desktop.jpg',
-              sizes: '1920x1080',
-              type: 'image/jpeg',
-              form_factor: 'wide',
-              label: 'Reprodutor imersivo Kyvra - Desktop'
+              src: 'https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/LOGOANDSCREENSHOOT/Screenshot_20260625-090023.png',
+              sizes: '1080x2400',
+              type: 'image/png',
+              form_factor: 'narrow',
+              label: 'Reprodutor imersivo Kyvra - Tela 2'
             }
           ]
         },
