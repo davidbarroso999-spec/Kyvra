@@ -94,6 +94,15 @@ export const AudioSpectrum = ({ audioRef }: { audioRef: React.RefObject<HTMLAudi
     
     // WebAudio initialization that waits for an interaction (play)
     const initAudio = () => {
+      // Se for Android (Capacitor/WebView), pulamos a conexão com o AudioContext.
+      // É crucial: ao chamar createMediaElementSource em dispositivos móveis Android,
+      // o player do WebView deixa de ser registrado como "reprodução de mídia padrão",
+      // impedindo que o Android exiba a notificação do player com controles de música no Lockscreen/Central.
+      const isAndroid = typeof window !== 'undefined' && /android/i.test(navigator.userAgent);
+      if (isAndroid) {
+        return;
+      }
+
       if (audioContextRef.current) {
         if (audioContextRef.current.state === 'suspended') {
           audioContextRef.current.resume();
@@ -140,18 +149,56 @@ export const AudioSpectrum = ({ audioRef }: { audioRef: React.RefObject<HTMLAudi
     
     const draw = () => {
       animationRef.current = requestAnimationFrame(draw);
-      if (!analyserRef.current) return;
+      
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      const barWidth = 4;
+      const gap = 3;
+      const isAndroid = typeof window !== 'undefined' && /android/i.test(navigator.userAgent);
+      
+      // Se for Android (WebAudio desativado para manter notificação), ou se o analisador não estiver ativo,
+      // renderizamos uma animação de ondas senoidais simulando o espectro de áudio com excelente fidelidade e sem lag.
+      if (!analyserRef.current || isAndroid) {
+        const visualBins = 32;
+        const totalWidth = visualBins * (barWidth + gap);
+        const startX = (canvas.width - totalWidth) / 2;
+        let x = startX > 0 ? startX : 0;
+        const effectiveBarWidth = startX > 0 ? barWidth : (canvas.width / visualBins) - gap;
+        
+        ctx.fillStyle = themeColorRef.current;
+        const isPlaying = audioRef.current && !audioRef.current.paused;
+        const time = Date.now() * 0.0035;
+        
+        for (let i = 0; i < visualBins; i++) {
+          let heightPercent = 0.04; // Altura mínima de repouso
+          
+          if (isPlaying) {
+            // Cria ondas orgânicas combinando frequências senoidais e cossenos diferentes
+            const w1 = Math.sin(time + i * 0.3) * 0.45 + 0.5;
+            const w2 = Math.cos(time * 0.7 - i * 0.18) * 0.3 + 0.3;
+            const w3 = Math.sin(time * 1.6 + i * 0.6) * 0.2 + 0.2;
+            heightPercent = (w1 * 0.5 + w2 * 0.3 + w3 * 0.2);
+            // adiciona um pequeno ruído rítmico natural
+            heightPercent = Math.max(0.08, heightPercent * (0.85 + Math.random() * 0.15));
+          }
+          
+          const barHeight = Math.max(2, heightPercent * canvas.height * 0.85);
+          ctx.globalAlpha = heightPercent * 0.75 + 0.15;
+          ctx.beginPath();
+          ctx.roundRect(x, canvas.height - barHeight, effectiveBarWidth, barHeight, Math.min(2, effectiveBarWidth/2));
+          ctx.fill();
+          
+          x += effectiveBarWidth + gap;
+        }
+        ctx.globalAlpha = 1.0;
+        return;
+      }
       
       const analyser = analyserRef.current;
       const bufferLength = analyser.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
       analyser.getByteFrequencyData(dataArray);
       
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      const barWidth = 4;
-      const gap = 3;
-      // We only use the lower 60% of frequency bins for visual clarity
       const visualBins = Math.floor(bufferLength * 0.6); 
       const totalWidth = visualBins * (barWidth + gap);
       const startX = (canvas.width - totalWidth) / 2;
@@ -210,6 +257,60 @@ const hapticFeedback = (duration = 10) => {
   }
 };
 
+// Helper function to show and update native media notifications via Service Worker
+export async function showMediaNotification(track: any, isPlaying: boolean) {
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('Notification' in window)) {
+    return;
+  }
+
+  if (Notification.permission !== 'granted') {
+    return;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    if (!registration) return;
+
+    const getAbsoluteUrl = (url: string | undefined | null, fallback: string) => {
+      if (!url) return window.location.origin + fallback;
+      if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url;
+      return window.location.origin + (url.startsWith('/') ? '' : '/') + url;
+    };
+
+    const artworkUrl = getAbsoluteUrl(track.coverUrl, '/pwa-512x512.png');
+
+    await registration.showNotification(track.title, {
+      body: track.artist || 'Kyvra',
+      icon: artworkUrl,
+      badge: artworkUrl,
+      image: artworkUrl, // Displays as a beautiful big cover in the Android media panel
+      tag: 'kyvra-music-player',
+      requireInteraction: false,
+      silent: true, // Keep it silent during state toggles so it behaves smoothly like a real media player
+      actions: [
+        {
+          action: 'previous',
+          title: 'Anterior'
+        },
+        {
+          action: isPlaying ? 'pause' : 'play',
+          title: isPlaying ? 'Pausar' : 'Tocar'
+        },
+        {
+          action: 'next',
+          title: 'Próxima'
+        },
+        {
+          action: 'close',
+          title: 'Fechar'
+        }
+      ]
+    } as any);
+  } catch (e) {
+    console.warn("Kyvra: Failed to show media notification", e);
+  }
+}
+
 export function MiniPlayer() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isActive, setIsActive] = useState(false);
@@ -247,35 +348,101 @@ export function MiniPlayer() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
-  // Request notifications permission for Android 13+ media control center support
+  // Request notifications permission and trigger first notification
   useEffect(() => {
     if (isPlaying && typeof window !== 'undefined' && 'Notification' in window) {
       if (Notification.permission === 'default') {
         try {
-          Notification.requestPermission();
+          Notification.requestPermission().then((permission) => {
+            if (permission === 'granted' && currentTrack) {
+              showMediaNotification(currentTrack, isPlaying);
+            }
+          });
         } catch (e) {
           console.warn("Kyvra: Notification request permission failed", e);
         }
       }
     }
-  }, [isPlaying]);
+  }, [isPlaying, currentTrack]);
+
+  // Sync state and track changes to the Notification Bar Player
+  useEffect(() => {
+    if (currentTrack) {
+      showMediaNotification(currentTrack, isPlaying);
+    } else {
+      // Clear notification if no track is playing
+      if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then((registration) => {
+          registration.getNotifications({ tag: 'kyvra-music-player' }).then((notifications) => {
+            for (const notification of notifications) {
+              notification.close();
+            }
+          });
+        });
+      }
+    }
+  }, [currentTrack, isPlaying]);
+
+  // Handle media actions from the Service Worker notification buttons
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+
+    const handleServiceWorkerMessage = (event: MessageEvent) => {
+      const { type, action } = event.data || {};
+      
+      if (type === 'MEDIA_ACTION') {
+        if (action === 'play') {
+          setIsPlaying(true);
+        } else if (action === 'pause') {
+          setIsPlaying(false);
+        } else if (action === 'next') {
+          hapticFeedback(10);
+          playNext();
+        } else if (action === 'previous') {
+          hapticFeedback(10);
+          playPrevious();
+        } else if (action === 'close') {
+          setIsPlaying(false);
+          // Explicitly ask the SW to dismiss the notification
+          if (navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+              type: 'CLOSE_NOTIFICATION'
+            });
+          }
+        }
+      }
+    };
+
+    navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
+    return () => {
+      navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
+    };
+  }, [setIsPlaying, playNext, playPrevious]);
 
   // Media Session API integration for Android control center, lock screen, and bluetooth actions
   useEffect(() => {
     if (!('mediaSession' in navigator) || !currentTrack) return;
 
     try {
+      const getAbsoluteUrl = (url: string | undefined | null, fallback: string) => {
+        if (!url) return window.location.origin + fallback;
+        if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url;
+        return window.location.origin + (url.startsWith('/') ? '' : '/') + url;
+      };
+
+      const artworkUrl = getAbsoluteUrl(currentTrack.coverUrl, '/pwa-512x512.png');
+
       navigator.mediaSession.metadata = new MediaMetadata({
         title: currentTrack.title,
         artist: currentTrack.artist || 'O Arquivista',
         album: currentTrack.albumTitle || 'Kyvra',
         artwork: [
-          { src: currentTrack.coverUrl || '/pwa-192x192.png', sizes: '96x96', type: 'image/png' },
-          { src: currentTrack.coverUrl || '/pwa-192x192.png', sizes: '128x128', type: 'image/png' },
-          { src: currentTrack.coverUrl || '/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
-          { src: currentTrack.coverUrl || '/pwa-512x512.png', sizes: '256x256', type: 'image/png' },
-          { src: currentTrack.coverUrl || '/pwa-512x512.png', sizes: '384x384', type: 'image/png' },
-          { src: currentTrack.coverUrl || '/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+          { src: artworkUrl, sizes: '96x96', type: 'image/png' },
+          { src: artworkUrl, sizes: '128x128', type: 'image/png' },
+          { src: artworkUrl, sizes: '192x192', type: 'image/png' },
+          { src: artworkUrl, sizes: '256x256', type: 'image/png' },
+          { src: artworkUrl, sizes: '384x384', type: 'image/png' },
+          { src: artworkUrl, sizes: '512x512', type: 'image/png' },
         ]
       });
     } catch (e) {
