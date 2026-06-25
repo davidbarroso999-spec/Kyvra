@@ -52,6 +52,37 @@ export default function App() {
     } else {
       console.warn("GEMINI_API_KEY is NOT detected in the environment. AI features will not work.");
     }
+
+    // Inicialização do Background Mode para reprodução contínua em segundo plano no Android/iOS
+    const initBackgroundMode = () => {
+      const bgMode = (window as any).cordova?.plugins?.backgroundMode;
+      if (bgMode) {
+        try {
+          bgMode.enable();
+          bgMode.setDefaults({
+            title: 'Kyvra Player',
+            text: 'Kyvra está ativo em segundo plano',
+            icon: 'icon',
+            color: '0d0d1a',
+            resume: true,
+            hidden: true,
+            silent: true // Oculta a notificação padrão do background mode para priorizar os controles nativos de mídia
+          });
+          console.log("Kyvra: Background Mode do Capacitor ativado com sucesso.");
+        } catch (e) {
+          console.error("Kyvra: Erro ao configurar o Background Mode:", e);
+        }
+      } else {
+        console.log("Kyvra: Plugin de Background Mode não detectado no ambiente Web (comum fora do APK).");
+      }
+    };
+
+    document.addEventListener('deviceready', initBackgroundMode, false);
+    initBackgroundMode(); // Executa caso o dispositivo já esteja pronto
+
+    return () => {
+      document.removeEventListener('deviceready', initBackgroundMode);
+    };
   }, []);
 
   return (

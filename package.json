@@ -12,6 +12,8 @@
     "start": "node dist/server.js"
   },
   "dependencies": {
+    "@awesome-cordova-plugins/background-mode": "^9.2.0",
+    "@awesome-cordova-plugins/device": "^9.2.0",
     "@capacitor/core": "^8.4.1",
     "@google/genai": "^1.48.0",
     "@radix-ui/react-slot": "^1.2.5",
@@ -20,6 +22,8 @@
     "@vitejs/plugin-react": "^5.0.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cordova-plugin-background-mode": "^0.7.3",
+    "cordova-plugin-device": "^3.0.0",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
     "gsap": "^3.15.0",
