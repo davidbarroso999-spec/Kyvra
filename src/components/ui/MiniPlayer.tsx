@@ -271,6 +271,20 @@ export async function showMediaNotification(track: any, isPlaying: boolean) {
     const registration = await navigator.serviceWorker.ready;
     if (!registration) return;
 
+    // Send postMessage to Service Worker for robust background/active updates
+    const activeSW = navigator.serviceWorker.controller || registration.active;
+    if (activeSW) {
+      activeSW.postMessage({
+        type: 'UPDATE_MEDIA_NOTIFICATION',
+        track: {
+          title: track.title,
+          artist: track.artist || 'Kyvra',
+          coverUrl: track.coverUrl
+        },
+        isPlaying: isPlaying
+      });
+    }
+
     const getAbsoluteUrl = (url: string | undefined | null, fallback: string) => {
       if (!url) return window.location.origin + fallback;
       if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url;
@@ -594,6 +608,7 @@ export function MiniPlayer() {
         src={currentTrack.audioUrl || undefined}
         className="hidden"
         crossOrigin="anonymous"
+        preload="auto"
         autoPlay={isPlaying}
         onCanPlay={() => {
           if (isPlaying && audioRef.current) {
