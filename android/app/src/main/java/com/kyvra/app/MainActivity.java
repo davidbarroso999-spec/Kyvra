@@ -26,6 +26,11 @@ public class MainActivity extends BridgeActivity {
             }
         }
         
+        // Configura o WebView do Capacitor para permitir a reprodução automática e contínua de mídias sem gestos explícitos
+        if (this.bridge != null && this.bridge.getWebView() != null) {
+            this.bridge.getWebView().getSettings().setMediaPlaybackRequiresUserGesture(false);
+        }
+        
         // Configura tela cheia imersiva nativa
         setImmersiveFullscreen();
     }

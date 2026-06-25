@@ -376,8 +376,8 @@ export function Lore() {
       <div className="fixed inset-0 z-[1] backdrop-blur-xl mask-linear-top pointer-events-none" />
 
       {/* HERO CONTENT (z-index 10) */}
-      <div className="flex-1 flex flex-col justify-end px-4 sm:px-6 md:px-12 pb-8 md:pb-16 z-10 relative">
-        <div className="min-h-[260px] sm:min-h-[300px] md:min-h-[340px] flex flex-col justify-end w-full">
+      <div className="flex-1 flex flex-col justify-end px-4 sm:px-6 md:px-12 pb-8 md:pb-16 z-10 relative landscape:max-h-[500px]:pb-2 landscape:max-h-[500px]:px-4">
+        <div className="min-h-[260px] sm:min-h-[300px] md:min-h-[340px] landscape:max-h-[500px]:min-h-[130px] flex flex-col justify-end w-full">
           <AnimatePresence mode="wait" custom={direction}>
             {!currentChapter ? (
               <motion.div 
@@ -404,7 +404,7 @@ export function Lore() {
                   {/* Metadata row */}
                   <motion.div 
                     variants={childVariants}
-                    className="flex flex-wrap items-center gap-4 sm:gap-6 mb-6 md:mb-8 text-xs sm:text-sm font-medium text-white/80"
+                    className="flex flex-wrap items-center gap-4 sm:gap-6 mb-6 md:mb-8 text-xs sm:text-sm font-medium text-white/80 landscape:max-h-[500px]:mb-1"
                   >
                     <div className="flex items-center gap-2">
                       <BookOpen size={16} className="text-white" fill="currentColor" />
@@ -425,7 +425,7 @@ export function Lore() {
                   {/* Title */}
                   <motion.h1 
                     variants={childVariants}
-                    className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-normal mb-4 md:mb-6 leading-tight"
+                    className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-normal mb-4 md:mb-6 leading-tight landscape:max-h-[500px]:text-xl landscape:max-h-[500px]:mb-1 landscape:max-h-[500px]:leading-none"
                     style={{ letterSpacing: '-0.04em' }}
                   >
                     {currentChapter.title}
@@ -434,7 +434,7 @@ export function Lore() {
                   {/* Description */}
                   <motion.p 
                     variants={childVariants}
-                    className="text-base sm:text-lg md:text-xl text-gray-300 font-light mb-6 md:mb-12 max-w-2xl line-clamp-3 leading-relaxed"
+                    className="text-base sm:text-lg md:text-xl text-gray-300 font-light mb-6 md:mb-12 max-w-2xl line-clamp-3 leading-relaxed landscape:max-h-[500px]:text-xs landscape:max-h-[500px]:mb-2 landscape:max-h-[500px]:line-clamp-2"
                   >
                     {currentChapter.content}
                   </motion.p>
@@ -446,12 +446,12 @@ export function Lore() {
 
         {/* Persistent Bottom Row (remains stable and does not slide during transition) */}
         {currentChapter && (
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 md:gap-6 w-full pt-6 border-t border-white/10 pointer-events-auto">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 md:gap-6 w-full pt-6 border-t border-white/10 pointer-events-auto landscape:max-h-[500px]:pt-2 landscape:max-h-[500px]:gap-2">
             {/* CTA Buttons */}
             <div className="flex items-center justify-center md:justify-start gap-3 sm:gap-4 shrink-0 w-full md:w-auto">
               <button 
                 onClick={() => setReadingModalOpen(true)}
-                className="w-full md:w-auto justify-center bg-white text-black rounded-full font-medium px-8 py-3 flex items-center gap-2 hover:bg-gray-200 transition-colors shadow-lg pointer-events-auto"
+                className="w-full md:w-auto justify-center bg-white text-black rounded-full font-medium px-8 py-3 flex items-center gap-2 hover:bg-gray-200 transition-colors shadow-lg pointer-events-auto landscape:max-h-[500px]:py-1.5 landscape:max-h-[500px]:px-5 landscape:max-h-[500px]:text-xs"
               >
                 <FileText size={18} fill="currentColor" />
                 Explorar Capítulo
@@ -459,7 +459,7 @@ export function Lore() {
             </div>
 
             {/* Brief explanation occupying space between button and arrows in a single line (Desktop only) */}
-            <div className="hidden md:block flex-1 text-center text-xs sm:text-sm text-white/50 font-light px-4 truncate whitespace-nowrap overflow-hidden self-center">
+            <div className="hidden md:block flex-1 text-center text-xs sm:text-sm text-white/50 font-light px-4 truncate whitespace-nowrap overflow-hidden self-center landscape:max-h-[500px]:hidden">
               Seu portal para a história de como o universo de KYVRA nasceu.
             </div>
 
@@ -467,23 +467,23 @@ export function Lore() {
             <div className="w-full md:w-auto flex items-center justify-between md:justify-end gap-3 md:gap-4 shrink-0 pointer-events-auto">
               <button 
                 onClick={handlePrev}
-                className="w-12 h-12 flex items-center justify-center rounded-full liquid-glass hover:bg-white/10 transition-colors shrink-0"
+                className="w-12 h-12 flex items-center justify-center rounded-full liquid-glass hover:bg-white/10 transition-colors shrink-0 landscape:max-h-[500px]:w-8 landscape:max-h-[500px]:h-8"
                 aria-label="Capítulo Anterior"
               >
-                <ChevronLeft size={20} />
+                <ChevronLeft size={20} className="landscape:max-h-[500px]:w-4 landscape:max-h-[500px]:h-4" />
               </button>
 
               {/* Centered mobile phrase right between arrows */}
-              <div className="md:hidden flex-1 text-center text-[10px] sm:text-xs text-white/50 font-light px-2 leading-tight">
+              <div className="md:hidden flex-1 text-center text-[10px] sm:text-xs text-white/50 font-light px-2 leading-tight landscape:max-h-[500px]:hidden">
                 Seu portal para a história de como o universo de KYVRA nasceu.
               </div>
 
               <button 
                 onClick={handleNext}
-                className="w-12 h-12 flex items-center justify-center rounded-full liquid-glass hover:bg-white/10 transition-colors shrink-0"
+                className="w-12 h-12 flex items-center justify-center rounded-full liquid-glass hover:bg-white/10 transition-colors shrink-0 landscape:max-h-[500px]:w-8 landscape:max-h-[500px]:h-8"
                 aria-label="Próximo Capítulo"
               >
-                <ChevronRight size={20} />
+                <ChevronRight size={20} className="landscape:max-h-[500px]:w-4 landscape:max-h-[500px]:h-4" />
               </button>
             </div>
           </div>
