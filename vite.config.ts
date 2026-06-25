@@ -15,22 +15,67 @@ export default defineConfig(({mode}) => {
         registerType: 'autoUpdate',
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
         manifest: {
+          id: 'descubra-kyvra-pwa',
           name: 'Kyvra',
           short_name: 'Kyvra',
-          description: 'O Arquivista de Kyvra',
+          description: 'O Arquivista de Kyvra - Reprodutor de áudio imersivo de Kyvra',
           theme_color: '#0a0a0a',
           background_color: '#0a0a0a',
           display: 'standalone',
+          display_override: ['window-controls-overlay', 'standalone', 'minimal-ui'],
+          orientation: 'portrait',
+          lang: 'pt-BR',
+          dir: 'ltr',
+          categories: ['music', 'entertainment', 'audio'],
           icons: [
             {
               src: 'pwa-192x192.png',
               sizes: '192x192',
-              type: 'image/png'
+              type: 'image/png',
+              purpose: 'any'
+            },
+            {
+              src: 'pwa-192x192.png',
+              sizes: '192x192',
+              type: 'image/png',
+              purpose: 'maskable'
             },
             {
               src: 'pwa-512x512.png',
               sizes: '512x512',
-              type: 'image/png'
+              type: 'image/png',
+              purpose: 'any'
+            },
+            {
+              src: 'pwa-512x512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'maskable'
+            }
+          ],
+          shortcuts: [
+            {
+              name: 'Reprodutor de Áudio',
+              short_name: 'Player',
+              description: 'Acesse diretamente o reprodutor imersivo de Kyvra',
+              url: '/',
+              icons: [{ src: 'pwa-192x192.png', sizes: '192x192' }]
+            }
+          ],
+          screenshots: [
+            {
+              src: 'screenshot-mobile.jpg',
+              sizes: '1080x1920',
+              type: 'image/jpeg',
+              form_factor: 'narrow',
+              label: 'Reprodutor imersivo Kyvra - Mobile'
+            },
+            {
+              src: 'screenshot-desktop.jpg',
+              sizes: '1920x1080',
+              type: 'image/jpeg',
+              form_factor: 'wide',
+              label: 'Reprodutor imersivo Kyvra - Desktop'
             }
           ]
         },
