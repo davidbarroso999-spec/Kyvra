@@ -1,5 +1,6 @@
 {
   "name": "Kyvra",
   "description": "Fragmentos de um Universo Sombrio - Luxury Dark Editorial Music Artist Website",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { useIdleCallback, useGPUAcceleration } from '@/modules/performance-optimization';
 
 import { FeaturedFragmentSection } from '@/components/ui/FeaturedFragmentSection';
+import { AudioVisualizer } from '@/components/ui/AudioVisualizer';
 
 const THEME_VIDEOS: Record<string, string> = {
   abissal: "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_abissal.webm",
@@ -77,6 +78,8 @@ const trackFPSSlowdown = (themeName: string, startTime: number) => {
 
 export function Home() {
   const theme = useStore((state) => state.theme);
+  const currentTrack = useStore((state) => state.currentTrack);
+  const [visualizerVariant, setVisualizerVariant] = useState<'bars' | 'wave' | 'circle'>('bars');
   const [featuredTracks, setFeaturedTracks] = useState<any[]>([]);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const videoRetries = useRef<Record<string, number>>({});
@@ -423,7 +426,7 @@ export function Home() {
         <div className="hidden md:flex landscape:flex md:flex-col justify-between md:h-full landscape:h-full w-full h-[100vh] relative overflow-hidden select-none z-10">
 
           {/* Left Aligned Content overlapping the video */}
-          <div className="relative z-35 flex-1 flex flex-col justify-center px-8 md:px-16 xl:px-24 pt-20 max-w-[900px] landscape:pt-14 landscape:gap-y-1">
+          <div className="relative z-35 flex-1 flex flex-col justify-center px-8 md:px-16 xl:px-24 pt-20 max-w-[1000px] landscape:pt-14 landscape:gap-y-1">
             {/* Logo container without backglow */}
             <div className="relative overflow-visible pointer-events-none mb-2 md:mb-4 flex flex-col items-start justify-center landscape:mb-1">
               <motion.div
@@ -432,19 +435,19 @@ export function Home() {
                 transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
                 className="relative flex flex-col items-start"
               >
-                <h2 className="font-display font-medium text-[3.2rem] xs:text-[4rem] sm:text-[5rem] md:text-[6.5rem] lg:text-[8rem] xl:text-[9.5rem] tracking-[0.05em] text-gradient m-0 p-0 text-left leading-none landscape:text-[2.6rem] landscape:sm:text-[4rem] landscape:md:text-[6.5rem]">
+                <h2 className="font-display font-medium text-[4.5rem] xs:text-[5.5rem] sm:text-[7rem] md:text-[9rem] lg:text-[11rem] xl:text-[13rem] tracking-[0.05em] text-gradient m-0 p-0 text-left leading-none landscape:text-[3.2rem] landscape:sm:text-[5rem] landscape:md:text-[9rem]">
                   KYVRA
                 </h2>
               </motion.div>
             </div>
 
             {/* Poetry & Description positioned BELOW the logo */}
-            <div className="space-y-4 md:space-y-6 w-full max-w-[550px] md:max-w-[650px] xl:max-w-[720px] text-left mt-2 md:-mt-1 lg:mt-2 landscape:mt-0.5 landscape:space-y-2">
+            <div className="space-y-4 md:space-y-6 w-full max-w-[650px] md:max-w-[750px] xl:max-w-[850px] text-left mt-2 md:-mt-1 lg:mt-2 landscape:mt-0.5 landscape:space-y-2">
               <motion.h1 
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1.2, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                className="font-cormorant text-white text-[1.2rem] xs:text-[1.4rem] sm:text-[1.8rem] md:text-[2rem] lg:text-[2.5rem] xl:text-[3rem] leading-[1.12] tracking-tight font-light landscape:text-[1.1rem] landscape:sm:text-[1.5rem] landscape:md:text-[2rem]"
+                className="font-cormorant text-white text-[1.6rem] xs:text-[2rem] sm:text-[2.5rem] md:text-[3rem] lg:text-[3.6rem] xl:text-[4.5rem] leading-[1.12] tracking-tight font-light landscape:text-[1.4rem] landscape:sm:text-[2.2rem] landscape:md:text-[3rem]"
               >
                 Onde as estrelas morrem, a poesia ecoa.
               </motion.h1>
@@ -453,9 +456,9 @@ export function Home() {
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1.2, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                className="font-sans text-white/75 text-[10px] xs:text-xs md:text-sm lg:text-[15px] xl:text-base leading-relaxed font-light landscape:text-[9.5px] landscape:sm:text-xs landscape:md:text-sm"
+                className="font-sans text-white/75 text-xs xs:text-sm md:text-base lg:text-[18px] xl:text-[20px] leading-relaxed font-light landscape:text-[11px] landscape:sm:text-sm landscape:md:text-base"
               >
-                Kyvra é um projeto de metal sinfônico melancólico e profundo. Um portal imersivo desenhado para guiar a alma através de arranjos grandiosos, crônicas sombrias e elegias visuais.
+                Kyvra é um portal imersivo de metal sinfônico melancólico e profundo, desenhado para guiar a alma através de arranjos grandiosos, crônicas sombrias e elegias visuais.
               </motion.p>
             </div>
           </div>
@@ -480,17 +483,17 @@ export function Home() {
               transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
               className="w-full relative flex justify-start items-center overflow-visible"
             >
-              <h1 className="font-display font-medium text-[22vw] leading-none text-gradient m-0 p-0 tracking-[0.01em] text-left select-none">
+              <h1 className="font-display font-medium text-[24vw] leading-none text-gradient m-0 p-0 tracking-[0.01em] text-left select-none">
                 KYVRA
               </h1>
             </motion.div>
 
             {/* Poetry and description (restricted to elegant max-w) */}
             <div className="space-y-3 max-w-[500px]">
-              <h1 className="font-cormorant text-white text-[1.8rem] sm:text-[2.2rem] leading-[1.12] tracking-tight font-light">
+              <h1 className="font-cormorant text-white text-[2rem] sm:text-[2.5rem] leading-[1.12] tracking-tight font-light">
                 Onde as estrelas morrem, a poesia ecoa.
               </h1>
-              <p className="font-sans text-white/70 text-xs sm:text-xs leading-relaxed font-light">
+              <p className="font-sans text-white/70 text-sm sm:text-sm leading-relaxed font-light">
                 Kyvra é um projeto de metal sinfônico melancólico e profundo. Um portal imersivo desenhado para guiar a alma através de arranjos grandiosos, crônicas sombrias e elegias visuais.
               </p>
             </div>
@@ -511,6 +514,66 @@ export function Home() {
           </div>
         </section>
       )}
+
+      {/* Immersive Audio Visualizer Section */}
+      <section id="visualizador" className="py-16 md:py-24 relative bg-void border-t border-white/5 overflow-hidden">
+        <div className="absolute inset-0 bg-radial-gradient from-primary/5 via-transparent to-transparent opacity-60 pointer-events-none" />
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
+            <div className="space-y-3">
+              <span className="text-xs font-mono tracking-widest text-primary uppercase">Ecos do Vazio</span>
+              <h2 className="font-display font-medium text-3xl sm:text-4xl md:text-5xl tracking-tight text-white leading-none">
+                ESPECTRO DE KYVRA
+              </h2>
+              <p className="font-sans text-white/60 text-sm max-w-xl font-light">
+                Contemple as frequências sonoras das crônicas místicas moldarem a realidade em tempo real. Altere a ressonância do espectro abaixo.
+              </p>
+            </div>
+            
+            {/* Visualizer controls */}
+            <div className="flex flex-wrap gap-2.5 bg-white/5 backdrop-blur-md border border-white/10 p-1.5 rounded-xl self-start md:self-auto">
+              {(['bars', 'wave', 'circle'] as const).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setVisualizerVariant(v)}
+                  className={cn(
+                    "px-4 py-2 rounded-lg text-xs font-mono uppercase tracking-wider transition-all duration-300 cursor-pointer",
+                    visualizerVariant === v
+                      ? "bg-primary text-black font-semibold shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)]"
+                      : "text-white/60 hover:text-white hover:bg-white/5"
+                  )}
+                >
+                  {v === 'bars' ? 'Barras' : v === 'wave' ? 'Ondas' : 'Orbital'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* High-fidelity Canvas container with a custom luxury card layout */}
+          <div className="relative w-full h-[320px] md:h-[400px] rounded-2xl overflow-hidden glass border border-white/10 flex flex-col justify-center items-center group">
+            {/* Ambient glows and decoration grids */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
+            <div className="absolute inset-0 opacity-[0.15] mix-blend-overlay pointer-events-none bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
+            
+            <AudioVisualizer 
+              variant={visualizerVariant} 
+              className="w-full h-full p-4" 
+              glow={true}
+              fftSize={visualizerVariant === 'circle' ? 256 : 512}
+            />
+
+            {/* Subtle Overlay HUD */}
+            <div className="absolute bottom-4 left-6 right-6 flex items-center justify-between pointer-events-none opacity-60">
+              <span className="text-[10px] font-mono tracking-widest uppercase">
+                {currentTrack ? `Faixa Ativa: ${currentTrack.title}` : 'Sem reprodução ativa'}
+              </span>
+              <span className="text-[10px] font-mono tracking-widest uppercase">
+                {visualizerVariant === 'bars' ? 'Modo: Espectro Linear' : visualizerVariant === 'wave' ? 'Modo: Osciloscópio' : 'Modo: Singularidade Orbital'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Featured Fragment Section */}
       <FeaturedFragmentSection className="bg-void border-t border-white/5" />

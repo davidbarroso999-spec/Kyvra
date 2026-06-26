@@ -18,6 +18,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/store/useStore";
+import { registerAudioElement } from "@/hooks/useAudioAnalyser";
 
 const formatTime = (seconds: number = 0) => {
   const minutes = Math.floor(seconds / 60);
@@ -152,18 +153,15 @@ export const AudioSpectrum = ({ audioRef }: { audioRef: React.RefObject<HTMLAudi
       
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      const barWidth = 4;
-      const gap = 3;
       const isAndroid = typeof window !== 'undefined' && /android/i.test(navigator.userAgent);
       
       // Se for Android (WebAudio desativado para manter notificação), ou se o analisador não estiver ativo,
       // renderizamos uma animação de ondas senoidais simulando o espectro de áudio com excelente fidelidade e sem lag.
       if (!analyserRef.current || isAndroid) {
-        const visualBins = 32;
-        const totalWidth = visualBins * (barWidth + gap);
-        const startX = (canvas.width - totalWidth) / 2;
-        let x = startX > 0 ? startX : 0;
-        const effectiveBarWidth = startX > 0 ? barWidth : (canvas.width / visualBins) - gap;
+        const visualBins = 64; // nice high-density of bars across the screen
+        const gap = 2;
+        const effectiveBarWidth = (canvas.width - (visualBins - 1) * gap) / visualBins;
+        let x = 0;
         
         ctx.fillStyle = themeColorRef.current;
         const isPlaying = audioRef.current && !audioRef.current.paused;
@@ -174,9 +172,9 @@ export const AudioSpectrum = ({ audioRef }: { audioRef: React.RefObject<HTMLAudi
           
           if (isPlaying) {
             // Cria ondas orgânicas combinando frequências senoidais e cossenos diferentes
-            const w1 = Math.sin(time + i * 0.3) * 0.45 + 0.5;
-            const w2 = Math.cos(time * 0.7 - i * 0.18) * 0.3 + 0.3;
-            const w3 = Math.sin(time * 1.6 + i * 0.6) * 0.2 + 0.2;
+            const w1 = Math.sin(time + i * 0.2) * 0.45 + 0.5;
+            const w2 = Math.cos(time * 0.7 - i * 0.12) * 0.3 + 0.3;
+            const w3 = Math.sin(time * 1.6 + i * 0.4) * 0.2 + 0.2;
             heightPercent = (w1 * 0.5 + w2 * 0.3 + w3 * 0.2);
             // adiciona um pequeno ruído rítmico natural
             heightPercent = Math.max(0.08, heightPercent * (0.85 + Math.random() * 0.15));
@@ -199,29 +197,23 @@ export const AudioSpectrum = ({ audioRef }: { audioRef: React.RefObject<HTMLAudi
       const dataArray = new Uint8Array(bufferLength);
       analyser.getByteFrequencyData(dataArray);
       
-      const visualBins = Math.floor(bufferLength * 0.6); 
-      const totalWidth = visualBins * (barWidth + gap);
-      const startX = (canvas.width - totalWidth) / 2;
+      const visualBins = 80; // beautiful high-resolution that spans 100% width
+      const gap = 2;
+      const effectiveBarWidth = (canvas.width - (visualBins - 1) * gap) / visualBins;
+      let x = 0;
       
-      let x = startX > 0 ? startX : 0;
-      const effectiveBarWidth = startX > 0 ? barWidth : (canvas.width / visualBins) - gap;
-      
-      // We set the fill style once per frame since it's the same color
       ctx.fillStyle = themeColorRef.current;
       
       for (let i = 0; i < visualBins; i++) {
-        // Apply dampening to lower visual noise
-        const rawValue = dataArray[i];
-        if (rawValue === 0) {
-          x += effectiveBarWidth + gap;
-          continue; // Skip drawing empty bars for performance
-        }
+        // Map visualBins to index in dataArray, focusing on the active lower 85% frequency bands
+        const dataIndex = Math.floor((i / visualBins) * bufferLength * 0.85);
+        const rawValue = dataArray[dataIndex] || 0;
         
         // non-linear scaling for better visuals
-        const percent = Math.pow(rawValue / 255, 1.5);
+        const percent = Math.pow(rawValue / 255, 1.3);
         const barHeight = Math.max(2, percent * canvas.height * 0.9);
         
-        ctx.globalAlpha = percent * 0.7 + 0.1;
+        ctx.globalAlpha = percent * 0.75 + 0.15;
         ctx.beginPath();
         ctx.roundRect(x, canvas.height - barHeight, effectiveBarWidth, barHeight, Math.min(2, effectiveBarWidth/2));
         ctx.fill();
@@ -241,7 +233,7 @@ export const AudioSpectrum = ({ audioRef }: { audioRef: React.RefObject<HTMLAudi
   }, []);
 
   return (
-    <div className="fixed bottom-0 left-0 w-full h-[80px] pointer-events-none z-[4900] opacity-60 mix-blend-screen flex items-end">
+    <div className="fixed bottom-0 left-0 w-full h-[100px] pointer-events-none z-[4900] opacity-60 mix-blend-screen flex items-end">
       <canvas ref={canvasRef} className="w-full h-full" />
     </div>
   );
@@ -331,6 +323,12 @@ export function MiniPlayer() {
   const [isFullPlayerOpen, setIsFullPlayerOpen] = useState(false);
   const [showLyrics, setShowLyrics] = useState(false);
   const [isMobileLandscape, setIsMobileLandscape] = useState(false);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      registerAudioElement(audioRef.current);
+    }
+  }, [audioRef]);
 
   useEffect(() => {
     const checkOrientation = () => {
@@ -602,7 +600,13 @@ export function MiniPlayer() {
     <>
       <AudioSpectrum audioRef={audioRef} />
       <audio
-        ref={audioRef}
+        ref={(el) => {
+          // @ts-ignore
+          audioRef.current = el;
+          if (el) {
+            registerAudioElement(el);
+          }
+        }}
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleEnded}
         src={currentTrack.audioUrl || undefined}

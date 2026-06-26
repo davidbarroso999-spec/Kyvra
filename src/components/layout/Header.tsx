@@ -83,13 +83,13 @@ export function Header() {
           isScrolled ? 'py-3 glass-premium m-4 w-[calc(100%-2rem)] r-md' : 'py-6 bg-transparent'
         )}
       >
-        <div className="max-w-7xl mx-auto px-4 md:px-6 flex items-center justify-between mt-[2px]">
+        <div className="w-full px-6 md:px-12 xl:px-16 flex items-center justify-between mt-[2px]">
           <Link to="/" className="font-display flex flex-col items-start z-50 relative pointer-events-auto leading-none">
-            <span className="text-xl md:text-2xl tracking-[0.1em] text-text-high font-semibold">
+            <span className="text-2xl md:text-3.5xl lg:text-4xl tracking-[0.15em] text-text-high font-semibold">
               KYVRA
             </span>
             {location.pathname === '/cosmogonia' && (
-              <div className="flex justify-between w-full text-[7.5px] md:text-[9.5px] font-semibold text-primary uppercase mt-1 leading-none select-none tracking-[0.05em]">
+              <div className="flex justify-between w-full text-[9px] md:text-[11px] font-semibold text-primary uppercase mt-1 leading-none select-none tracking-[0.05em]">
                 <span>C</span>
                 <span>O</span>
                 <span>S</span>
