@@ -20,6 +20,11 @@ export function CookieBanner() {
   const handleAccept = () => {
     localStorage.setItem('kyvra_cookie_consent', 'accepted');
     setIsOpen(false);
+    
+    // Suggest PWA installation after closing the cookie banner
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('showPwaPrompt'));
+    }, 1200);
   };
 
   const handleDecline = () => {

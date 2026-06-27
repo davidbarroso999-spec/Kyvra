@@ -9,6 +9,7 @@ import { useStore } from './store/useStore';
 import React, { Suspense } from 'react';
 import { Preloader } from './components/ui/Preloader';
 import { CookieBanner } from './components/ui/CookieBanner';
+import { PwaInstallPrompt } from './components/ui/PwaInstallPrompt';
 
 // Lazy loading das páginas para melhorar a performance inicial
 const Home = React.lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
@@ -80,8 +81,15 @@ export default function App() {
     document.addEventListener('deviceready', initBackgroundMode, false);
     initBackgroundMode(); // Executa caso o dispositivo já esteja pronto
 
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      (window as any).deferredPrompt = e;
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
     return () => {
       document.removeEventListener('deviceready', initBackgroundMode);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, []);
 
@@ -89,6 +97,7 @@ export default function App() {
     <HashRouter>
       <Preloader />
       <CookieBanner />
+      <PwaInstallPrompt />
       <Suspense fallback={null}>
         <Routes>
           <Route path="/" element={<Layout />}>

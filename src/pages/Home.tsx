@@ -435,19 +435,19 @@ export function Home() {
                 transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
                 className="relative flex flex-col items-start"
               >
-                <h2 className="font-display font-medium text-[4.5rem] xs:text-[5.5rem] sm:text-[7rem] md:text-[9rem] lg:text-[11rem] xl:text-[13rem] tracking-[0.05em] text-gradient m-0 p-0 text-left leading-none landscape:text-[3.2rem] landscape:sm:text-[5rem] landscape:md:text-[9rem]">
+                <h2 className="font-display font-medium text-[4.5rem] xs:text-[5.5rem] sm:text-[7rem] md:text-[9rem] lg:text-[11rem] xl:text-[13rem] tracking-[0.05em] text-gradient m-0 p-0 text-left leading-none landscape:text-[2.5rem] landscape:sm:text-[3.5rem] landscape:md:text-[5rem] landscape:lg:text-[6.5rem]">
                   KYVRA
                 </h2>
               </motion.div>
             </div>
 
             {/* Poetry & Description positioned BELOW the logo */}
-            <div className="space-y-4 md:space-y-6 w-full max-w-[650px] md:max-w-[750px] xl:max-w-[850px] text-left mt-2 md:-mt-1 lg:mt-2 landscape:mt-0.5 landscape:space-y-2">
+            <div className="space-y-4 md:space-y-6 w-full max-w-[650px] md:max-w-[750px] xl:max-w-[850px] text-left mt-2 md:-mt-1 lg:mt-2 landscape:mt-0.5 landscape:space-y-1">
               <motion.h1 
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1.2, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                className="font-cormorant text-white text-[1.6rem] xs:text-[2rem] sm:text-[2.5rem] md:text-[3rem] lg:text-[3.6rem] xl:text-[4.5rem] leading-[1.12] tracking-tight font-light landscape:text-[1.4rem] landscape:sm:text-[2.2rem] landscape:md:text-[3rem]"
+                className="font-cormorant text-white text-[1.6rem] xs:text-[2rem] sm:text-[2.5rem] md:text-[3rem] lg:text-[3.6rem] xl:text-[4.5rem] leading-[1.12] tracking-tight font-light landscape:text-[1.2rem] landscape:sm:text-[1.5rem] landscape:md:text-[1.8rem] landscape:lg:text-[2.2rem]"
               >
                 Onde as estrelas morrem, a poesia ecoa.
               </motion.h1>
@@ -456,7 +456,7 @@ export function Home() {
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1.2, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                className="font-sans text-white/75 text-xs xs:text-sm md:text-base lg:text-[18px] xl:text-[20px] leading-relaxed font-light landscape:text-[11px] landscape:sm:text-sm landscape:md:text-base"
+                className="font-sans text-white/75 text-xs xs:text-sm md:text-base lg:text-[18px] xl:text-[20px] leading-relaxed font-light landscape:text-[10px] landscape:sm:text-[11px] landscape:md:text-[12px] landscape:lg:text-[14px]"
               >
                 Kyvra é um portal imersivo de metal sinfônico melancólico e profundo, desenhado para guiar a alma através de arranjos grandiosos, crônicas sombrias e elegias visuais.
               </motion.p>
