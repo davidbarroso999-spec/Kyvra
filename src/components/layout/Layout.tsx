@@ -11,7 +11,7 @@ export function Layout() {
   const { scrollYProgress } = useScroll();
   const height = useTransform(scrollYProgress, [0, 1], ['0%', '100%']);
   const location = useLocation();
-  const isLorePage = location.pathname === '/cosmogonia';
+  const isFullScreenPage = location.pathname === '/cosmogonia' || location.pathname === '/reliquias';
 
   return (
     <div className="min-h-screen flex flex-col relative w-full">
@@ -19,11 +19,11 @@ export function Layout() {
       
       <Header />
       
-      <main className={cn("flex-1 flex flex-col w-full", isLorePage ? "pb-0 h-[100dvh] overflow-hidden" : "pb-32 sm:pb-24")}>
+      <main className={cn("flex-1 flex flex-col w-full", isFullScreenPage ? "pb-0 h-[100dvh] overflow-hidden" : "pb-32 sm:pb-24")}>
         <Outlet />
       </main>
 
-      {!isLorePage && <Footer />}
+      {!isFullScreenPage && <Footer />}
 
       <CircularMenu />
       <MiniPlayer />

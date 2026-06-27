@@ -102,6 +102,28 @@ export function Header() {
                 <span>A</span>
               </div>
             )}
+            {location.pathname === '/reliquias' && (
+              <div className="flex justify-between w-full text-[7px] md:text-[8.5px] font-bold text-primary uppercase mt-1 leading-none select-none tracking-[0.02em]">
+                <span>R</span>
+                <span>E</span>
+                <span>L</span>
+                <span>Í</span>
+                <span>Q</span>
+                <span>U</span>
+                <span>I</span>
+                <span>A</span>
+                <span>S</span>
+                <span className="opacity-0">.</span>
+                <span>D</span>
+                <span>O</span>
+                <span className="opacity-0">.</span>
+                <span>V</span>
+                <span>A</span>
+                <span>Z</span>
+                <span>I</span>
+                <span>O</span>
+              </div>
+            )}
           </Link>
 
           {/* Actions */}

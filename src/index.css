@@ -760,3 +760,29 @@ html, body {
     margin-top: 0 !important;
   }
 }
+
+/* ==========================================
+   QUIETPRESS SPECIFIC ANIMATIONS & TYPO
+   ========================================== */
+.font-helvetica {
+  font-family: 'Helvetica Regular', Helvetica, Arial, sans-serif !important;
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.delay-1 { animation-delay: 0.1s; }
+.delay-2 { animation-delay: 0.25s; }
+.delay-3 { animation-delay: 0.4s; }
+.delay-4 { animation-delay: 0.55s; }
+.delay-5 { animation-delay: 0.75s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up { animation: none; }
+}
