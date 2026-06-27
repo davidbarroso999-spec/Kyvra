@@ -1,7 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Play } from 'lucide-react';
+import { 
+  Search, 
+  Play, 
+  Music, 
+  ListPlus, 
+  Key, 
+  Globe, 
+  ExternalLink, 
+  Plus, 
+  Trash2, 
+  Check, 
+  Tv, 
+  WifiOff, 
+  Loader2,
+  Compass,
+  Link2,
+  HelpCircle,
+  ArrowRight
+} from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { cn, saveForOffline } from '@/lib/utils';
 import { getAllTracks } from '@/lib/apiCache';
@@ -243,7 +261,7 @@ export function Archive() {
   const [searchQuery, setSearchQuery] = useState('');
   const { isPending, updateWithConcurrency } = useConcurrentUpdate();
   const searchInputRef = useRef<HTMLInputElement>(null);
-  
+
   const currentTrack = useStore((state) => state.currentTrack);
   const isPlaying = useStore((state) => state.isPlaying);
   const setCurrentTrack = useStore((state) => state.setCurrentTrack);
@@ -426,7 +444,7 @@ export function Archive() {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-16 flex items-end justify-between border-b border-border pb-8"
+        className="mb-8 flex items-end justify-between border-b border-border pb-8"
       >
         <div>
           <span className="font-sc text-[11px] tracking-[0.3em] text-primary block mb-3">ARQUIVO SONORO</span>

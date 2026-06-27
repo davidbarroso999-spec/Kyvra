@@ -67,6 +67,9 @@ export const AudioSpectrum = ({ audioRef }: { audioRef: React.RefObject<HTMLAudi
   const animationRef = useRef<number>(0);
   const themeColorRef = useRef<string>('#a78bfa'); // Default primary hex
 
+  const isPlayingStore = useStore((s) => s.isPlaying);
+  const currentTrack = useStore((s) => s.currentTrack);
+
   useEffect(() => {
     // Read theme color based on the current class of HTML
     const updateThemeColor = () => {
@@ -164,13 +167,13 @@ export const AudioSpectrum = ({ audioRef }: { audioRef: React.RefObject<HTMLAudi
         let x = 0;
         
         ctx.fillStyle = themeColorRef.current;
-        const isPlaying = audioRef.current && !audioRef.current.paused;
+        const isCurrentlyPlaying = audioRef.current && !audioRef.current.paused;
         const time = Date.now() * 0.0035;
         
         for (let i = 0; i < visualBins; i++) {
           let heightPercent = 0.04; // Altura mínima de repouso
           
-          if (isPlaying) {
+          if (isCurrentlyPlaying) {
             // Cria ondas orgânicas combinando frequências senoidais e cossenos diferentes
             const w1 = Math.sin(time + i * 0.2) * 0.45 + 0.5;
             const w2 = Math.cos(time * 0.7 - i * 0.12) * 0.3 + 0.3;
@@ -359,6 +362,8 @@ export function MiniPlayer() {
   const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+
+  // No YouTube states or effect controllers needed
 
   // Request notifications permission and trigger first notification
   useEffect(() => {
@@ -594,11 +599,11 @@ export function MiniPlayer() {
     }
   }, [isPlaying, currentTrack?.audioUrl]);
 
-  if (!currentTrack) return null;
-
-  return (
+  // Always render background audio engines so they are initialized and ready immediately
+  const renderEngines = () => (
     <>
       <AudioSpectrum audioRef={audioRef} />
+
       <audio
         ref={(el) => {
           // @ts-ignore
@@ -609,7 +614,7 @@ export function MiniPlayer() {
         }}
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleEnded}
-        src={currentTrack.audioUrl || undefined}
+        src={currentTrack?.audioUrl || undefined}
         className="hidden"
         crossOrigin="anonymous"
         preload="auto"
@@ -620,6 +625,16 @@ export function MiniPlayer() {
           }
         }}
       />
+    </>
+  );
+
+  if (!currentTrack) {
+    return renderEngines();
+  }
+
+  return (
+    <>
+      {renderEngines()}
 
       {/* Origin Center Point of CircularMenu for perfect alignment */}
       <div className="fixed bottom-[6rem] right-[1.5rem] sm:bottom-[3.625rem] sm:right-[3rem] z-[5000] flex items-center justify-center pointer-events-none">

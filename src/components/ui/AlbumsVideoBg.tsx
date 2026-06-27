@@ -21,6 +21,7 @@ export function AlbumsVideoBg() {
   const [currentVideoTheme, setCurrentVideoTheme] = useState(theme);
   const [previousVideoTheme, setPreviousVideoTheme] = useState<string | null>(null);
   const [videoLoaded, setVideoLoaded] = useState<Record<string, boolean>>({});
+  const [loopFading, setLoopFading] = useState<Record<string, boolean>>({});
   const prevThemeRef = useRef(theme);
 
   const handleVideoError = (tName: string, e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
@@ -88,12 +89,7 @@ export function AlbumsVideoBg() {
           return null;
         }
 
-        let opacityClass = "opacity-0";
-        if (isCurrent) {
-          opacityClass = "opacity-100 scale-100 z-10";
-        } else if (isPrevious) {
-          opacityClass = "opacity-0 scale-105 z-0";
-        }
+        const isLoopFading = loopFading[tName];
 
         return (
           <video
@@ -101,22 +97,42 @@ export function AlbumsVideoBg() {
             ref={el => {
               videoRefs.current[tName] = el;
             }}
-            autoPlay={false}
+            autoPlay={true}
             loop={true}
             muted={true}
             playsInline={true}
             preload="auto"
             className={cn(
-              "absolute inset-0 w-full h-full object-cover object-[80%_center] md:object-center transition-all duration-[2000ms] ease-in-out bg-transparent",
-              opacityClass
+              "absolute inset-0 w-full h-full object-cover object-[80%_center] md:object-center bg-transparent",
+              isCurrent 
+                ? (isLoopFading ? "opacity-0 scale-[1.02] z-10" : "opacity-100 scale-100 z-10") 
+                : "opacity-0 scale-105 z-0"
             )}
             style={{
               willChange: "opacity, transform",
               transform: "translate3d(0,0,0)",
-              backfaceVisibility: "hidden"
+              backfaceVisibility: "hidden",
+              transition: isLoopFading
+                ? "opacity 1000ms cubic-bezier(0.25, 1, 0.5, 1), transform 1000ms cubic-bezier(0.25, 1, 0.5, 1)"
+                : "opacity 2000ms ease-in-out, transform 2000ms ease-in-out"
             }}
             src={ALBUM_THEME_VIDEOS[tName]}
             onError={(e) => handleVideoError(tName, e)}
+            onTimeUpdate={(e) => {
+              const video = e.currentTarget;
+              if (!video || !video.duration) return;
+              const timeLeft = video.duration - video.currentTime;
+              // Start fade-out when less than 1.0 second remains
+              if (timeLeft < 1.0 && timeLeft > 0) {
+                if (!loopFading[tName]) {
+                  setLoopFading(prev => ({ ...prev, [tName]: true }));
+                }
+              } else {
+                if (loopFading[tName]) {
+                  setLoopFading(prev => ({ ...prev, [tName]: false }));
+                }
+              }
+            }}
             onCanPlay={(e) => {
               e.currentTarget.play().catch(() => {});
             }}
