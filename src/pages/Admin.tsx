@@ -1,12 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Upload, Lock, X, Plus, Sparkles, CheckCircle2, Edit3, Save, Trash2, ChevronDown, ChevronUp, RefreshCw, Edit2, Book, Loader2 } from 'lucide-react';
 import { cn, parseChapterNumber } from '@/lib/utils';
 import { getAI, MODELS, generateText, generateMultimodal } from '@/lib/ai';
 import { supabase } from '@/lib/supabase';
 import { getAudioMetadata } from '@/lib/audioMetadata';
 import { CombinationLock } from '@/components/ui/CombinationLock';
-
 export function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeTab, setActiveTab] = useState<'musicas' | 'lore' | 'editar_letras' | 'destaque' | 'acervo'>('musicas');
@@ -51,6 +50,9 @@ export function Admin() {
   const [editingLyrics, setEditingLyrics] = useState('');
   const [isSavingLyrics, setIsSavingLyrics] = useState(false);
   const [lyricsSuccess, setLyricsSuccess] = useState('');
+  const [isSyncingFromLrcLib, setIsSyncingFromLrcLib] = useState(false);
+  const [showSyncPreview, setShowSyncPreview] = useState(false);
+  const [parsedPreviewLines, setParsedPreviewLines] = useState<any[]>([]);
 
   // Destaque State
   const [featuredTrackIds, setFeaturedTrackIds] = useState<string[]>([]);
@@ -1699,16 +1701,25 @@ export function Admin() {
                         value={editingLyrics}
                         onChange={(e) => setEditingLyrics(e.target.value)}
                         placeholder="Cole ou digite a letra da música aqui..."
-                        className="w-full bg-void border border-border rounded p-3 focus:border-primary outline-none transition-colors resize-y mb-4 font-sans text-sm"
+                        className="w-full bg-void border border-border rounded p-3 focus:border-primary outline-none transition-colors resize-y mb-4 font-sans text-sm text-white"
                       />
+                      
+                      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                        <p className="text-xs text-text-low font-mono">
+                          As letras adicionadas aqui serão exibidas na íntegra de forma contínua no player.
+                        </p>
+                      </div>
+
                       <div className="flex justify-end gap-3">
                         <button
+                          type="button"
                           onClick={() => setEditingTrackId(null)}
                           className="px-4 py-2 text-sm text-text-mid hover:text-text-high transition-colors"
                         >
                           Cancelar
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleSaveLyrics(track.id)}
                           disabled={isSavingLyrics}
                           className="px-6 py-2 bg-primary text-void font-medium rounded hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2 text-sm"
@@ -1789,6 +1800,71 @@ export function Admin() {
           </div>
         </div>
       ) : null}
+
+      {/* Modal de Preview de Sincronização LRC */}
+      <AnimatePresence>
+        {showSyncPreview && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowSyncPreview(false)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            />
+            
+            {/* Conteúdo */}
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative w-full max-w-2xl bg-void border border-border rounded-xl p-6 overflow-hidden max-h-[85vh] flex flex-col z-10 shadow-[0_20px_50px_rgba(0,0,0,0.8)]"
+            >
+              <div className="flex items-center justify-between border-b border-border pb-4 mb-4">
+                <div>
+                  <h3 className="font-display font-medium text-lg text-white">Preview de Sincronização</h3>
+                  <p className="text-text-mid text-xs">Simulação da linha do tempo com formato LRC obtido</p>
+                </div>
+                <button 
+                  onClick={() => setShowSyncPreview(false)}
+                  className="p-1.5 hover:bg-surface rounded-full text-text-mid hover:text-white transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-3.5 min-h-[300px]">
+                {parsedPreviewLines.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center py-12 text-text-low">
+                    <p className="text-sm mb-2">Nenhuma marcação temporal LRC válida detectada.</p>
+                    <p className="text-xs max-w-md text-center">Certifique-se de que as linhas estão prefixadas com o formato de carimbo de data/hora correto como: <span className="text-primary font-mono">[01:23.45] Letra da música</span></p>
+                  </div>
+                ) : (
+                  parsedPreviewLines.map((line, idx) => (
+                    <div key={idx} className="flex items-start gap-4 p-2 bg-surface/10 rounded border border-border/20">
+                      <span className="font-mono text-xs text-primary/85 bg-primary/10 px-2 py-0.5 rounded shrink-0">
+                        {Math.floor(line.timestamp / 60).toString().padStart(2, '0')}:{(line.timestamp % 60).toFixed(2).padStart(5, '0')}
+                      </span>
+                      <p className="text-sm text-text-high font-medium">{line.text}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="border-t border-border pt-4 mt-4 flex justify-between items-center text-xs text-text-low">
+                <span>Total de {parsedPreviewLines.length} linhas cronometradas</span>
+                <button
+                  onClick={() => setShowSyncPreview(false)}
+                  className="px-5 py-2 bg-primary text-void font-medium rounded hover:bg-primary/90 transition-colors text-xs"
+                >
+                  Entendi
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

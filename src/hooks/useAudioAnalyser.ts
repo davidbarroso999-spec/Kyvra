@@ -7,6 +7,21 @@ const audioConnections = new WeakMap<HTMLAudioElement, {
   source: MediaElementAudioSourceNode;
 }>();
 
+// Global set of active AudioContexts to resume them on user interaction
+const activeAudioContexts = new Set<AudioContext>();
+
+if (typeof window !== 'undefined') {
+  const resumeAll = () => {
+    activeAudioContexts.forEach(ctx => {
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
+    });
+  };
+  window.addEventListener('click', resumeAll, { passive: true });
+  window.addEventListener('touchstart', resumeAll, { passive: true });
+}
+
 let globalAudioElement: HTMLAudioElement | null = null;
 const registryListeners = new Set<(el: HTMLAudioElement | null) => void>();
 
@@ -63,12 +78,6 @@ export function useAudioAnalyser(options: UseAudioAnalyserOptions = {}) {
       return;
     }
 
-    const isAndroid = typeof window !== 'undefined' && /android/i.test(navigator.userAgent);
-    if (isAndroid) {
-      // No Android APK, o Web Audio API é evitado para manter os controles de mídia nativos operacionais
-      return;
-    }
-
     const initAudioContext = () => {
       try {
         let connection = audioConnections.get(audioElement);
@@ -90,6 +99,7 @@ export function useAudioAnalyser(options: UseAudioAnalyserOptions = {}) {
             source: sourceNode
           };
           audioConnections.set(audioElement, connection);
+          activeAudioContexts.add(context);
         } else {
           // Atualiza o fftSize caso tenha mudado
           if (connection.analyser.fftSize !== fftSize) {
@@ -101,13 +111,7 @@ export function useAudioAnalyser(options: UseAudioAnalyserOptions = {}) {
         setAudioContext(connection.audioContext);
 
         if (connection.audioContext.state === 'suspended') {
-          const resumeCtx = () => {
-            connection?.audioContext.resume();
-            audioElement.removeEventListener('play', resumeCtx);
-            audioElement.removeEventListener('playing', resumeCtx);
-          };
-          audioElement.addEventListener('play', resumeCtx);
-          audioElement.addEventListener('playing', resumeCtx);
+          connection.audioContext.resume().catch(() => {});
         }
       } catch (error) {
         console.warn('Kyvra [useAudioAnalyser]: Falha ao conectar Web Audio API:', error);
@@ -117,12 +121,21 @@ export function useAudioAnalyser(options: UseAudioAnalyserOptions = {}) {
     // Ativa quando o áudio começar a tocar, ou imediatamente se já estiver ativo
     if (!audioElement.paused) {
       initAudioContext();
-    } else {
-      audioElement.addEventListener('play', initAudioContext, { once: true });
     }
 
+    // Set up play and playing listeners to ensure we initialize or resume immediately
+    const handlePlay = () => {
+      initAudioContext();
+    };
+
+    audioElement.addEventListener('play', handlePlay);
+    audioElement.addEventListener('playing', handlePlay);
+
     return () => {
-      // A conexão permanece em cache no WeakMap global para reuso posterior
+      if (audioElement) {
+        audioElement.removeEventListener('play', handlePlay);
+        audioElement.removeEventListener('playing', handlePlay);
+      }
     };
   }, [audioElement, fftSize]);
 

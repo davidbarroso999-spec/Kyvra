@@ -18,7 +18,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/store/useStore";
-import { registerAudioElement } from "@/hooks/useAudioAnalyser";
+import { registerAudioElement, useAudioAnalyser } from "@/hooks/useAudioAnalyser";
 
 const formatTime = (seconds: number = 0) => {
   const minutes = Math.floor(seconds / 60);
@@ -61,14 +61,17 @@ const CustomSlider = ({
 
 export const AudioSpectrum = ({ audioRef }: { audioRef: React.RefObject<HTMLAudioElement> }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
+  const { analyser } = useAudioAnalyser({ fftSize: 256 });
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const animationRef = useRef<number>(0);
   const themeColorRef = useRef<string>('#a78bfa'); // Default primary hex
 
   const isPlayingStore = useStore((s) => s.isPlaying);
   const currentTrack = useStore((s) => s.currentTrack);
+
+  useEffect(() => {
+    analyserRef.current = analyser;
+  }, [analyser]);
 
   useEffect(() => {
     // Read theme color based on the current class of HTML
@@ -93,52 +96,6 @@ export const AudioSpectrum = ({ audioRef }: { audioRef: React.RefObject<HTMLAudi
   }, []);
 
   useEffect(() => {
-    if (!audioRef.current) return;
-    const audioEl = audioRef.current;
-    
-    // WebAudio initialization that waits for an interaction (play)
-    const initAudio = () => {
-      // Se for Android (Capacitor/WebView), pulamos a conexão com o AudioContext.
-      // É crucial: ao chamar createMediaElementSource em dispositivos móveis Android,
-      // o player do WebView deixa de ser registrado como "reprodução de mídia padrão",
-      // impedindo que o Android exiba a notificação do player com controles de música no Lockscreen/Central.
-      const isAndroid = typeof window !== 'undefined' && /android/i.test(navigator.userAgent);
-      if (isAndroid) {
-        return;
-      }
-
-      if (audioContextRef.current) {
-        if (audioContextRef.current.state === 'suspended') {
-          audioContextRef.current.resume();
-        }
-        return;
-      }
-      try {
-        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-        if (!AudioCtx) return;
-        audioContextRef.current = new AudioCtx();
-        analyserRef.current = audioContextRef.current.createAnalyser();
-        analyserRef.current.fftSize = 256; 
-        
-        sourceRef.current = audioContextRef.current.createMediaElementSource(audioEl);
-        sourceRef.current.connect(analyserRef.current);
-        analyserRef.current.connect(audioContextRef.current.destination);
-      } catch (e) {
-        console.warn("Kyvra: Mute ou interrupção WebAudio", e);
-      }
-    };
-
-    audioEl.addEventListener('play', initAudio, { once: true });
-    
-    return () => {
-      audioEl.removeEventListener('play', initAudio);
-      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-          audioContextRef.current.close().catch(()=>{});
-      }
-    };
-  }, [audioRef]);
-
-  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d', { alpha: true }); // optimize by specifying basic properties, alpha is true by default
@@ -156,11 +113,9 @@ export const AudioSpectrum = ({ audioRef }: { audioRef: React.RefObject<HTMLAudi
       
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      const isAndroid = typeof window !== 'undefined' && /android/i.test(navigator.userAgent);
-      
-      // Se for Android (WebAudio desativado para manter notificação), ou se o analisador não estiver ativo,
+      // Se o analisador não estiver ativo,
       // renderizamos uma animação de ondas senoidais simulando o espectro de áudio com excelente fidelidade e sem lag.
-      if (!analyserRef.current || isAndroid) {
+      if (!analyserRef.current) {
         const visualBins = 64; // nice high-density of bars across the screen
         const gap = 2;
         const effectiveBarWidth = (canvas.width - (visualBins - 1) * gap) / visualBins;
@@ -186,7 +141,13 @@ export const AudioSpectrum = ({ audioRef }: { audioRef: React.RefObject<HTMLAudi
           const barHeight = Math.max(2, heightPercent * canvas.height * 0.85);
           ctx.globalAlpha = heightPercent * 0.75 + 0.15;
           ctx.beginPath();
-          ctx.roundRect(x, canvas.height - barHeight, effectiveBarWidth, barHeight, Math.min(2, effectiveBarWidth/2));
+          ctx.roundRect(
+            x, 
+            canvas.height - barHeight, 
+            Math.max(0.1, effectiveBarWidth), 
+            barHeight, 
+            Math.max(0, Math.min(2, effectiveBarWidth / 2))
+          );
           ctx.fill();
           
           x += effectiveBarWidth + gap;
@@ -218,7 +179,13 @@ export const AudioSpectrum = ({ audioRef }: { audioRef: React.RefObject<HTMLAudi
         
         ctx.globalAlpha = percent * 0.75 + 0.15;
         ctx.beginPath();
-        ctx.roundRect(x, canvas.height - barHeight, effectiveBarWidth, barHeight, Math.min(2, effectiveBarWidth/2));
+        ctx.roundRect(
+          x, 
+          canvas.height - barHeight, 
+          Math.max(0.1, effectiveBarWidth), 
+          barHeight, 
+          Math.max(0, Math.min(2, effectiveBarWidth / 2))
+        );
         ctx.fill();
         
         x += effectiveBarWidth + gap;
@@ -236,8 +203,15 @@ export const AudioSpectrum = ({ audioRef }: { audioRef: React.RefObject<HTMLAudi
   }, []);
 
   return (
-    <div className="fixed bottom-0 left-0 w-full h-[100px] pointer-events-none z-[4900] opacity-60 mix-blend-screen flex items-end">
-      <canvas ref={canvasRef} className="w-full h-full" />
+    <div 
+      className="fixed bottom-0 left-0 w-full h-[100px] pointer-events-none z-[4900] opacity-60 mix-blend-screen flex items-end"
+      style={{ transform: 'translateZ(0)' }}
+    >
+      <canvas 
+        ref={canvasRef} 
+        className="w-full h-full" 
+        style={{ transform: 'translateZ(0)' }}
+      />
     </div>
   );
 };
@@ -1021,7 +995,7 @@ export function MiniPlayer() {
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                className="flex flex-col gap-5 text-white/90 text-base md:text-lg lg:text-xl font-medium leading-relaxed"
+                                className="flex flex-col gap-5 text-white/90 text-base md:text-lg lg:text-xl font-medium leading-relaxed text-left"
                                 style={{ whiteSpace: "pre-wrap" }}
                               >
                                 {currentTrack.lyrics}
@@ -1190,7 +1164,9 @@ export function MiniPlayer() {
                             Voltar
                           </Button>
                         </div>
-                        <div className="flex-1 overflow-y-auto py-2 px-3 bg-void/30 backdrop-blur-md rounded-xl custom-scrollbar border border-white/5 text-left text-xs sm:text-sm">
+                        <div 
+                          className="flex-1 overflow-y-auto py-2 px-3 bg-void/30 backdrop-blur-md rounded-xl custom-scrollbar border border-white/5 text-left text-xs sm:text-sm"
+                        >
                           {currentTrack.lyrics ? (
                             <div className="text-white/90 font-medium leading-relaxed" style={{ whiteSpace: "pre-wrap" }}>
                               {currentTrack.lyrics}

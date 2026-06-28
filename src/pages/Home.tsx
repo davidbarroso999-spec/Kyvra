@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { getFeaturedTracksSettings, getTracksByIds, getTrackSynopses } from '@/lib/apiCache';
 import { useStore } from '@/store/useStore';
 import { FeaturedSlider } from '@/components/ui/FeaturedSlider';
@@ -79,8 +79,8 @@ const trackFPSSlowdown = (themeName: string, startTime: number) => {
 export function Home() {
   const theme = useStore((state) => state.theme);
   const currentTrack = useStore((state) => state.currentTrack);
-  const [visualizerVariant, setVisualizerVariant] = useState<'bars' | 'wave' | 'circle'>('bars');
   const [featuredTracks, setFeaturedTracks] = useState<any[]>([]);
+
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const videoRetries = useRef<Record<string, number>>({});
   
@@ -514,66 +514,6 @@ export function Home() {
           </div>
         </section>
       )}
-
-      {/* Immersive Audio Visualizer Section */}
-      <section id="visualizador" className="py-16 md:py-24 relative bg-void border-t border-white/5 overflow-hidden">
-        <div className="absolute inset-0 bg-radial-gradient from-primary/5 via-transparent to-transparent opacity-60 pointer-events-none" />
-        <div className="max-w-7xl mx-auto px-6 relative z-10">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
-            <div className="space-y-3">
-              <span className="text-xs font-mono tracking-widest text-primary uppercase">Ecos do Vazio</span>
-              <h2 className="font-display font-medium text-3xl sm:text-4xl md:text-5xl tracking-tight text-white leading-none">
-                ESPECTRO DE KYVRA
-              </h2>
-              <p className="font-sans text-white/60 text-sm max-w-xl font-light">
-                Contemple as frequências sonoras das crônicas místicas moldarem a realidade em tempo real. Altere a ressonância do espectro abaixo.
-              </p>
-            </div>
-            
-            {/* Visualizer controls */}
-            <div className="flex flex-wrap gap-2.5 bg-white/5 backdrop-blur-md border border-white/10 p-1.5 rounded-xl self-start md:self-auto">
-              {(['bars', 'wave', 'circle'] as const).map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setVisualizerVariant(v)}
-                  className={cn(
-                    "px-4 py-2 rounded-lg text-xs font-mono uppercase tracking-wider transition-all duration-300 cursor-pointer",
-                    visualizerVariant === v
-                      ? "bg-primary text-black font-semibold shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)]"
-                      : "text-white/60 hover:text-white hover:bg-white/5"
-                  )}
-                >
-                  {v === 'bars' ? 'Barras' : v === 'wave' ? 'Ondas' : 'Orbital'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* High-fidelity Canvas container with a custom luxury card layout */}
-          <div className="relative w-full h-[320px] md:h-[400px] rounded-2xl overflow-hidden glass border border-white/10 flex flex-col justify-center items-center group">
-            {/* Ambient glows and decoration grids */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
-            <div className="absolute inset-0 opacity-[0.15] mix-blend-overlay pointer-events-none bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
-            
-            <AudioVisualizer 
-              variant={visualizerVariant} 
-              className="w-full h-full p-4" 
-              glow={true}
-              fftSize={visualizerVariant === 'circle' ? 256 : 512}
-            />
-
-            {/* Subtle Overlay HUD */}
-            <div className="absolute bottom-4 left-6 right-6 flex items-center justify-between pointer-events-none opacity-60">
-              <span className="text-[10px] font-mono tracking-widest uppercase">
-                {currentTrack ? `Faixa Ativa: ${currentTrack.title}` : 'Sem reprodução ativa'}
-              </span>
-              <span className="text-[10px] font-mono tracking-widest uppercase">
-                {visualizerVariant === 'bars' ? 'Modo: Espectro Linear' : visualizerVariant === 'wave' ? 'Modo: Osciloscópio' : 'Modo: Singularidade Orbital'}
-              </span>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Featured Fragment Section */}
       <FeaturedFragmentSection className="bg-void border-t border-white/5" />

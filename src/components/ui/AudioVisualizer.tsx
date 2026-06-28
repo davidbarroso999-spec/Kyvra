@@ -3,29 +3,32 @@ import { useAudioAnalyser } from '@/hooks/useAudioAnalyser';
 
 interface AudioVisualizerProps {
   className?: string;
-  variant?: 'bars' | 'wave' | 'circle';
+  variant?: 'bars' | 'wave' | 'circle'; // Mantido para compatibilidade de tipos
   fftSize?: number;
   barColor?: string;
   glow?: boolean;
 }
 
 /**
- * Componente <AudioVisualizer /> que renderiza um espectro responsivo de áudio usando Canvas.
- * Oferece três modos de visualização (barras, ondas e circular orbital) e animação orgânica de fallback.
+ * Componente <AudioVisualizer /> Único e Supremo.
+ * Renderiza um espectro de áudio místico e responsivo, adaptado aos temas de Kyvra,
+ * com pulsação de glow sincronizada em tempo real com as batidas de graves (graves reais)
+ * e animação flutuante poética de repouso (fallback).
  */
 export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
   className = '',
-  variant = 'bars',
   fftSize = 256,
   barColor,
   glow = true
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { analyser, audioElement } = useAudioAnalyser({ fftSize });
-  const themeColorRef = useRef<string>('#a78bfa'); // Cor padrão violeta de Kyvra
+  // Usamos fftSize 256 por padrão para maior densidade de resposta e performance estelar
+  const { analyser, audioElement } = useAudioAnalyser({ fftSize: 256 });
+  const themeColorRef = useRef<string>('#a78bfa'); // Cor primária de Kyvra
   const animationRef = useRef<number>(0);
+  const smoothedHeights = useRef<number[]>([]);
 
-  // Escuta mudanças de tema nas classes do documento para obter a cor de acento atual
+  // Monitora as classes do documento para obter dinamicamente a cor de acento de cada tema (--primary)
   useEffect(() => {
     const updateThemeColor = () => {
       const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
@@ -68,7 +71,6 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
       resizeObserver = new ResizeObserver(handleResize);
       resizeObserver.observe(canvas.parentElement);
       
-      // Setup inicial de dimensões baseando-se no elemento pai
       canvas.width = canvas.parentElement.clientWidth * window.devicePixelRatio;
       canvas.height = canvas.parentElement.clientHeight * window.devicePixelRatio;
       ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
@@ -80,194 +82,130 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
       const width = canvas.width / window.devicePixelRatio;
       const height = canvas.height / window.devicePixelRatio;
 
+      // Limpeza suave do canvas
       ctx.clearRect(0, 0, width, height);
 
       const color = barColor || themeColorRef.current;
-      ctx.fillStyle = color;
-      ctx.strokeStyle = color;
-
       const isPlaying = audioElement && !audioElement.paused;
-      const isAndroid = typeof window !== 'undefined' && /android/i.test(navigator.userAgent);
+      const time = Date.now() * 0.002;
 
-      // Reset de configurações globais de sombra a cada quadro para evitar vazamento de estilos
+      // Definir quantidade de barras e canais de frequência
+      const visualBins = 52;
+      
+      // Inicializar array de alturas suavizadas se necessário
+      if (smoothedHeights.current.length !== visualBins) {
+        smoothedHeights.current = new Array(visualBins).fill(5);
+      }
+
+      let bassIntensity = 0;
+
+      // 1. LEITURA DOS DADOS EM TEMPO REAL OU FALLBACK SUTIL
+      if (analyser && isPlaying) {
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        analyser.getByteFrequencyData(dataArray);
+
+        // Extrai a energia dos graves para modular a pulsação do glow de fundo
+        let bassSum = 0;
+        const bassEndIndex = Math.min(10, bufferLength);
+        for (let i = 1; i < bassEndIndex; i++) {
+          bassSum += dataArray[i];
+        }
+        bassIntensity = bassSum / ((bassEndIndex - 1) * 255);
+
+        // Preenche as barras com dados de frequência reais suavizados
+        for (let i = 0; i < visualBins; i++) {
+          // Mapeia os dados focando mais na faixa de frequências audíveis ricas (graves e médios)
+          const dataIndex = Math.floor((i / visualBins) * bufferLength * 0.75);
+          const rawValue = dataArray[dataIndex] || 0;
+          const targetPercent = Math.pow(rawValue / 255, 1.25);
+          
+          // Suavização temporal (lerp) para evitar pulos bruscos e dar fluidez premium
+          smoothedHeights.current[i] += (targetPercent - smoothedHeights.current[i]) * 0.28;
+        }
+      } else {
+        // Fallback: Respiração cósmica calma e poética quando em repouso
+        bassIntensity = (Math.sin(time * 0.5) * 0.5 + 0.5) * 0.15;
+        
+        for (let i = 0; i < visualBins; i++) {
+          let percent = 0.02;
+          if (isPlaying) {
+            // Se estiver tocando mas sem analisador ativo (iOS/etc), gera ondas orgânicas bonitas
+            const wave1 = Math.sin(time + i * 0.15) * 0.45 + 0.5;
+            const wave2 = Math.cos(time * 0.75 - i * 0.08) * 0.35 + 0.35;
+            percent = (wave1 * 0.6 + wave2 * 0.4) * 0.7;
+          } else {
+            // Respiração ociosa suave
+            percent = (Math.sin(time * 0.8 + i * 0.12) * 0.5 + 0.5) * 0.06 + 0.02;
+          }
+          smoothedHeights.current[i] += (percent - smoothedHeights.current[i]) * 0.15;
+        }
+      }
+
+      // 2. DESENHO DA AURA/GLOW PULSANTE DE FUNDO (BEAT GLOW)
+      if (glow) {
+        ctx.save();
+        const glowOpacity = 0.03 + bassIntensity * 0.12;
+        const glowRadius = Math.max(120, Math.min(width, height) * 0.4 * (1 + bassIntensity * 0.35));
+        
+        const radialGradient = ctx.createRadialGradient(
+          width / 2, height / 2, 10,
+          width / 2, height / 2, glowRadius
+        );
+        radialGradient.addColorStop(0, color.replace(')', `, ${glowOpacity})`).replace('rgb', 'rgba'));
+        radialGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        
+        ctx.fillStyle = radialGradient;
+        ctx.beginPath();
+        ctx.arc(width / 2, height / 2, glowRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // 3. DESENHO DO ESPECTRO DO SOM ÚNICO (SIMÉTRICO CENTRAL)
+      const gap = 4;
+      const barWidth = (width - (visualBins - 1) * gap) / visualBins;
+      const centerY = height / 2;
+
+      for (let i = 0; i < visualBins; i++) {
+        const percent = smoothedHeights.current[i] || 0.02;
+        // Altura total de cada barra (distribuída simetricamente para cima e para baixo do centro)
+        const barHeight = Math.max(4, percent * height * 0.78);
+        const x = i * (barWidth + gap);
+        
+        // Criar gradiente de cor vertical para a barra que brilha mais nas pontas (estilo neon)
+        const barGradient = ctx.createLinearGradient(x, centerY - barHeight / 2, x, centerY + barHeight / 2);
+        // Nas bordas extremas, o brilho é máximo. No centro, fica mais sutil e translúcido.
+        barGradient.addColorStop(0, color); // Ponta superior brilhante
+        barGradient.addColorStop(0.5, color.replace(')', ', 0.35)').replace('rgb', 'rgba')); // Centro sutil
+        barGradient.addColorStop(1, color); // Ponta inferior brilhante
+
+        ctx.fillStyle = barGradient;
+
+        if (glow) {
+          ctx.shadowBlur = Math.min(14, percent * 18);
+          ctx.shadowColor = color;
+        } else {
+          ctx.shadowBlur = 0;
+        }
+
+        // Aplica opacidade proporcional para dar profundidade de camadas
+        ctx.globalAlpha = percent * 0.65 + 0.35;
+
+        // Desenha a barra simétrica central arredondada
+        ctx.beginPath();
+        ctx.roundRect(
+          x,
+          centerY - barHeight / 2,
+          Math.max(0.1, barWidth),
+          barHeight,
+          Math.max(0, Math.min(3, barWidth / 2))
+        );
+        ctx.fill();
+      }
+
       ctx.shadowBlur = 0;
       ctx.globalAlpha = 1.0;
-
-      // Se não houver Web Audio (analisador indisponível, iOS/Android WebView que bloqueia, etc.), 
-      // renderizamos uma simulação matemática bonita para manter a interface viva e dinâmica.
-      if (!analyser || isAndroid) {
-        const time = Date.now() * 0.003;
-
-        if (variant === 'bars') {
-          const visualBins = 48;
-          const gap = 3;
-          const barWidth = (width - (visualBins - 1) * gap) / visualBins;
-
-          for (let i = 0; i < visualBins; i++) {
-            let percent = 0.04;
-            if (isPlaying) {
-              const w1 = Math.sin(time + i * 0.18) * 0.45 + 0.5;
-              const w2 = Math.cos(time * 0.85 - i * 0.12) * 0.35 + 0.35;
-              percent = (w1 * 0.6 + w2 * 0.4);
-              percent = Math.max(0.05, percent * (0.8 + Math.random() * 0.2));
-            }
-            const barHeight = percent * height * 0.8;
-
-            if (glow) {
-              ctx.shadowBlur = 8;
-              ctx.shadowColor = color;
-            }
-
-            ctx.beginPath();
-            ctx.roundRect(
-              i * (barWidth + gap),
-              height - barHeight,
-              barWidth,
-              barHeight,
-              Math.min(2, barWidth / 2)
-            );
-            ctx.fill();
-          }
-        } else if (variant === 'wave') {
-          ctx.beginPath();
-          ctx.lineWidth = 2.5;
-          if (glow) {
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = color;
-          }
-
-          const points = 80;
-          for (let i = 0; i < points; i++) {
-            const x = (i / (points - 1)) * width;
-            let y = height / 2;
-            if (isPlaying) {
-              const wave1 = Math.sin(time + i * 0.12) * 16;
-              const wave2 = Math.cos(time * 1.4 + i * 0.06) * 8;
-              y += wave1 + wave2;
-            } else {
-              y += Math.sin(i * 0.1) * 1.5;
-            }
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-          }
-          ctx.stroke();
-        } else if (variant === 'circle') {
-          const centerX = width / 2;
-          const centerY = height / 2;
-          const radius = Math.min(width, height) * 0.28;
-          const points = 72;
-
-          ctx.beginPath();
-          if (glow) {
-            ctx.shadowBlur = 12;
-            ctx.shadowColor = color;
-          }
-
-          for (let i = 0; i < points; i++) {
-            const angle = (i / points) * Math.PI * 2;
-            let offset = 0;
-            if (isPlaying) {
-              offset = (Math.sin(time * 2.2 + i * 0.25) * 10) + (Math.cos(time * 0.8 - i * 0.15) * 5);
-            }
-            const r = radius + offset;
-            const x = centerX + Math.cos(angle) * r;
-            const y = centerY + Math.sin(angle) * r;
-
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-          }
-          ctx.closePath();
-          ctx.lineWidth = 2.5;
-          ctx.stroke();
-        }
-        return;
-      }
-
-      // ───────────────────────────────────────────────────────────
-      // CÓDIGO DO ANALISADOR REAL (WEB AUDIO API ATIVA)
-      // ───────────────────────────────────────────────────────────
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-      analyser.getByteFrequencyData(dataArray);
-
-      if (variant === 'bars') {
-        const visualBins = Math.min(64, bufferLength);
-        const gap = 3;
-        const barWidth = (width - (visualBins - 1) * gap) / visualBins;
-
-        for (let i = 0; i < visualBins; i++) {
-          const dataIndex = Math.floor((i / visualBins) * bufferLength * 0.85);
-          const rawValue = dataArray[dataIndex] || 0;
-          const percent = Math.pow(rawValue / 255, 1.25);
-          const barHeight = Math.max(3, percent * height * 0.85);
-
-          if (glow) {
-            ctx.shadowBlur = Math.min(12, percent * 15);
-            ctx.shadowColor = color;
-          }
-
-          ctx.globalAlpha = percent * 0.75 + 0.25;
-          ctx.beginPath();
-          ctx.roundRect(
-            i * (barWidth + gap),
-            height - barHeight,
-            barWidth,
-            barHeight,
-            Math.min(2, barWidth / 2)
-          );
-          ctx.fill();
-        }
-      } else if (variant === 'wave') {
-        ctx.beginPath();
-        ctx.lineWidth = 2.5;
-        if (glow) {
-          ctx.shadowBlur = 10;
-          ctx.shadowColor = color;
-        }
-
-        const points = Math.min(100, bufferLength);
-        for (let i = 0; i < points; i++) {
-          const x = (i / (points - 1)) * width;
-          const dataIndex = Math.floor((i / points) * bufferLength);
-          const rawValue = dataArray[dataIndex] || 0;
-          const percent = rawValue / 255;
-
-          const offset = (percent - 0.5) * height * 0.55;
-          const y = height / 2 + offset;
-
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-      } else if (variant === 'circle') {
-        const centerX = width / 2;
-        const centerY = height / 2;
-        const radius = Math.min(width, height) * 0.3;
-        const points = Math.min(80, bufferLength);
-
-        ctx.beginPath();
-        if (glow) {
-          ctx.shadowBlur = 12;
-          ctx.shadowColor = color;
-        }
-
-        for (let i = 0; i < points; i++) {
-          const angle = (i / points) * Math.PI * 2;
-          const dataIndex = Math.floor((i / points) * bufferLength * 0.8);
-          const rawValue = dataArray[dataIndex] || 0;
-          const percent = rawValue / 255;
-
-          const r = radius + (percent * 32);
-          const x = centerX + Math.cos(angle) * r;
-          const y = centerY + Math.sin(angle) * r;
-
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-        ctx.closePath();
-        ctx.lineWidth = 2.5;
-        ctx.stroke();
-      }
     };
 
     draw();
@@ -278,11 +216,19 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
         resizeObserver.disconnect();
       }
     };
-  }, [analyser, audioElement, variant, barColor, glow]);
+  }, [analyser, audioElement, barColor, glow]);
 
   return (
-    <div id="audio-visualizer" className={`relative w-full h-full overflow-hidden ${className}`}>
-      <canvas ref={canvasRef} className="block w-full h-full" />
+    <div 
+      id="audio-visualizer" 
+      className={`relative w-full h-full overflow-hidden ${className}`}
+      style={{ transform: 'translateZ(0)' }}
+    >
+      <canvas 
+        ref={canvasRef} 
+        className="block w-full h-full" 
+        style={{ transform: 'translateZ(0)' }}
+      />
     </div>
   );
 };
