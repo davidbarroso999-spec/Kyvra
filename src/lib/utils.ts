@@ -5,6 +5,36 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export async function copyToClipboard(text: string): Promise<boolean> {
+  // Try modern Clipboard API first
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (err) {
+    console.warn("Clipboard API falhou, tentando fallback", err);
+  }
+
+  // Fallback para execCommand (útil em iframes sem permissão ou contextos não seguros)
+  try {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-999999px";
+    textArea.style.top = "-999999px";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    const successful = document.execCommand('copy');
+    textArea.remove();
+    return successful;
+  } catch (err) {
+    console.error("Fallback de clipboard falhou", err);
+    return false;
+  }
+}
+
 export function parseChapterNumber(chapter: any): number {
   if (chapter === null || chapter === undefined) return 999999;
   const str = String(chapter).trim();

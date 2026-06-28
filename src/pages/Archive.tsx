@@ -21,8 +21,9 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
-import { cn, saveForOffline } from '@/lib/utils';
+import { cn, saveForOffline, copyToClipboard } from '@/lib/utils';
 import { getAllTracks } from '@/lib/apiCache';
+import { generateTrackShareText } from '@/lib/share';
 import { TrackDuration } from '@/components/ui/TrackDuration';
 import {
   useVirtualization,
@@ -99,7 +100,7 @@ const TrackRow = React.memo(({
       style={style}
       id={`track-${track.id}`}
       onClick={() => handlePlay(track)}
-      className="track-row-hover flex items-center gap-4 py-3 px-4 cursor-pointer rounded-none border-b border-border/50 group"
+      className={cn("track-row-hover flex items-center gap-4 py-3 px-4 cursor-pointer border-b border-border/50 group first:rounded-t-lg last:rounded-b-lg", openMenuId === track.id && "relative z-[5000]")}
     >
       <div className="w-8 flex justify-center items-center text-text-low font-mono text-sm shrink-0">
         {isCurrentTrack && isPlaying ? (
@@ -178,13 +179,13 @@ const TrackRow = React.memo(({
         {openMenuId === track.id && (
           <>
             <div
-              className="fixed inset-0 z-40"
+              className="fixed inset-0 z-[9998]"
               onClick={(e) => {
                 e.stopPropagation();
                 setOpenMenuId(null);
               }}
             />
-            <div className="absolute right-0 bottom-full mb-1 z-50 w-48 glass rounded-lg py-1 shadow-2xl border border-border">
+            <div className="absolute right-0 bottom-full mb-1 z-[9999] w-48 glass rounded-lg py-1 shadow-2xl border border-border">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -391,22 +392,23 @@ export function Archive() {
   };
 
   const handleShareTrack = async (track: any) => {
-    const shareUrl = `https://descubrakyvra.vercel.app/#/arquivo?track=${track.id}`;
+    const { setGeneratingShare } = useStore.getState();
+    setGeneratingShare(true);
     try {
-      if (navigator.share) {
-        await navigator.share({
-          title: `Kyvra — ${track.title}`,
-          text: `Ouvindo ${track.title} de ${track.artist} no Kyvra. Fragmentos de um universo sombrio.`,
-          url: shareUrl,
-        });
+      const shareText = await generateTrackShareText(track);
+      const shareUrl = `https://descubrakyvra.vercel.app/#/arquivo?track=${track.id}`;
+      const fullText = `${shareText}\n\n${shareUrl}`;
+      const success = await copyToClipboard(fullText);
+      if (success) {
+        showFeedback('Link e texto decodificado copiados!');
       } else {
-        await navigator.clipboard.writeText(shareUrl);
-        showFeedback('Link copiado para a área de transferência');
+        showFeedback('Erro ao copiar para a área de transferência.');
       }
-    } catch (error: any) {
-      if (error.name !== 'AbortError') {
-        console.error('Error sharing:', error);
-      }
+    } catch (e) {
+      console.error(e);
+      showFeedback('Erro ao decodificar fragmento.');
+    } finally {
+      setGeneratingShare(false);
     }
   };
 
@@ -522,7 +524,7 @@ export function Archive() {
             )}
           </div>
         ) : (
-          <div ref={containerRef} className="w-full border border-border/30 rounded-lg overflow-hidden bg-void/30">
+          <div ref={containerRef} className="w-full border border-border/30 rounded-lg bg-void/30">
             <div style={{ paddingTop, paddingBottom }}>
               {slicedItems.map((track, idx) => (
                 <TrackRow

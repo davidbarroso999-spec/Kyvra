@@ -10,6 +10,7 @@ import React, { Suspense } from 'react';
 import { Preloader } from './components/ui/Preloader';
 import { CookieBanner } from './components/ui/CookieBanner';
 import { PwaInstallPrompt } from './components/ui/PwaInstallPrompt';
+import { ShareSpinner } from './components/ui/ShareSpinner';
 
 // Lazy loading das páginas para melhorar a performance inicial
 const Home = React.lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
@@ -98,6 +99,7 @@ export default function App() {
       <Preloader />
       <CookieBanner />
       <PwaInstallPrompt />
+      <ShareSpinner />
       <Suspense fallback={null}>
         <Routes>
           <Route path="/" element={<Layout />}>

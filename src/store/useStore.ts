@@ -19,7 +19,9 @@ interface AppState {
   theme: Theme;
   setTheme: (theme: Theme) => void;
 
-  // Player State
+  // Share State
+  isGeneratingShare: boolean;
+  setGeneratingShare: (val: boolean) => void;
   currentTrack: Track | null;
   isPlaying: boolean;
   queue: Track[];           // Fila original (ordem real das músicas)
@@ -78,6 +80,9 @@ export const useStore = create<AppState>()(
 
       themeVideoUrls: {},
       setThemeVideoUrls: (themeVideoUrls) => set({ themeVideoUrls }),
+      
+      isGeneratingShare: false,
+      setGeneratingShare: (isGeneratingShare) => set({ isGeneratingShare }),
       currentTrack: null,
       isPlaying: false,
       queue: [],

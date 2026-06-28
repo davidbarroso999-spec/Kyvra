@@ -5,8 +5,10 @@ import { Play, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { getAlbumWithTracks } from '@/lib/apiCache';
 import { TrackDuration } from '@/components/ui/TrackDuration';
-import { saveForOffline } from '@/lib/utils';
+import { saveForOffline, cn, copyToClipboard } from '@/lib/utils';
 import { KyvraButton } from '@/components/ui/KyvraButton';
+
+import { generateTrackShareText } from '@/lib/share';
 
 export function AlbumDetail() {
   const { id } = useParams();
@@ -102,22 +104,24 @@ export function AlbumDetail() {
   };
 
   const handleShareTrack = async (track: any) => {
-    const shareUrl = `https://descubrakyvra.vercel.app/#/arquivo?track=${track.id}`;
+    const { setGeneratingShare } = useStore.getState();
+    setGeneratingShare(true);
     try {
-      if (navigator.share) {
-        await navigator.share({
-          title: `Kyvra — ${track.title}`,
-          text: `Ouvindo ${track.title} de ${track.artist || album?.artist} no Kyvra. Fragmentos de um universo sombrio.`,
-          url: shareUrl,
-        });
+      const trackWithArtist = { ...track, artist: track.artist || album?.artist };
+      const shareText = await generateTrackShareText(trackWithArtist);
+      const shareUrl = `https://descubrakyvra.vercel.app/#/arquivo?track=${track.id}`;
+      const fullText = `${shareText}\n\n${shareUrl}`;
+      const success = await copyToClipboard(fullText);
+      if (success) {
+        showFeedback('Link e texto decodificado copiados!');
       } else {
-        await navigator.clipboard.writeText(shareUrl);
-        showFeedback('Link copiado para a área de transferência');
+        showFeedback('Erro ao copiar para a área de transferência.');
       }
-    } catch (error: any) {
-      if (error.name !== 'AbortError') {
-        console.error('Error sharing:', error);
-      }
+    } catch (e) {
+      console.error(e);
+      showFeedback('Erro ao decodificar fragmento.');
+    } finally {
+      setGeneratingShare(false);
     }
   };
 
@@ -262,7 +266,7 @@ export function AlbumDetail() {
             <div
               key={track.id}
               onClick={() => handlePlayTrack(track)}
-              className="track-row-hover flex items-center gap-4 py-3 px-4 cursor-pointer rounded-none border-b border-border/50 last:border-0 group"
+              className={cn("track-row-hover flex items-center gap-4 py-3 px-4 cursor-pointer border-b border-border/50 last:border-0 group first:rounded-t-lg last:rounded-b-lg", openMenuId === track.id && "relative z-[5000]")}
             >
               <span className="w-6 text-right font-mono text-text-low text-sm group-hover:text-primary">
                 {index + 1}
@@ -296,13 +300,13 @@ export function AlbumDetail() {
                   <>
                     {/* Overlay invisível para fechar o menu ao clicar fora */}
                     <div
-                      className="fixed inset-0 z-40"
+                      className="fixed inset-0 z-[9998]"
                       onClick={(e) => {
                         e.stopPropagation();
                         setOpenMenuId(null);
                       }}
                     />
-                    <div className="absolute right-0 bottom-full mb-1 z-50 w-48 glass rounded-lg py-1 shadow-2xl border border-border">
+                    <div className="absolute right-0 bottom-full mb-1 z-[9999] w-48 glass rounded-lg py-1 shadow-2xl border border-border">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
