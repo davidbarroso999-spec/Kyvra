@@ -91,6 +91,7 @@ export function Home() {
   const [previousVideoTheme, setPreviousVideoTheme] = useState<string | null>(null);
   const [fadeActive, setFadeActive] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState<Record<string, boolean>>({});
+  const [loopFading, setLoopFading] = useState<Record<string, boolean>>({});
   const prevThemeRef = useRef(theme);
   const [initialDelayOver, setInitialDelayOver] = useState(false);
 
@@ -364,18 +365,21 @@ export function Home() {
             const isCurrent = tName === currentVideoTheme;
             const isTransitionActive = previousVideoTheme !== null;
             const isLoaded = videoLoaded[tName];
+            const isLoopFading = loopFading[tName];
             
             // Determine dynamic opacity during crossfade transition
-            let opacityClass = "opacity-0 z-0 pointer-events-none";
+            let opacityClass = "opacity-0 z-0 pointer-events-none scale-105";
             if (isCurrent && isLoaded) {
               if (isTransitionActive) {
-                opacityClass = fadeActive ? "opacity-[0.78] md:opacity-[0.82] z-10" : "opacity-0 z-10";
+                opacityClass = fadeActive ? "opacity-[0.78] md:opacity-[0.82] z-10 scale-100" : "opacity-0 z-10 scale-[1.02]";
               } else {
-                opacityClass = "opacity-[0.78] md:opacity-[0.82] z-10";
+                opacityClass = isLoopFading 
+                  ? "opacity-0 scale-[1.02] z-10" 
+                  : "opacity-[0.78] md:opacity-[0.82] scale-100 z-10";
               }
             } else if (!isCurrent) {
               // This is the previous video fading out
-              opacityClass = fadeActive ? "opacity-0 z-0 pointer-events-none" : "opacity-[0.78] md:opacity-[0.82] z-0";
+              opacityClass = fadeActive ? "opacity-0 z-0 pointer-events-none scale-105" : "opacity-[0.78] md:opacity-[0.82] z-0 scale-100";
             }
 
             return (
@@ -390,16 +394,34 @@ export function Home() {
                 playsInline={true}
                 preload="auto"
                 className={cn(
-                  "absolute inset-0 w-full h-full object-cover object-[80%_center] md:object-center transition-opacity duration-[2000ms] ease-in-out bg-transparent",
+                  "absolute inset-0 w-full h-full object-cover object-[80%_center] md:object-center bg-transparent",
                   opacityClass
                 )}
                 style={{
                   willChange: "opacity, transform",
                   transform: "translate3d(0,0,0)",
-                  backfaceVisibility: "hidden"
+                  backfaceVisibility: "hidden",
+                  transition: isLoopFading
+                    ? "opacity 1000ms cubic-bezier(0.25, 1, 0.5, 1), transform 1000ms cubic-bezier(0.25, 1, 0.5, 1)"
+                    : "opacity 2000ms ease-in-out, transform 2000ms ease-in-out"
                 }}
                 src={THEME_VIDEOS[tName]}
                 onError={(e) => handleVideoError(tName, e)}
+                onTimeUpdate={(e) => {
+                  const video = e.currentTarget;
+                  if (!video || !video.duration) return;
+                  const timeLeft = video.duration - video.currentTime;
+                  // Start fade-out when less than 1.0 second remains
+                  if (timeLeft < 1.0 && timeLeft > 0) {
+                    if (!loopFading[tName]) {
+                      setLoopFading(prev => ({ ...prev, [tName]: true }));
+                    }
+                  } else {
+                    if (loopFading[tName]) {
+                      setLoopFading(prev => ({ ...prev, [tName]: false }));
+                    }
+                  }
+                }}
                 onCanPlay={(e) => {
                   e.currentTarget.play().catch(() => {});
                 }}
