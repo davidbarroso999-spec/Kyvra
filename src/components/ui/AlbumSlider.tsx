@@ -17,8 +17,8 @@ interface AlbumSliderProps {
   albums: Album[];
 }
 
-const CARD_W   = 280;
-const CARD_GAP = 40;
+const CARD_W   = 200;
+const CARD_GAP = 24;
 
 export function AlbumSlider({ albums }: AlbumSliderProps) {
   const wrapperRef  = useRef<HTMLDivElement>(null);
@@ -26,9 +26,9 @@ export function AlbumSlider({ albums }: AlbumSliderProps) {
 
   const { scrollBy } = useHorizontalSlider(wrapperRef, slideRefs, {
     ease: 0.075,
-    scaleMax: 1.35,
-    scaleMin: 0.75,
-    offsetMultiplier: 120,
+    scaleMax: 1.15,
+    scaleMin: 0.85,
+    offsetMultiplier: 60,
   });
 
   const setSlideRef = useCallback((el: HTMLDivElement | null, idx: number) => {
@@ -40,21 +40,21 @@ export function AlbumSlider({ albums }: AlbumSliderProps) {
   if (!albums.length) return null;
 
   return (
-    <section className="relative w-full overflow-hidden" style={{ height: 460 }}>
+    <section className="relative w-full overflow-hidden" style={{ height: 350 }}>
       {/* botões de navegação */}
       <button
         onClick={() => scrollBy(-(CARD_W + CARD_GAP))}
-        className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 flex items-center justify-center glass rounded-full text-text-mid hover:text-primary transition-colors hidden md:flex"
+        className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-8 h-8 flex items-center justify-center glass rounded-full text-text-mid hover:text-primary transition-colors hidden md:flex"
         aria-label="Álbum anterior"
       >
-        <ChevronLeft size={20} />
+        <ChevronLeft size={16} />
       </button>
       <button
         onClick={() => scrollBy(CARD_W + CARD_GAP)}
-        className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 flex items-center justify-center glass rounded-full text-text-mid hover:text-primary transition-colors hidden md:flex"
+        className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-8 h-8 flex items-center justify-center glass rounded-full text-text-mid hover:text-primary transition-colors hidden md:flex"
         aria-label="Próximo álbum"
       >
-        <ChevronRight size={20} />
+        <ChevronRight size={16} />
       </button>
 
       {/* wrapper */}
@@ -111,27 +111,27 @@ export function AlbumSlider({ albums }: AlbumSliderProps) {
                 <div className="play-reveal">
                   <div>
                     {album.year && (
-                      <span className="font-sc text-[10px] tracking-[0.2em] text-text-mid block">
+                      <span className="font-sc text-[9px] tracking-[0.2em] text-text-mid block">
                         {album.year}
                       </span>
                     )}
                     {album.tracks !== undefined && (
-                      <span className="font-sans text-xs text-text-high">
+                      <span className="font-sans text-[10px] text-text-high">
                         {album.tracks} {album.tracks === 1 ? 'faixa' : 'faixas'}
                       </span>
                     )}
                   </div>
                   <span className="play-reveal-icon">
-                    <Play size={14} className="ml-0.5" />
+                    <Play size={12} className="ml-0.5" />
                   </span>
                 </div>
 
                 {/* badge de faixas */}
                 {album.tracks !== undefined && (
                   <div
-                    className="absolute top-3 right-3 glass px-2.5 py-1 rounded-full"
+                    className="absolute top-2 right-2 glass px-2 py-0.5 rounded-full"
                   >
-                    <span className="font-mono text-xs text-text-high">
+                    <span className="font-mono text-[10px] text-text-high">
                       {album.tracks} faixas
                     </span>
                   </div>
@@ -139,12 +139,12 @@ export function AlbumSlider({ albums }: AlbumSliderProps) {
               </div>
 
               {/* info */}
-              <div className="mt-3 px-1">
-                <h3 className="font-display text-text-high text-xl leading-tight truncate group-hover:text-primary transition-colors">
+              <div className="mt-2.5 px-0.5">
+                <h3 className="font-display text-text-high text-base leading-tight truncate group-hover:text-primary transition-colors">
                   {album.title}
                 </h3>
                 {album.year && (
-                  <p className="font-mono text-text-low text-xs mt-1">{album.year}</p>
+                  <p className="font-mono text-text-low text-[10px] mt-0.5">{album.year}</p>
                 )}
               </div>
             </Link>
