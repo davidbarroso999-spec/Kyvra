@@ -61,15 +61,23 @@ export default function App() {
       if (bgMode) {
         try {
           bgMode.enable();
+          bgMode.disableWebViewOptimizations(); // Evita gargalo/throttling de JavaScript em segundo plano
+          
           bgMode.setDefaults({
             title: 'Kyvra Player',
-            text: 'Kyvra está ativo em segundo plano',
+            text: 'Kyvra está ativo para sintonizar o vazio',
             icon: 'icon',
             color: '0d0d1a',
             resume: true,
-            hidden: true,
-            silent: true // Oculta a notificação padrão do background mode para priorizar os controles nativos de mídia
+            hidden: false,
+            silent: false // Mantém o Foreground Service ativo para que a Media Session apareça e funcione
           });
+          
+          // Adiciona listener para garantir que as otimizações do webview fiquem desativadas ao ativar
+          bgMode.on('activate', () => {
+            bgMode.disableWebViewOptimizations();
+          });
+
           console.log("Kyvra: Background Mode do Capacitor ativado com sucesso.");
         } catch (e) {
           console.error("Kyvra: Erro ao configurar o Background Mode:", e);
