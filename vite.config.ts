@@ -24,6 +24,7 @@ export default defineConfig(({mode}) => {
           display: 'standalone',
           display_override: ['window-controls-overlay', 'standalone', 'minimal-ui'],
           orientation: 'portrait',
+          start_url: '/',
           lang: 'pt-BR',
           dir: 'ltr',
           categories: ['music', 'entertainment', 'audio'],

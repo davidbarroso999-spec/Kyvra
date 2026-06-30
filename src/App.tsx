@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { HashRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
 import { useStore } from './store/useStore';
 import React, { Suspense } from 'react';
@@ -109,6 +109,7 @@ export default function App() {
             <Route path="reliquias/:id" element={<AlbumDetail />} />
             <Route path="cosmogonia" element={<Lore />} />
             <Route path="arquivista" element={<Admin />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>
       </Suspense>
