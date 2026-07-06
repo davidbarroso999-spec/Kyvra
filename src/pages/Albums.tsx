@@ -4,12 +4,15 @@ import { Link } from 'react-router-dom';
 import { 
   Menu, 
   X, 
-  ArrowLeft
+  ArrowLeft,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { getAlbums } from '@/lib/apiCache';
 import { AlbumSlider } from '@/components/ui/AlbumSlider';
 import { AlbumsVideoBg } from '@/components/ui/AlbumsVideoBg';
 import { useStore } from '@/store/useStore';
+import { cn } from '@/lib/utils';
 
 const ALBUM_ORDER = [
   "sob a última luz",
@@ -70,81 +73,181 @@ export function Albums() {
       <AlbumsVideoBg />
 
       {/* 2. Hero Content (centered, z-10) */}
-      <main className="absolute inset-0 z-10 flex flex-col justify-center px-6 sm:px-12 md:px-20 pt-16">
-        <AnimatePresence mode="wait">
-          {!viewingAlbums ? (
-            // DESIGN PADRÃO DE CAPA DO HERO TOTALMENTE AMBIENTADO EM KYVRA
-            <motion.div 
-              key="hero-text"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="max-w-3xl"
+      <main className="absolute inset-0 z-10 flex flex-col lg:flex-row items-center justify-center lg:justify-between px-6 sm:px-12 md:px-20 pt-16 h-full w-full max-w-7xl mx-auto">
+        
+        {/* LAYOUT PARA DESKTOP (visível de lg para cima) */}
+        <div className="hidden lg:flex w-full h-full items-center justify-between gap-12">
+          {/* Coluna Esquerda: Texto Principal */}
+          <motion.div 
+            layout
+            className={cn(
+              "flex flex-col text-left items-start transition-all duration-500",
+              viewingAlbums 
+                ? "w-[38%]" 
+                : "w-full max-w-2xl"
+            )}
+          >
+            <motion.h1 
+              layout
+              className={cn(
+                "font-medium tracking-tight text-white leading-[1.08] font-display uppercase transition-all duration-500 text-left",
+                viewingAlbums ? "text-4xl xl:text-5xl" : "text-6xl xl:text-7xl"
+              )}
             >
-              {/* Headline */}
-              <h1 className="animate-fade-up delay-2 text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-medium tracking-tight text-white leading-[1.08] font-display uppercase">
-                elegias gravadas na<br />
-                eternidade do vazio.
-              </h1>
+              elegias gravadas na<br />
+              eternidade.
+            </motion.h1>
 
-              {/* Subtext */}
-              <p className="animate-fade-up delay-3 mt-4 sm:mt-5 max-w-sm text-xs sm:text-sm md:text-base leading-relaxed text-white/70 font-light">
-                Metal sinfônico melancólico e profundo. Coros ancestrais, lamentos e arranjos imortalizados em relíquias físicas para guiar a sua alma pelo abismo.
-              </p>
-
-              {/* Single button */}
-              <div className="animate-fade-up delay-4 mt-6 flex flex-col sm:flex-row gap-3">
-                <button 
-                  onClick={() => setViewingAlbums(true)}
-                  className="rounded-lg bg-white px-6 py-2.5 text-xs font-semibold text-gray-900 hover:scale-105 active:scale-95 transition-transform duration-200 cursor-pointer text-center"
-                >
-                  Explorar Relíquias
-                </button>
-              </div>
-            </motion.div>
-          ) : (
-            // VISUALIZAÇÃO DO CARROSSEL DE ÁLBUNS DO KYVRA INTEGRADO
-            <motion.div 
-              key="carousel"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-              className="w-full flex flex-col items-center justify-center max-w-5xl mx-auto"
+            <motion.p 
+              layout
+              className={cn(
+                "mt-4 leading-relaxed text-white/70 font-light transition-all duration-500 text-left",
+                viewingAlbums ? "text-xs xl:text-sm max-w-xs" : "text-sm xl:text-base max-w-md"
+              )}
             >
-              {/* Cabeçalho do carrossel */}
-              <div className="w-full max-w-4xl flex items-center justify-between mb-2 md:mb-4 px-2">
-                <button 
-                  onClick={() => setViewingAlbums(false)}
-                  className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-mono text-white/60 hover:text-white hover:translate-x-[-3px] transition-all cursor-pointer"
-                >
-                  <ArrowLeft size={12} /> Retornar à Capa
-                </button>
-                <span className="text-[9px] font-mono tracking-widest text-primary uppercase">
-                  Relíquias do Vazio ({albums.length})
-                </span>
-              </div>
+              Metal sinfônico melancólico e profundo. Coros ancestrais, lamentos e arranjos imortalizados em relíquias físicas para guiar a sua alma pelo abismo.
+            </motion.p>
 
-              {/* Box com vidro líquido para emoldurar o carrossel existente */}
-              <div className="w-full rounded-2xl liquid-glass border border-white/10 p-3 md:p-5 backdrop-blur-md shadow-2xl relative overflow-hidden">
-                <div className="absolute inset-0 bg-radial-gradient from-white/5 to-transparent pointer-events-none" />
-                
-                {loading ? (
-                  <div className="h-[260px] md:h-[320px] flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                      <span className="font-mono text-[10px] text-white/40 tracking-widest uppercase">Decifrando Relíquias...</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="-mx-3 md:-mx-5">
-                    <AlbumSlider albums={albums} />
-                  </div>
+            <motion.div layout className="mt-8">
+              <button 
+                onClick={() => setViewingAlbums(!viewingAlbums)}
+                className={cn(
+                  "rounded-lg px-6 py-2.5 text-xs font-semibold hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer text-center shadow-xl flex items-center gap-2",
+                  viewingAlbums 
+                    ? "border border-white/20 bg-white/10 text-white hover:bg-white hover:text-gray-900" 
+                    : "bg-white text-gray-900"
                 )}
-              </div>
+              >
+                {viewingAlbums ? (
+                  <>
+                    <EyeOff size={14} /> Ocultar Relíquias
+                  </>
+                ) : (
+                  <>
+                    <Eye size={14} /> Explorar Relíquias
+                  </>
+                )}
+              </button>
             </motion.div>
-          )}
-        </AnimatePresence>
+          </motion.div>
+
+          {/* Coluna Direita: Painel Lateral em Glassmorphic */}
+          <div className="w-[58%] h-full flex items-center justify-end">
+            <AnimatePresence>
+              {viewingAlbums && (
+                <motion.div
+                  initial={{ opacity: 0, x: 60 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 60 }}
+                  transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                  className="w-full flex flex-col"
+                >
+                  {/* Cabeçalho do carrossel */}
+                  <div className="w-full flex items-center justify-end mb-3 px-2">
+                    <span className="text-[10px] font-mono tracking-widest text-primary uppercase">
+                      Relíquias do Vazio ({albums.length})
+                    </span>
+                  </div>
+
+                  {/* Box com vidro líquido para emoldurar o carrossel existente */}
+                  <div className="w-full rounded-2xl liquid-glass border border-white/10 p-3 md:p-5 backdrop-blur-md shadow-2xl relative overflow-hidden">
+                    <div className="absolute inset-0 bg-radial-gradient from-white/5 to-transparent pointer-events-none" />
+                    
+                    {loading ? (
+                      <div className="h-[260px] md:h-[320px] flex items-center justify-center">
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                          <span className="font-mono text-[10px] text-white/40 tracking-widest uppercase">Decifrando Relíquias...</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="-mx-3 md:-mx-5">
+                        <AlbumSlider albums={albums} />
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* LAYOUT PARA MOBILE (visível de lg para baixo) */}
+        <div className="lg:hidden w-full flex flex-col h-full justify-center gap-6">
+          <div className="w-full flex flex-col text-left items-start">
+            {/* Headline */}
+            <h1 className="text-3xl sm:text-4xl font-medium tracking-tight text-white leading-[1.08] font-display uppercase">
+              elegias gravadas na<br />
+              eternidade.
+            </h1>
+
+            {/* Subtext */}
+            <p className="mt-3 max-w-sm text-xs sm:text-sm leading-relaxed text-white/70 font-light">
+              Metal sinfônico melancólico e profundo. Coros ancestrais, lamentos e arranjos imortalizados em relíquias físicas para guiar a sua alma pelo abismo.
+            </p>
+
+            {/* Persistent toggle button */}
+            <div className="mt-4 flex">
+              <button 
+                onClick={() => setViewingAlbums(!viewingAlbums)}
+                className={cn(
+                  "rounded-lg px-5 py-2 text-xs font-semibold hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer text-center shadow-xl flex items-center gap-2",
+                  viewingAlbums 
+                    ? "border border-white/20 bg-white/10 text-white hover:bg-white hover:text-gray-900" 
+                    : "bg-white text-gray-900"
+                )}
+              >
+                {viewingAlbums ? (
+                  <>
+                    <EyeOff size={14} /> Ocultar Relíquias
+                  </>
+                ) : (
+                  <>
+                    <Eye size={14} /> Explorar Relíquias
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          <AnimatePresence>
+            {viewingAlbums && (
+              <motion.div 
+                key="carousel-mobile"
+                initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                animate={{ opacity: 1, height: "auto", marginTop: 16 }}
+                exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                className="w-full overflow-hidden"
+              >
+                {/* Cabeçalho do carrossel */}
+                <div className="w-full flex items-center justify-end mb-2 px-2">
+                  <span className="text-[9px] font-mono tracking-widest text-primary uppercase">
+                    Relíquias ({albums.length})
+                  </span>
+                </div>
+
+                {/* Box com vidro líquido para emoldurar o carrossel existente */}
+                <div className="w-full rounded-2xl liquid-glass border border-white/10 p-3 backdrop-blur-md shadow-2xl relative overflow-hidden">
+                  <div className="absolute inset-0 bg-radial-gradient from-white/5 to-transparent pointer-events-none" />
+                  
+                  {loading ? (
+                    <div className="h-[220px] flex items-center justify-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                        <span className="font-mono text-[9px] text-white/40 tracking-widest uppercase">Decifrando Relíquias...</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="-mx-3">
+                      <AlbumSlider albums={albums} />
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </main>
     </div>
   );

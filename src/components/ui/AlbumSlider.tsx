@@ -35,7 +35,7 @@ export function AlbumSlider({ albums }: AlbumSliderProps) {
     if (el) slideRefs.current[idx] = el;
   }, []);
 
-  const sidePad = `calc(50vw - ${CARD_W / 2}px)`;
+  const sidePad = `calc(50% - ${CARD_W / 2}px)`;
 
   if (!albums.length) return null;
 
@@ -89,9 +89,9 @@ export function AlbumSlider({ albums }: AlbumSliderProps) {
               className="group block select-none"
               draggable={false}
             >
-              {/* capa — aspecto 1:1.3 (retrato) */}
+              {/* capa — aspecto 1:1 */}
               <div
-                className="relative overflow-hidden"
+                className="relative overflow-hidden transition-all duration-300 group-hover:shadow-[0_0_20px_rgba(167,139,250,0.15)]"
                 style={{ borderRadius: 'var(--radius-md)', aspectRatio: '1 / 1' }}
               >
                 <img
@@ -104,48 +104,35 @@ export function AlbumSlider({ albums }: AlbumSliderProps) {
                   draggable={false}
                 />
 
-                {/* overlay hover */}
-                <div className="absolute inset-0 bg-void/0 group-hover:bg-void/30 transition-colors duration-400" />
-
-                {/* play reveal */}
-                <div className="play-reveal">
-                  <div>
-                    {album.year && (
-                      <span className="font-sc text-[9px] tracking-[0.2em] text-text-mid block">
-                        {album.year}
-                      </span>
-                    )}
-                    {album.tracks !== undefined && (
-                      <span className="font-sans text-[10px] text-text-high">
-                        {album.tracks} {album.tracks === 1 ? 'faixa' : 'faixas'}
-                      </span>
-                    )}
-                  </div>
-                  <span className="play-reveal-icon">
-                    <Play size={12} className="ml-0.5" />
-                  </span>
-                </div>
-
-                {/* badge de faixas */}
-                {album.tracks !== undefined && (
-                  <div
-                    className="absolute top-2 right-2 glass px-2 py-0.5 rounded-full"
-                  >
-                    <span className="font-mono text-[10px] text-text-high">
-                      {album.tracks} faixas
-                    </span>
-                  </div>
-                )}
+                {/* overlay hover sutil */}
+                <div className="absolute inset-0 bg-void/0 group-hover:bg-void/25 transition-colors duration-400" />
               </div>
 
               {/* info */}
-              <div className="mt-2.5 px-0.5">
-                <h3 className="font-display text-text-high text-base leading-tight truncate group-hover:text-primary transition-colors">
-                  {album.title}
-                </h3>
-                {album.year && (
-                  <p className="font-mono text-text-low text-[10px] mt-0.5">{album.year}</p>
-                )}
+              <div className="mt-3 px-1 flex flex-col gap-1">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="font-display text-text-high text-sm sm:text-base leading-tight truncate group-hover:text-primary transition-colors">
+                    {album.title}
+                  </h3>
+                  {/* Ícone de Play minimalista e sutil do lado de fora */}
+                  <span className="w-6 h-6 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-void transition-all duration-300 flex-shrink-0 shadow-lg">
+                    <Play size={9} fill="currentColor" className="ml-0.5" />
+                  </span>
+                </div>
+                
+                <div className="flex items-center gap-1.5 font-mono text-[10px] text-text-mid">
+                  {album.year && (
+                    <span>{album.year}</span>
+                  )}
+                  {album.year && album.tracks !== undefined && (
+                    <span className="text-text-low font-sans">•</span>
+                  )}
+                  {album.tracks !== undefined && (
+                    <span>
+                      {album.tracks} {album.tracks === 1 ? 'faixa' : 'faixas'}
+                    </span>
+                  )}
+                </div>
               </div>
             </Link>
           </div>

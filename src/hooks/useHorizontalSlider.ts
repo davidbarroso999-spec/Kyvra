@@ -67,7 +67,9 @@ export function useHorizontalSlider(
   const calculateSnapPoints = useCallback(() => {
     if (!wrapperRef.current || !slideRefs.current?.length) return;
     
-    const centerScreen = window.innerWidth / 2;
+    const container = wrapperRef.current.parentElement || wrapperRef.current;
+    const containerWidth = container.offsetWidth;
+    const centerContainer = containerWidth / 2;
     const newSnapPoints: number[] = [];
     const newMetrics: {originX: number, width: number}[] = [];
     
@@ -80,7 +82,7 @@ export function useHorizontalSlider(
       
       newMetrics.push({ originX, width: originWidth });
       
-      let snapPos = originX + (originWidth / 2) - centerScreen;
+      let snapPos = originX + (originWidth / 2) - centerContainer;
       snapPos = Math.max(0, Math.min(maxScrollRef.current, snapPos));
       newSnapPoints.push(snapPos);
     });
@@ -91,9 +93,10 @@ export function useHorizontalSlider(
 
   const updateScaleAndPosition = useCallback(() => {
     const slides = slideRefs.current;
-    if (!slides) return;
+    if (!slides || !wrapperRef.current) return;
     
-    const cw = window.innerWidth;
+    const container = wrapperRef.current.parentElement || wrapperRef.current;
+    const cw = container.offsetWidth;
     const centerScreen = cw / 2;
     const metrics = slideMetricsRef.current;
 
@@ -124,7 +127,7 @@ export function useHorizontalSlider(
         slide.style.transform = `scale(${scale}) translateZ(0)`;
       }
     });
-  }, [scaleMax, scaleMin, offsetMultiplier, slideRefs]);
+  }, [scaleMax, scaleMin, offsetMultiplier, slideRefs, wrapperRef]);
 
   const update = useCallback(() => {
     const diff = targetRef.current - currentRef.current;
@@ -163,7 +166,9 @@ export function useHorizontalSlider(
 
     // calcula o scroll máximo
     const recalcMax = () => {
-      maxScrollRef.current = Math.max(0, wrapper.scrollWidth - window.innerWidth);
+      const container = wrapper.parentElement || wrapper;
+      const containerWidth = container.offsetWidth;
+      maxScrollRef.current = Math.max(0, wrapper.scrollWidth - containerWidth);
       calculateSnapPoints();
       startAnimation();
     };
