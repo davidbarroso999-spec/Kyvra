@@ -344,15 +344,25 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
 
     let resizeObserver: ResizeObserver | null = null;
 
+    let isUnmounted = false;
+    let resizeFrameId: number | null = null;
+
     const handleResize = (entries: ResizeObserverEntry[]) => {
-      for (const entry of entries) {
-        const { width, height } = entry.contentRect;
+      if (!entries || entries.length === 0) return;
+      const { width, height } = entries[0].contentRect;
+      
+      if (resizeFrameId) {
+        cancelAnimationFrame(resizeFrameId);
+      }
+      
+      resizeFrameId = requestAnimationFrame(() => {
+        if (isUnmounted) return;
         canvas.width = width * window.devicePixelRatio;
         canvas.height = height * window.devicePixelRatio;
         if (!isWebGL && fallbackCtx) {
           fallbackCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
         }
-      }
+      });
     };
 
     if (canvas.parentElement) {
@@ -367,6 +377,7 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
     }
 
     const draw = () => {
+      if (isUnmounted) return;
       animationRef.current = requestAnimationFrame(draw);
 
       const width = canvas.width / window.devicePixelRatio;
@@ -515,6 +526,10 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
     draw();
 
     return () => {
+      isUnmounted = true;
+      if (resizeFrameId) {
+        cancelAnimationFrame(resizeFrameId);
+      }
       cancelAnimationFrame(animationRef.current);
       if (resizeObserver) {
         resizeObserver.disconnect();

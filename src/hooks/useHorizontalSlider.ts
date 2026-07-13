@@ -173,9 +173,18 @@ export function useHorizontalSlider(
       startAnimation();
     };
 
+    let sliderUnmounted = false;
+    let sliderResizeFrameId: number | null = null;
+
     // Use ResizeObserver to detect when items are loaded inside the wrapper
     const resizeObserver = new ResizeObserver(() => {
-      recalcMax();
+      if (sliderResizeFrameId) {
+        cancelAnimationFrame(sliderResizeFrameId);
+      }
+      sliderResizeFrameId = requestAnimationFrame(() => {
+        if (sliderUnmounted) return;
+        recalcMax();
+      });
     });
     resizeObserver.observe(wrapper);
 
@@ -250,6 +259,10 @@ export function useHorizontalSlider(
     startAnimation();
 
     return () => {
+      sliderUnmounted = true;
+      if (sliderResizeFrameId) {
+        cancelAnimationFrame(sliderResizeFrameId);
+      }
       clearTimeout(delayRecalc);
       resizeObserver.disconnect();
       cancelAnimationFrame(rafRef.current);

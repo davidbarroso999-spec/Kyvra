@@ -19,6 +19,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/store/useStore";
 import { registerAudioElement, useAudioAnalyser } from "@/hooks/useAudioAnalyser";
+import { AudioVisualizer } from "@/components/ui/AudioVisualizer";
 
 const formatTime = (seconds: number = 0) => {
   const minutes = Math.floor(seconds / 60);
@@ -26,7 +27,7 @@ const formatTime = (seconds: number = 0) => {
   return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 };
 
-const CustomSlider = ({
+const CustomSlider = React.memo(({
   value,
   onChange,
   className,
@@ -35,186 +36,29 @@ const CustomSlider = ({
   onChange: (value: number) => void;
   className?: string;
 }) => {
+  const handleInteraction = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const percentage = (x / rect.width) * 100;
+    onChange(Math.min(Math.max(percentage, 0), 100));
+  };
+
   return (
-    <motion.div
+    <div
       className={cn(
-        "relative w-full h-[3px] bg-white/20 rounded-full cursor-pointer hover:h-[5px] transition-all",
+        "relative w-full h-[3px] bg-white/20 rounded-full cursor-pointer hover:h-[5px] transition-all duration-150",
         className
       )}
-      onClick={(e) => {
-        const rect = e.currentTarget.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const percentage = (x / rect.width) * 100;
-        onChange(Math.min(Math.max(percentage, 0), 100));
-      }}
-    >
-      <motion.div
-        className="absolute top-0 left-0 h-full bg-white rounded-full"
-        style={{ width: `${value}%` }}
-        initial={{ width: 0 }}
-        animate={{ width: `${value}%` }}
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      />
-    </motion.div>
-  );
-};
-
-export const AudioSpectrum = ({ audioRef }: { audioRef: React.RefObject<HTMLAudioElement> }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { analyser } = useAudioAnalyser({ fftSize: 256 });
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const animationRef = useRef<number>(0);
-  const themeColorRef = useRef<string>('#a78bfa'); // Default primary hex
-
-  const isPlayingStore = useStore((s) => s.isPlaying);
-  const currentTrack = useStore((s) => s.currentTrack);
-
-  useEffect(() => {
-    analyserRef.current = analyser;
-  }, [analyser]);
-
-  useEffect(() => {
-    // Read theme color based on the current class of HTML
-    const updateThemeColor = () => {
-      const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
-      if (primary) themeColorRef.current = primary;
-    };
-    
-    updateThemeColor();
-    
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach(m => {
-        if (m.attributeName === 'class') {
-          updateThemeColor();
-        }
-      });
-    });
-    
-    observer.observe(document.documentElement, { attributes: true });
-    
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d', { alpha: true }); // optimize by specifying basic properties, alpha is true by default
-    if (!ctx) return;
-    
-    const onResize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = 100;
-      ctx.imageSmoothingEnabled = false; // better performance for simple rects
-    };
-    onResize(); // Initial setup
-    
-    const draw = () => {
-      animationRef.current = requestAnimationFrame(draw);
-      
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      // Se o analisador não estiver ativo,
-      // renderizamos uma animação de ondas senoidais simulando o espectro de áudio com excelente fidelidade e sem lag.
-      if (!analyserRef.current) {
-        const visualBins = 64; // nice high-density of bars across the screen
-        const gap = 2;
-        const effectiveBarWidth = (canvas.width - (visualBins - 1) * gap) / visualBins;
-        let x = 0;
-        
-        ctx.fillStyle = themeColorRef.current;
-        const isCurrentlyPlaying = audioRef.current && !audioRef.current.paused;
-        const time = Date.now() * 0.0035;
-        
-        for (let i = 0; i < visualBins; i++) {
-          let heightPercent = 0.04; // Altura mínima de repouso
-          
-          if (isCurrentlyPlaying) {
-            // Cria ondas orgânicas combinando frequências senoidais e cossenos diferentes
-            const w1 = Math.sin(time + i * 0.2) * 0.45 + 0.5;
-            const w2 = Math.cos(time * 0.7 - i * 0.12) * 0.3 + 0.3;
-            const w3 = Math.sin(time * 1.6 + i * 0.4) * 0.2 + 0.2;
-            heightPercent = (w1 * 0.5 + w2 * 0.3 + w3 * 0.2);
-            // adiciona um pequeno ruído rítmico natural
-            heightPercent = Math.max(0.08, heightPercent * (0.85 + Math.random() * 0.15));
-          }
-          
-          const barHeight = Math.max(2, heightPercent * canvas.height * 0.85);
-          ctx.globalAlpha = heightPercent * 0.75 + 0.15;
-          ctx.beginPath();
-          ctx.roundRect(
-            x, 
-            canvas.height - barHeight, 
-            Math.max(0.1, effectiveBarWidth), 
-            barHeight, 
-            Math.max(0, Math.min(2, effectiveBarWidth / 2))
-          );
-          ctx.fill();
-          
-          x += effectiveBarWidth + gap;
-        }
-        ctx.globalAlpha = 1.0;
-        return;
-      }
-      
-      const analyser = analyserRef.current;
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-      analyser.getByteFrequencyData(dataArray);
-      
-      const visualBins = 80; // beautiful high-resolution that spans 100% width
-      const gap = 2;
-      const effectiveBarWidth = (canvas.width - (visualBins - 1) * gap) / visualBins;
-      let x = 0;
-      
-      ctx.fillStyle = themeColorRef.current;
-      
-      for (let i = 0; i < visualBins; i++) {
-        // Map visualBins to index in dataArray, focusing on the active lower 85% frequency bands
-        const dataIndex = Math.floor((i / visualBins) * bufferLength * 0.85);
-        const rawValue = dataArray[dataIndex] || 0;
-        
-        // non-linear scaling for better visuals
-        const percent = Math.pow(rawValue / 255, 1.3);
-        const barHeight = Math.max(2, percent * canvas.height * 0.9);
-        
-        ctx.globalAlpha = percent * 0.75 + 0.15;
-        ctx.beginPath();
-        ctx.roundRect(
-          x, 
-          canvas.height - barHeight, 
-          Math.max(0.1, effectiveBarWidth), 
-          barHeight, 
-          Math.max(0, Math.min(2, effectiveBarWidth / 2))
-        );
-        ctx.fill();
-        
-        x += effectiveBarWidth + gap;
-      }
-      ctx.globalAlpha = 1.0; // Reset alpha
-    };
-    
-    draw();
-    window.addEventListener('resize', onResize, { passive: true }); // passive listener
-    
-    return () => {
-      cancelAnimationFrame(animationRef.current);
-      window.removeEventListener('resize', onResize);
-    };
-  }, []);
-
-  return (
-    <div 
-      className="fixed bottom-0 left-0 w-full h-[100px] pointer-events-none z-[4900] opacity-60 mix-blend-screen flex items-end"
+      onClick={handleInteraction}
       style={{ transform: 'translateZ(0)' }}
     >
-      <canvas 
-        ref={canvasRef} 
-        className="w-full h-full" 
-        style={{ transform: 'translateZ(0)' }}
+      <div
+        className="absolute top-0 left-0 h-full bg-white rounded-full transition-[width] duration-75 ease-out"
+        style={{ width: `${value}%`, transform: 'translateZ(0)' }}
       />
     </div>
   );
-};
+});
 
 const hapticFeedback = (duration = 10) => {
   if (typeof window !== 'undefined' && 'vibrate' in navigator) {
@@ -576,7 +420,7 @@ export function MiniPlayer() {
   // Always render background audio engines so they are initialized and ready immediately
   const renderEngines = () => (
     <>
-      <AudioSpectrum audioRef={audioRef} />
+      <AudioVisualizer className="fixed bottom-0 left-0 w-full h-[100px] pointer-events-none z-[4900] opacity-60 mix-blend-screen" />
 
       <audio
         ref={(el) => {
