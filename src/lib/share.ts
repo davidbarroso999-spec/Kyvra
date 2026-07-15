@@ -1,28 +1,51 @@
-import { generateText } from '@/lib/ai';
-
 export async function generateTrackShareText(track: any, albumArtist?: string): Promise<string> {
   const artist = track.artist || albumArtist || 'Artista Desconhecido';
-  let cleanLyrics = '';
+  const title = track.title || 'Fragmento';
   
+  // Limpar a letra de tags de tempo para extrair um verso real se disponível
+  let cleanLyricsLines: string[] = [];
   if (track.lyrics) {
-    cleanLyrics = track.lyrics.replace(/\[\d{2}:\d{2}(?:\.\d{2,3})?\]/g, '').trim();
+    cleanLyricsLines = track.lyrics
+      .split('\n')
+      .map((line: string) => {
+        // Remove timestamps tipo [00:12.34] ou [01:23]
+        let cleaned = line.replace(/\[\d{2}:\d{2}(?:\.\d{2,3})?\]/g, '').trim();
+        // Remove marcas de seção como [Refrão], [Guitar Solo] etc.
+        cleaned = cleaned.replace(/\[.*?\]/g, '').trim();
+        return cleaned;
+      })
+      .filter((line: string) => line.length > 3 && !line.includes('[') && !line.includes(']'));
   }
 
-  try {
-    const prompt = `Crie um texto poético, curto e objetivo para acompanhar o compartilhamento da música "${track.title}" do artista "${artist}".
-    O app é o "Kyvra". O tema geral é sombrio, misterioso e introspectivo (como um universo dark).
-    Semente aleatória para variação: ${Math.random().toString(36).substring(7)}
-    ${cleanLyrics ? `Baseie-se na letra:\n"${cleanLyrics}"\nAtue como um intérprete poético. Extraia a essência objetiva. Faça uma mini tradução poética sobre o significado, ex: "Este fragmento traz a dor através do silêncio, para lembrar que..."` : `Atue como um intérprete poético. Crie uma pequena frase objetiva revelando o significado profundo ou a emoção principal por trás do título dessa música, de forma misteriosa e direta.`}
-    O texto DEVE terminar convidando a pessoa para descobrir no Kyvra, usando a hashtag #Kyvra. DEVE ser MUITO curto (máximo de 2 frases objetivas). Não seja genérico, seja único, criativo e reflexivo. Não use emojis. Retorne APENAS o texto final.`;
+  let quote = '';
 
-    const generated = await generateText(prompt);
-    if (generated) {
-      return generated;
-    }
-  } catch (err) {
-    console.error("Error generating share text:", err);
+  // Se a música possuir letras com versos reais, escolhemos um e formatamos com reticências e emoji de nota musical
+  if (cleanLyricsLines.length > 0) {
+    const lyricSeed = (title.length + artist.length) % cleanLyricsLines.length;
+    const lyricVerse = cleanLyricsLines[lyricSeed];
+    quote = `"${lyricVerse}... 🎵" — Um verso solene extraído da profunda elegia de "${title}".`;
+  } else {
+    // Caso a música não possua letra cadastrada, usamos fragmentos poéticos inspirados no universo gótico do Kyvra
+    const defaultLyrics = [
+      `Ecoam vozes sob a abóbada de pedra gélida... 🎵`,
+      `Onde o silêncio abraça o fim das eras... 🎵`,
+      `Sussurros do abismo guiam nossos passos vagantes... 🎵`,
+      `Nas cinzas do tempo, apenas a elegia restou... 🎵`,
+      `Sombras dançam sob a luz fria das estrelas mortas... 🎵`,
+      `O sopro do vento traz segredos esquecidos... 🎵`,
+      `Onde as almas encontram o repouso soturno... 🎵`,
+      `Entre coros de pura melancolia e grandiosidade... 🎵`
+    ];
+    const fallbackSeed = (title.length + artist.length) % defaultLyrics.length;
+    const fallbackVerse = defaultLyrics[fallbackSeed];
+    quote = `"${fallbackVerse}" — Um eco misterioso sob a melodia de "${title}".`;
   }
 
-  // Fallback se a IA falhar
-  return `Ouvindo ${track.title} de ${artist} no Kyvra. Fragmentos de um universo sombrio.`;
+  // Define o cabeçalho de reprodução evitando repetir "de Kyvra no Kyvra"
+  const isKyvraArtist = artist.toLowerCase() === 'kyvra';
+  const heading = isKyvraArtist 
+    ? `Ouvindo "${title}" no Kyvra.` 
+    : `Ouvindo "${title}" de ${artist} no Kyvra.`;
+
+  return `${heading}\n\n${quote}\n\nUna-se ao abismo. #Kyvra`;
 }

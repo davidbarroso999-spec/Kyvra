@@ -105,6 +105,53 @@ async function startServer() {
     }
   });
 
+  // API Route for secure music share text generation via Gemini
+  app.post("/api/share-text", async (req, res) => {
+    const { track, albumArtist } = req.body;
+    if (!track) {
+      return res.status(400).json({ error: "Track data is required" });
+    }
+
+    const artist = track.artist || albumArtist || 'Artista Desconhecido';
+    let cleanLyrics = '';
+    if (track.lyrics) {
+      cleanLyrics = track.lyrics.replace(/\[\d{2}:\d{2}(?:\.\d{2,3})?\]/g, '').trim();
+    }
+
+    const client = getGeminiClient();
+    const fallbackText = `Ouvindo ${track.title} de ${artist} no Kyvra. Fragmentos de um universo sombrio.`;
+
+    if (!client) {
+      return res.json({ text: fallbackText });
+    }
+
+    try {
+      const prompt = `Crie um texto poético, curto e objetivo para acompanhar o compartilhamento da música "${track.title}" do artista "${artist}".
+      O app é o "Kyvra". O tema geral é sombrio, misterioso e introspectivo (como um universo dark).
+      Semente aleatória para variação: ${Math.random().toString(36).substring(7)}
+      ${cleanLyrics ? `Baseie-se na letra:\n"${cleanLyrics}"\nAtue como um intérprete poético. Extraia a essência objetiva. Faça uma mini tradução poética sobre o significado, ex: "Este fragmento traz a dor através do silêncio, para lembrar que..."` : `Atue como um intérprete poético. Crie uma pequena frase objetiva revelando o significado profundo ou a emoção principal por trás do título dessa música, de forma misteriosa e direta.`}
+      O texto DEVE terminar convidando a pessoa para descobrir no Kyvra, usando a hashtag #Kyvra. DEVE ser MUITO curto (máximo de 2 frases objetivas). Não seja genérico, seja único, criativo e reflexivo. Não use emojis. Retorne APENAS o texto final.`;
+
+      const response = await client.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: prompt,
+        config: {
+          systemInstruction: "Você é um intérprete poético melancólico e misterioso do universo do Kyvra. Seus textos são refinados, góticos e breves.",
+          temperature: 0.9,
+        }
+      });
+
+      if (response.text) {
+        const text = response.text.replace(/\*\*/g, '').replace(/\*/g, '').trim();
+        return res.json({ text });
+      }
+      throw new Error("Empty response from AI");
+    } catch (err) {
+      console.error("Share Text Generation Error:", err);
+      return res.json({ text: fallbackText });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

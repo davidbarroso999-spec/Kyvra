@@ -221,10 +221,6 @@ export function FeaturedFragmentSection({ className }: FeaturedFragmentSectionPr
         </div>
       </motion.div>
 
-      {/* Divider */}
-      <div className="mt-20 flex items-center justify-center">
-        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-      </div>
     </section>
   );
 }

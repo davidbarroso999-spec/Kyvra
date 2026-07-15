@@ -19,7 +19,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/store/useStore";
 import { registerAudioElement, useAudioAnalyser } from "@/hooks/useAudioAnalyser";
-import { AudioVisualizer } from "@/components/ui/AudioVisualizer";
+import { FrequencyVisualizer } from "@/components/ui/FrequencyVisualizer";
 
 const formatTime = (seconds: number = 0) => {
   const minutes = Math.floor(seconds / 60);
@@ -420,8 +420,6 @@ export function MiniPlayer() {
   // Always render background audio engines so they are initialized and ready immediately
   const renderEngines = () => (
     <>
-      <AudioVisualizer className="fixed bottom-0 left-0 w-full h-[100px] pointer-events-none z-[4900] opacity-60 mix-blend-screen" />
-
       <audio
         ref={(el) => {
           // @ts-ignore
@@ -769,6 +767,11 @@ export function MiniPlayer() {
             />
             {/* Additional overlay to smooth out the grain from smaller blur */}
             <div className="absolute inset-0 z-[1] bg-void/60 pointer-events-none" />
+
+            {/* Subtle frequency wave visualizer */}
+            <div className="absolute inset-0 z-[2] pointer-events-none overflow-hidden">
+              <FrequencyVisualizer opacity={0.35} />
+            </div>
             
             {/* Header */}
             <div className="relative z-10 flex items-center justify-between p-6 pt-12 md:py-6 md:px-8 shrink-0 landscape:py-3 landscape:pt-4">

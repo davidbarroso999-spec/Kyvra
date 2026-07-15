@@ -27,6 +27,18 @@ export function FeaturedSlider({ tracks }: FeaturedSliderProps) {
   const setIsPlaying = useStore((state) => state.setIsPlaying);
   const setQueue = useStore((state) => state.setQueue);
 
+  const [activeCardId, setActiveCardId] = React.useState<string | number | null>(null);
+
+  React.useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setActiveCardId(null);
+      }
+    };
+    window.addEventListener('click', handleOutsideClick);
+    return () => window.removeEventListener('click', handleOutsideClick);
+  }, []);
+
   const [dimensions, setDimensions] = React.useState({
     cardWidth: 320,
     cardGap: 48,
@@ -153,6 +165,20 @@ export function FeaturedSlider({ tracks }: FeaturedSliderProps) {
             <div
               className="group relative cursor-pointer select-none"
               style={{ width: CARD_W }}
+              onClick={(e) => {
+                const isTouch = typeof window !== 'undefined' && (window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0);
+                if (isTouch) {
+                  if (activeCardId === track.id) {
+                    handlePlay(track, e);
+                  } else {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setActiveCardId(track.id);
+                  }
+                } else {
+                  handlePlay(track, e);
+                }
+              }}
             >
               {/* capa — aspect 3:4 */}
               <div
@@ -176,6 +202,9 @@ export function FeaturedSlider({ tracks }: FeaturedSliderProps) {
                 <button
                   onClick={(e) => handlePlay(track, e)}
                   className="play-reveal"
+                  style={{
+                    transform: activeCardId === track.id ? 'translateY(0)' : undefined
+                  }}
                   aria-label={`Tocar ${track.title}`}
                 >
                   <span className="font-sc text-[10px] tracking-[0.2em] text-text-mid">REPRODUZIR</span>
@@ -187,7 +216,10 @@ export function FeaturedSlider({ tracks }: FeaturedSliderProps) {
                 {/* badge de vibe no canto superior esquerdo */}
                 {track.vibe && (
                   <span
-                    className="absolute top-3 left-3 px-2.5 py-1 rounded-full font-mono text-[9px] uppercase tracking-wider text-primary border border-primary/30"
+                    className={cn(
+                      "absolute top-3 left-3 px-2.5 py-1 rounded-full font-mono text-[9px] uppercase tracking-wider text-primary border border-primary/30 transition-all duration-300 md:group-hover:opacity-100",
+                      activeCardId === track.id ? "opacity-100 scale-100" : "opacity-0 md:opacity-0"
+                    )}
                     style={{ background: 'rgba(5,5,8,0.75)', backdropFilter: 'blur(8px)' }}
                   >
                     {track.vibe.split(' | ')[0]}
