@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { useStore } from "@/store/useStore";
 import { registerAudioElement, useAudioAnalyser } from "@/hooks/useAudioAnalyser";
 import { FrequencyVisualizer } from "@/components/ui/FrequencyVisualizer";
+import { LiquidChrome } from "@/components/ui/LiquidChrome";
 
 const formatTime = (seconds: number = 0) => {
   const minutes = Math.floor(seconds / 60);
@@ -488,6 +489,9 @@ export function MiniPlayer() {
                 }}
                 layout
               >
+                {/* Background Liquid Chrome WebGL */}
+                <LiquidChrome className="absolute inset-0 z-0 opacity-30 pointer-events-none" />
+
                 <AnimatePresence mode="popLayout">
                   {isActive ? (
                     <motion.div
