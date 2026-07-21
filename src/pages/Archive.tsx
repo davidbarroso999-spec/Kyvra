@@ -428,7 +428,7 @@ export function Archive() {
   );
 
   return (
-    <div className="w-full pt-32 px-6 pb-32 max-w-5xl mx-auto">
+    <div className="w-full pt-32 px-6 md:px-12 xl:px-16 pb-32 max-w-5xl mx-auto">
       {/* Toast de feedback de fila */}
       <AnimatePresence>
         {queueFeedback && (

@@ -7,6 +7,7 @@ interface LiquidChromeProps {
   frequencyX?: number;
   frequencyY?: number;
   interactive?: boolean;
+  isPlaying?: boolean;
 }
 
 export const LiquidChrome = memo(function LiquidChrome({
@@ -16,8 +17,11 @@ export const LiquidChrome = memo(function LiquidChrome({
   frequencyX = 3,
   frequencyY = 3,
   interactive = true,
+  isPlaying = true,
 }: LiquidChromeProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const isPlayingRef = useRef(isPlaying);
+  isPlayingRef.current = isPlaying;
 
   useEffect(() => {
     const container = containerRef.current;
@@ -223,22 +227,35 @@ export const LiquidChrome = memo(function LiquidChrome({
       container.addEventListener('touchmove', onTouchMove);
     }
 
-    // Controle de FPS (Framerate throttling):
+    // Controle de FPS (Framerate throttling) com acumulação de tempo para tocar/pausar:
     // Limitar para 15 FPS economiza até 80% do processamento mantendo o movimento fluído sob blur.
     let lastTime = 0;
     const targetFPS = 15;
     const interval = 1000 / targetFPS;
 
+    let accumulatedTime = 0;
+    let lastRealTime = 0;
+
     function loop(t: number) {
       state.raf = requestAnimationFrame(loop);
       if (!gl || !isVisible || !isTabActive) return;
+
+      if (lastRealTime === 0) {
+        lastRealTime = t;
+      }
+      const delta = (t - lastRealTime) * 1e-3;
+      lastRealTime = t;
+
+      if (isPlayingRef.current) {
+        accumulatedTime += delta * opts.speed;
+      }
 
       const elapsed = t - lastTime;
       if (elapsed < interval) return;
 
       lastTime = t - (elapsed % interval);
 
-      gl.uniform1f(uTimeLoc, t * 1e-3 * opts.speed);
+      gl.uniform1f(uTimeLoc, accumulatedTime);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
     state.raf = requestAnimationFrame(loop);

@@ -21,6 +21,7 @@ import { useStore } from "@/store/useStore";
 import { registerAudioElement, useAudioAnalyser } from "@/hooks/useAudioAnalyser";
 import { FrequencyVisualizer } from "@/components/ui/FrequencyVisualizer";
 import { LiquidChrome } from "@/components/ui/LiquidChrome";
+import { KyvraAudio, isNativeAudioAvailable } from "@/lib/nativeAudio";
 
 const formatTime = (seconds: number = 0) => {
   const minutes = Math.floor(seconds / 60);
@@ -176,11 +177,133 @@ export function MiniPlayer() {
     toggleRepeat,
     isPlayerHidden,
     setPlayerHidden,
+    queue,
+    shuffledQueue,
+    setCurrentTrack,
   } = useStore();
 
   const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+
+  // Native Audio synchronization and control refs
+  const lastNativeTrackIdRef = useRef<string | null>(null);
+  const lastNativeIsPlayingRef = useRef<boolean | null>(null);
+
+  // Native Audio control wrappers
+  const handlePlayNext = () => {
+    hapticFeedback(10);
+    if (isNativeAudioAvailable()) {
+      KyvraAudio.skipToNext().catch((err) => {
+        console.warn("Kyvra: skipToNext failed, falling back to Zustand", err);
+        playNext();
+      });
+    } else {
+      playNext();
+    }
+  };
+
+  const handlePlayPrevious = () => {
+    hapticFeedback(10);
+    if (isNativeAudioAvailable()) {
+      KyvraAudio.skipToPrevious().catch((err) => {
+        console.warn("Kyvra: skipToPrevious failed, falling back to Zustand", err);
+        playPrevious();
+      });
+    } else {
+      playPrevious();
+    }
+  };
+
+  // 1. Sync Queue & Track changes to native player
+  useEffect(() => {
+    if (!isNativeAudioAvailable() || !currentTrack) return;
+
+    // If the change was already handled/triggered by the native player, skip sending
+    if (currentTrack.id === lastNativeTrackIdRef.current) {
+      return;
+    }
+
+    const activeQueue = isShuffle ? shuffledQueue : queue;
+    if (activeQueue.length === 0) return;
+
+    const trackIndex = activeQueue.findIndex(t => t.id === currentTrack.id);
+    const startIndex = trackIndex !== -1 ? trackIndex : 0;
+
+    // Send the active queue starting from the selected track
+    KyvraAudio.setQueue({
+      tracks: activeQueue,
+      startIndex
+    }).catch(err => {
+      console.error("Kyvra: Failed to set queue on native player", err);
+    });
+  }, [currentTrack?.id, isShuffle]);
+
+  // 2. Sync Play/Pause state to native player
+  useEffect(() => {
+    if (!isNativeAudioAvailable() || !currentTrack) return;
+
+    if (isPlaying === lastNativeIsPlayingRef.current) {
+      return;
+    }
+
+    if (isPlaying) {
+      KyvraAudio.play().catch(err => console.error("Kyvra: play error", err));
+    } else {
+      KyvraAudio.pause().catch(err => console.error("Kyvra: pause error", err));
+    }
+  }, [isPlaying]);
+
+  // 3. Listen to Native Player state updates
+  useEffect(() => {
+    if (!isNativeAudioAvailable()) return;
+
+    let active = true;
+
+    const subState = KyvraAudio.addListener('playbackStateChanged', ({ isPlaying: nativeIsPlaying }) => {
+      if (!active) return;
+      lastNativeIsPlayingRef.current = nativeIsPlaying;
+      setIsPlaying(nativeIsPlaying);
+    });
+
+    const subTrack = KyvraAudio.addListener('trackChanged', ({ mediaId }) => {
+      if (!active || !mediaId) return;
+      lastNativeTrackIdRef.current = mediaId;
+
+      const activeQueue = isShuffle ? shuffledQueue : queue;
+      const foundTrack = activeQueue.find(t => t.id === mediaId);
+      if (foundTrack) {
+        setCurrentTrack(foundTrack);
+      }
+    });
+
+    const subError = KyvraAudio.addListener('playbackError', ({ message }) => {
+      console.error("Kyvra: Native player error:", message);
+    });
+
+    // Native position polling (since native is playing, HTML5 audio is not updating time)
+    const interval = setInterval(() => {
+      if (!active) return;
+      KyvraAudio.getPosition().then(({ positionMs, durationMs }) => {
+        if (!active) return;
+        const currentSecs = positionMs / 1000;
+        const durationSecs = durationMs / 1000;
+        setCurrentTime(currentSecs);
+        setDuration(durationSecs);
+        
+        const prog = durationSecs > 0 ? (currentSecs / durationSecs) * 100 : 0;
+        setProgress(isFinite(prog) ? prog : 0);
+      }).catch(() => {});
+    }, 1000);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+      subState.then(s => s.remove());
+      subTrack.then(s => s.remove());
+      subError.then(s => s.remove());
+    };
+  }, [queue, shuffledQueue, isShuffle]);
 
   // No YouTube states or effect controllers needed
 
@@ -374,6 +497,17 @@ export function MiniPlayer() {
   };
 
   const handleSeek = (value: number) => {
+    if (isNativeAudioAvailable()) {
+      hapticFeedback(6);
+      const timeMs = (value / 100) * duration * 1000;
+      if (isFinite(timeMs)) {
+        KyvraAudio.seekTo({ positionMs: timeMs }).then(() => {
+          setProgress(value);
+        }).catch(() => {});
+      }
+      return;
+    }
+
     if (audioRef.current && audioRef.current.duration) {
       hapticFeedback(6);
       const time = (value / 100) * audioRef.current.duration;
@@ -402,6 +536,13 @@ export function MiniPlayer() {
   }, [volume]);
 
   useEffect(() => {
+    if (isNativeAudioAvailable()) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      return;
+    }
+
     if (audioRef.current) {
       if (isPlaying) {
         const playPromise = audioRef.current.play();
@@ -431,13 +572,13 @@ export function MiniPlayer() {
         }}
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleEnded}
-        src={currentTrack?.audioUrl || undefined}
+        src={isNativeAudioAvailable() ? undefined : (currentTrack?.audioUrl || undefined)}
         className="hidden"
         crossOrigin="anonymous"
         preload="auto"
-        autoPlay={isPlaying}
+        autoPlay={isNativeAudioAvailable() ? false : isPlaying}
         onCanPlay={() => {
-          if (isPlaying && audioRef.current) {
+          if (!isNativeAudioAvailable() && isPlaying && audioRef.current) {
             audioRef.current.play().catch(() => {});
           }
         }}
@@ -490,7 +631,7 @@ export function MiniPlayer() {
                 layout
               >
                 {/* Background Liquid Chrome WebGL */}
-                <LiquidChrome className="absolute inset-0 z-0 opacity-30 pointer-events-none" />
+                <LiquidChrome className="absolute inset-0 z-0 opacity-30 pointer-events-none" isPlaying={isPlaying} />
 
                 <AnimatePresence mode="popLayout">
                   {isActive ? (
@@ -575,8 +716,7 @@ export function MiniPlayer() {
                               size="icon"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                hapticFeedback(10);
-                                playPrevious();
+                                handlePlayPrevious();
                               }}
                               className={cn("text-white hover:bg-white/20 hover:text-white rounded-full transition-colors", isMobileLandscape ? "h-6 w-6" : "h-7 w-7")}
                             >
@@ -602,8 +742,7 @@ export function MiniPlayer() {
                               size="icon"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                hapticFeedback(10);
-                                playNext();
+                                handlePlayNext();
                               }}
                               className={cn("text-white hover:bg-white/20 hover:text-white rounded-full transition-colors", isMobileLandscape ? "h-6 w-6" : "h-7 w-7")}
                             >
@@ -678,8 +817,7 @@ export function MiniPlayer() {
                         size="icon"
                         onClick={(e) => {
                           e.stopPropagation();
-                          hapticFeedback(10);
-                          playPrevious();
+                          handlePlayPrevious();
                         }}
                         className="text-white hover:bg-white/20 hover:text-white h-8 w-8 rounded-full transition-colors ml-1"
                       >
@@ -705,8 +843,7 @@ export function MiniPlayer() {
                         size="icon"
                         onClick={(e) => {
                           e.stopPropagation();
-                          hapticFeedback(10);
-                          playNext();
+                          handlePlayNext();
                         }}
                         className="text-white hover:bg-white/20 hover:text-white h-8 w-8 rounded-full transition-colors mr-1"
                       >
@@ -924,8 +1061,7 @@ export function MiniPlayer() {
                         size="icon"
                         onClick={(e) => {
                           e.stopPropagation();
-                          hapticFeedback(10);
-                          playPrevious();
+                          handlePlayPrevious();
                         }}
                         className="text-white/90 hover:text-white hover:bg-white/10 h-14 w-14 rounded-full transition-colors"
                       >
@@ -953,8 +1089,7 @@ export function MiniPlayer() {
                         size="icon"
                         onClick={(e) => {
                           e.stopPropagation();
-                          hapticFeedback(10);
-                          playNext();
+                          handlePlayNext();
                         }}
                         className="text-white/90 hover:text-white hover:bg-white/10 h-14 w-14 rounded-full transition-colors"
                       >
@@ -1035,7 +1170,7 @@ export function MiniPlayer() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={(e) => { e.stopPropagation(); hapticFeedback(10); playPrevious(); }}
+                            onClick={(e) => { e.stopPropagation(); handlePlayPrevious(); }}
                             className="text-white/80 hover:text-white h-8 w-8 rounded-full"
                           >
                             <SkipBack className="h-4 w-4" />
@@ -1051,7 +1186,7 @@ export function MiniPlayer() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={(e) => { e.stopPropagation(); hapticFeedback(10); playNext(); }}
+                            onClick={(e) => { e.stopPropagation(); handlePlayNext(); }}
                             className="text-white/80 hover:text-white h-8 w-8 rounded-full"
                           >
                             <SkipForward className="h-4 w-4" />
@@ -1101,7 +1236,7 @@ export function MiniPlayer() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={(e) => { e.stopPropagation(); hapticFeedback(10); playPrevious(); }}
+                            onClick={(e) => { e.stopPropagation(); handlePlayPrevious(); }}
                             className="text-white/95 hover:text-white hover:bg-white/10 h-10 w-10 rounded-full"
                           >
                             <SkipBack className="h-5 w-5" />
@@ -1117,7 +1252,7 @@ export function MiniPlayer() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={(e) => { e.stopPropagation(); hapticFeedback(10); playNext(); }}
+                            onClick={(e) => { e.stopPropagation(); handlePlayNext(); }}
                             className="text-white/95 hover:text-white hover:bg-white/10 h-10 w-10 rounded-full"
                           >
                             <SkipForward className="h-5 w-5" />

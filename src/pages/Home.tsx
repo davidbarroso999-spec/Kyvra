@@ -448,7 +448,7 @@ export function Home() {
         <div className="hidden md:flex landscape:flex md:flex-col justify-between md:h-full landscape:h-full w-full h-[100vh] relative overflow-hidden select-none z-10">
 
           {/* Left Aligned Content overlapping the video */}
-          <div className="relative z-35 flex-1 flex flex-col justify-center px-8 md:px-16 xl:px-24 pt-20 max-w-[1000px] landscape:pt-14 landscape:gap-y-1">
+          <div className="relative z-35 flex-1 flex flex-col justify-center px-6 md:px-12 xl:px-16 pt-20 w-full landscape:pt-14 landscape:gap-y-1">
             {/* Logo container without backglow */}
             <div className="relative overflow-visible pointer-events-none mb-2 md:mb-4 flex flex-col items-start justify-center landscape:mb-1">
               <motion.div
@@ -486,7 +486,7 @@ export function Home() {
           </div>
 
           {/* Bottom brand layout footer container */}
-          <div className="relative z-35 px-8 md:px-16 xl:px-24 pb-8 flex w-full">
+          <div className="relative z-35 px-6 md:px-12 xl:px-16 pb-8 flex w-full">
             <div className="flex-1" />
           </div>
         </div>

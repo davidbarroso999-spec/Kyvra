@@ -268,18 +268,19 @@ export function AlbumDetail() {
               onClick={() => handlePlayTrack(track)}
               className={cn("track-row-hover flex items-center gap-4 py-3 px-4 cursor-pointer border-b border-border/50 last:border-0 group first:rounded-t-lg last:rounded-b-lg", openMenuId === track.id && "relative z-[5000]")}
             >
-              <span className="w-6 text-right font-mono text-text-low text-sm group-hover:text-primary">
-                {index + 1}
-              </span>
-              <div className="flex-1 flex flex-col min-w-0">
-                <h3 className="font-medium text-text-high group-hover:text-primary transition-colors truncate">{track.title}</h3>
+              <div className="w-8 flex justify-center items-center text-text-low font-mono text-sm shrink-0">
+                <span className="font-mono">{String(index + 1).padStart(2, '0')}</span>
               </div>
-              <span className="font-mono text-sm text-text-low">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-medium text-text-high group-hover:text-primary transition-colors truncate text-sm md:text-base">{track.title}</h3>
+                <p className="text-xs text-text-low truncate">{track.artist || 'Kyvra'}</p>
+              </div>
+              <div className="font-mono text-xs md:text-sm text-text-low w-12 text-right shrink-0">
                 <TrackDuration audioUrl={track.audioUrl} defaultDuration={track.duration} />
-              </span>
+              </div>
 
               {/* Botão de menu */}
-              <div className="relative">
+              <div className="relative shrink-0">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();

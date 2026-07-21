@@ -73,7 +73,7 @@ export function Albums() {
       <AlbumsVideoBg />
 
       {/* 2. Hero Content (centered, z-10) */}
-      <main className="absolute inset-0 z-10 flex flex-col lg:flex-row items-center justify-center lg:justify-between px-6 sm:px-12 md:px-20 pt-16 h-full w-full max-w-7xl mx-auto">
+      <main className="absolute inset-0 z-10 flex flex-col lg:flex-row items-start lg:items-center justify-center lg:justify-between px-6 md:px-12 xl:px-16 pt-24 lg:pt-16 h-full w-full">
         
         {/* LAYOUT PARA DESKTOP (visível de lg para cima) */}
         <div className="hidden lg:flex w-full h-full items-center justify-between gap-12">
@@ -132,7 +132,7 @@ export function Albums() {
           </motion.div>
 
           {/* Coluna Direita: Painel Lateral em Glassmorphic */}
-          <div className="w-[58%] h-full flex items-center justify-end">
+          <div className={cn("h-full flex items-center justify-end transition-all duration-500", viewingAlbums ? "w-[58%]" : "w-0 overflow-hidden")}>
             <AnimatePresence>
               {viewingAlbums && (
                 <motion.div

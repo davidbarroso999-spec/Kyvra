@@ -398,7 +398,7 @@ export function Lore() {
       <div className="fixed inset-0 z-[1] backdrop-blur-xl mask-linear-top pointer-events-none" />
 
       {/* HERO CONTENT (z-index 10) */}
-      <div className="flex-1 flex flex-col justify-end px-4 sm:px-6 md:px-12 pb-8 md:pb-16 z-10 relative lore-hero-content">
+      <div className="flex-1 flex flex-col justify-end px-6 md:px-12 xl:px-16 pb-8 md:pb-16 z-10 relative lore-hero-content w-full">
         <div className="min-h-[260px] sm:min-h-[300px] md:min-h-[340px] flex flex-col justify-end w-full lore-hero-inner">
           <AnimatePresence mode="wait" custom={direction}>
             {!currentChapter ? (
