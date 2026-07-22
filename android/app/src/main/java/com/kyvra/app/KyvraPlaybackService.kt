@@ -5,9 +5,7 @@ import android.content.Intent
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
-import androidx.media3.common.util.SimpleBitmapLoader
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.session.CacheBitmapLoader
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 
@@ -30,11 +28,6 @@ class KyvraPlaybackService : MediaSessionService() {
             .setHandleAudioBecomingNoisy(true)
             .build()
 
-        // Carrega capas remotas (https) via SimpleBitmapLoader e CacheBitmapLoader
-        val bitmapLoader = CacheBitmapLoader(
-            SimpleBitmapLoader()
-        )
-
         val sessionActivityIntent = packageManager
             .getLaunchIntentForPackage(packageName)
         val sessionActivityPendingIntent = sessionActivityIntent?.let {
@@ -45,7 +38,6 @@ class KyvraPlaybackService : MediaSessionService() {
         }
 
         mediaSession = MediaSession.Builder(this, player)
-            .setBitmapLoader(bitmapLoader)
             .apply {
                 if (sessionActivityPendingIntent != null) {
                     setSessionActivity(sessionActivityPendingIntent)
