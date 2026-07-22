@@ -61,18 +61,27 @@ class KyvraAudioPlugin : Plugin() {
         val mediaItems = mutableListOf<MediaItem>()
         for (i in 0 until tracksArray.length()) {
             val t = tracksArray.getJSONObject(i)
-            val metadata = MediaMetadata.Builder()
-                .setTitle(t.getString("title"))
-                .setArtist(t.optString("artist", "Kyvra"))
-                .setAlbumTitle(t.optString("albumTitle", ""))
-                .setArtworkUri(Uri.parse(t.getString("coverUrl")))
-                .build()
+            val title = t.optString("title", "")
+            val artist = t.optString("artist", "Kyvra")
+            val albumTitle = t.optString("albumTitle", "")
+            val coverUrl = t.optString("coverUrl", "")
+            val mediaId = t.optString("id", "")
+            val audioUrl = t.optString("audioUrl", "")
+
+            val metadataBuilder = MediaMetadata.Builder()
+                .setTitle(title)
+                .setArtist(artist)
+                .setAlbumTitle(albumTitle)
+
+            if (coverUrl.isNotEmpty()) {
+                metadataBuilder.setArtworkUri(Uri.parse(coverUrl))
+            }
 
             mediaItems.add(
                 MediaItem.Builder()
-                    .setMediaId(t.getString("id"))
-                    .setUri(t.getString("audioUrl"))
-                    .setMediaMetadata(metadata)
+                    .setMediaId(mediaId)
+                    .setUri(audioUrl)
+                    .setMediaMetadata(metadataBuilder.build())
                     .build()
             )
         }
