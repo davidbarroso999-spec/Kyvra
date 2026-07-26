@@ -52,7 +52,6 @@ dependencies {
     // Media3 (ExoPlayer + MediaSession + Notification)
     implementation "androidx.media3:media3-exoplayer:$media3Version"
     implementation "androidx.media3:media3-session:$media3Version"
-    implementation "androidx.media3:media3-datasource-okhttp:$media3Version"
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 }
 

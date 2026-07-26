@@ -8,7 +8,6 @@ import android.view.View;
 import android.view.Window;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
-import android.webkit.WebView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import com.getcapacitor.BridgeActivity;
@@ -67,24 +66,6 @@ public class MainActivity extends BridgeActivity {
                 | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                 | View.SYSTEM_UI_FLAG_FULLSCREEN
             );
-        }
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
-        // Para garantir que o áudio HTML5 e os handlers da API MediaSession
-        // continuem ativos em segundo plano e com a tela desligada, retomamos
-        // as atividades e timers do WebView do Capacitor que são suspensos por padrão no onPause.
-        if (this.bridge != null && this.bridge.getWebView() != null) {
-            final WebView webView = this.bridge.getWebView();
-            webView.post(new Runnable() {
-                @Override
-                public void run() {
-                    webView.onResume();
-                    webView.resumeTimers();
-                }
-            });
         }
     }
 }

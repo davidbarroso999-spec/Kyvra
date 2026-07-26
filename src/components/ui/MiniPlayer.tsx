@@ -309,6 +309,7 @@ export function MiniPlayer() {
 
   // Request notifications permission and trigger first notification
   useEffect(() => {
+    if (isNativeAudioAvailable()) return;
     if (isPlaying && typeof window !== 'undefined' && 'Notification' in window) {
       if (Notification.permission === 'default') {
         try {
@@ -326,6 +327,7 @@ export function MiniPlayer() {
 
   // Sync state and track changes to the Notification Bar Player
   useEffect(() => {
+    if (isNativeAudioAvailable()) return; // Native Android handles its own notification
     if (currentTrack) {
       showMediaNotification(currentTrack, isPlaying);
     } else {
@@ -344,6 +346,7 @@ export function MiniPlayer() {
 
   // Handle media actions from the Service Worker notification buttons
   useEffect(() => {
+    if (isNativeAudioAvailable()) return; // Native Android uses KyvraAudio listeners instead
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
 
     const handleServiceWorkerMessage = (event: MessageEvent) => {
@@ -380,6 +383,7 @@ export function MiniPlayer() {
 
   // Media Session API integration for Android control center, lock screen, and bluetooth actions
   useEffect(() => {
+    if (isNativeAudioAvailable()) return; // Native Android reports metadata via MediaItem, not here
     if (!('mediaSession' in navigator) || !currentTrack) return;
 
     try {
@@ -410,11 +414,13 @@ export function MiniPlayer() {
   }, [currentTrack]);
 
   useEffect(() => {
+    if (isNativeAudioAvailable()) return;
     if (!('mediaSession' in navigator)) return;
     navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
   }, [isPlaying]);
 
   useEffect(() => {
+    if (isNativeAudioAvailable()) return; // Native Android handles hardware/lockscreen actions via MediaSession.Callback
     if (!('mediaSession' in navigator) || !currentTrack) return;
 
     try {
@@ -456,6 +462,7 @@ export function MiniPlayer() {
     }
 
     return () => {
+      if (isNativeAudioAvailable()) return;
       if (!('mediaSession' in navigator)) return;
       try {
         navigator.mediaSession.setActionHandler('play', null);
