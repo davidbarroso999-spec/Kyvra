@@ -16,6 +16,7 @@
     "@awesome-cordova-plugins/device": "^9.2.0",
     "@capacitor/core": "^8.4.1",
     "@google/genai": "^1.48.0",
+    "@gsap/react": "^2.1.2",
     "@radix-ui/react-slot": "^1.2.5",
     "@supabase/supabase-js": "^2.101.1",
     "@tailwindcss/vite": "^4.1.14",
