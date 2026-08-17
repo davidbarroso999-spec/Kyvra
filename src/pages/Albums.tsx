@@ -45,6 +45,26 @@ export function Albums() {
   // Estado de controle de visualização dos álbuns
   const [viewingAlbums, setViewingAlbums] = useState(false);
 
+  // Scroll via Keyboard (Arrows)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
+      
+      const SCROLL_AMOUNT = window.innerHeight * 0.4;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        window.scrollBy({ top: SCROLL_AMOUNT, behavior: 'smooth' });
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        window.scrollBy({ top: -SCROLL_AMOUNT, behavior: 'smooth' });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown, { passive: false });
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // Carregar os álbuns reais de Kyvra
   useEffect(() => {
     async function fetchAlbums() {

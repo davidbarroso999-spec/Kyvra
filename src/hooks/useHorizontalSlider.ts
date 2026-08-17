@@ -199,7 +199,9 @@ export function useHorizontalSlider(
     let touchVelocity = 0;
     let isVerticalSwipe = false;
     let isFirstMove = true;
+    let isMouseDown = false;
 
+    // --- Touch Handlers ---
     const handleTouchStart = (e: TouchEvent) => {
       isDraggingRef.current = true;
       touchStartX = e.touches[0].clientX;
@@ -250,11 +252,98 @@ export function useHorizontalSlider(
       startAnimation();
     };
 
+    // --- Mouse Handlers ---
+    const handleMouseDown = (e: MouseEvent) => {
+      isMouseDown = true;
+      isDraggingRef.current = true;
+      touchStartX = e.clientX;
+      touchStartY = e.clientY;
+      lastTouchX = e.clientX;
+      touchStartTarget = targetRef.current;
+      touchVelocity = 0;
+      isVerticalSwipe = false;
+      isFirstMove = true;
+      (container as HTMLElement).style.cursor = 'grabbing';
+      startAnimation();
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isMouseDown) return;
+      if (isVerticalSwipe) return;
+
+      const currentX = e.clientX;
+      const currentY = e.clientY;
+
+      if (isFirstMove) {
+        if (Math.abs(currentY - touchStartY) > Math.abs(currentX - touchStartX)) {
+          isVerticalSwipe = true;
+          isDraggingRef.current = false;
+          return;
+        }
+        isFirstMove = false;
+      }
+
+      e.preventDefault();
+
+      touchVelocity = lastTouchX - currentX;
+      lastTouchX = currentX;
+
+      const delta = touchStartX - currentX;
+      targetRef.current = Math.max(0, Math.min(
+        maxScrollRef.current,
+        touchStartTarget + delta * 1.5 
+      ));
+      startAnimation();
+    };
+
+    const handleMouseUp = () => {
+      if (!isMouseDown) return;
+      isMouseDown = false;
+      isDraggingRef.current = false;
+      (container as HTMLElement).style.cursor = '';
+      if (!isVerticalSwipe) {
+        forceSnap(touchVelocity);
+        startAnimation();
+      }
+    };
+
+    const handleMouseLeave = () => {
+      if (isMouseDown) {
+        handleMouseUp();
+      }
+    };
+
+    // --- Wheel Handler ---
+    const handleWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && Math.abs(e.deltaX) < 10) return;
+      e.preventDefault();
+      
+      const rawDelta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      
+      targetRef.current = Math.max(0, Math.min(
+        maxScrollRef.current,
+        targetRef.current + rawDelta
+      ));
+      
+      isDraggingRef.current = false;
+      startAnimation();
+      
+      clearTimeout((wrapper as any)._wheelSnapTimeout);
+      (wrapper as any)._wheelSnapTimeout = setTimeout(() => {
+        forceSnap(0);
+      }, 150);
+    };
+
     const container = wrapper.parentElement || wrapper;
 
     container.addEventListener('touchstart', handleTouchStart, { passive: true });
     container.addEventListener('touchmove', handleTouchMove, { passive: false });
     container.addEventListener('touchend', handleTouchEnd, { passive: true });
+    container.addEventListener('mousedown', handleMouseDown, { passive: true });
+    container.addEventListener('mousemove', handleMouseMove, { passive: false });
+    container.addEventListener('mouseup', handleMouseUp, { passive: true });
+    container.addEventListener('mouseleave', handleMouseLeave, { passive: true });
+    container.addEventListener('wheel', handleWheel, { passive: false });
 
     startAnimation();
 
@@ -270,6 +359,11 @@ export function useHorizontalSlider(
       container.removeEventListener('touchstart', handleTouchStart);
       container.removeEventListener('touchmove', handleTouchMove);
       container.removeEventListener('touchend', handleTouchEnd);
+      container.removeEventListener('mousedown', handleMouseDown);
+      container.removeEventListener('mousemove', handleMouseMove);
+      container.removeEventListener('mouseup', handleMouseUp);
+      container.removeEventListener('mouseleave', handleMouseLeave);
+      container.removeEventListener('wheel', handleWheel);
     };
   }, [startAnimation, wrapperRef, calculateSnapPoints, forceSnap]);
 

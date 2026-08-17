@@ -325,7 +325,7 @@ export function Home() {
   return (
     <div className="w-full bg-[#030303]">
       {/* Immersive Responsive Hero Section */}
-      <section className="relative min-h-[100vh] lg:h-[100vh] w-full bg-[#030303] text-white overflow-hidden pb-10 lg:pb-0">
+      <section className="relative min-h-[100dvh] lg:h-[100dvh] w-full bg-[#030303] text-white overflow-hidden pb-10 lg:pb-0">
         
         {/* UNIFIED HARDWARE-ACCELERATED BACKGROUND ENGINE */}
         <div ref={backgroundEngineRef} className="absolute inset-0 w-full h-full bg-[#030303] z-0 overflow-hidden pointer-events-none select-none">
@@ -445,7 +445,7 @@ export function Home() {
         </div>
 
         {/* DESKTOP/WIDE LANDSCAPE IMMERSIVE LAYOUT */}
-        <div className="hidden md:flex landscape:flex md:flex-col justify-between md:h-full landscape:h-full w-full h-[100vh] relative overflow-hidden select-none z-10">
+        <div className="hidden md:flex landscape:flex md:flex-col justify-between md:h-full landscape:h-full w-full h-[100dvh] relative overflow-hidden select-none z-10">
 
           {/* Left Aligned Content overlapping the video */}
           <div className="relative z-35 flex-1 flex flex-col justify-center px-6 md:px-12 xl:px-16 pt-20 w-full landscape:pt-14 landscape:gap-y-1">
@@ -492,7 +492,7 @@ export function Home() {
         </div>
 
         {/* MOBILE PORTRAIT LAYOUT (Strictly vertical below md and portrait) */}
-        <div className="md:hidden landscape:hidden flex flex-col justify-between min-h-[100vh] relative z-10 px-6 pt-24 pb-8 h-[100vh] overflow-hidden">
+        <div className="md:hidden landscape:hidden flex flex-col justify-between min-h-[100dvh] relative z-10 px-6 pt-24 pb-8 h-[100dvh] overflow-hidden">
           {/* Empty spacer on mobile to keep top clean */}
           <div className="flex-1" />
 
