@@ -11,6 +11,7 @@ import { Preloader } from './components/ui/Preloader';
 import { CookieBanner } from './components/ui/CookieBanner';
 import { PwaInstallPrompt } from './components/ui/PwaInstallPrompt';
 import { ShareSpinner } from './components/ui/ShareSpinner';
+import { ScrollToTop } from './components/layout/ScrollToTop';
 
 // Lazy loading das páginas para melhorar a performance inicial
 const Home = React.lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
@@ -104,6 +105,7 @@ export default function App() {
 
   return (
     <HashRouter>
+      <ScrollToTop />
       <Preloader />
       <CookieBanner />
       <PwaInstallPrompt />

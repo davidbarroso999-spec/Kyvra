@@ -90,7 +90,7 @@ export function CircularMenu() {
                   >
                     <Link
                       to={item.path}
-                      onClick={() => setIsOpen(false)}
+                      onClick={() => setMenuOpen(false)}
                       className="absolute w-full h-full rounded-full focus:outline-none"
                     >
                       <svg 
