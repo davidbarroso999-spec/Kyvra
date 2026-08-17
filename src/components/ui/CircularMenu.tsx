@@ -14,36 +14,37 @@ const menuItems = [
 ];
 
 export function CircularMenu() {
-  const [isOpen, setIsOpen] = useState(false);
+  const isMenuOpen = useStore((state) => state.isMenuOpen);
+  const setMenuOpen = useStore((state) => state.setMenuOpen);
   const location = useLocation();
   const isPlayerHidden = useStore((state) => state.isPlayerHidden);
   const setPlayerHidden = useStore((state) => state.setPlayerHidden);
   const currentTrack = useStore((state) => state.currentTrack);
 
-  const toggleMenu = () => setIsOpen(!isOpen);
+  const toggleMenu = () => setMenuOpen(!isMenuOpen);
 
   // Fecha o menu após rota
   useEffect(() => {
-    setIsOpen(false);
-  }, [location.pathname]);
+    setMenuOpen(false);
+  }, [location.pathname, setMenuOpen]);
 
   return (
     <>
       {/* Backdrop */}
       <AnimatePresence>
-        {isOpen && (
+        {isMenuOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={() => setIsOpen(false)}
+            onClick={() => setMenuOpen(false)}
             className="fixed inset-0 bg-void/40 z-[3000] transition-opacity"
           />
         )}
       </AnimatePresence>
 
       {/* Origin perfectly at bottom-right, spaced a bit from edges to align with MiniPlayer */}
-      <div className="fixed bottom-[6rem] right-[1.5rem] sm:bottom-[3.625rem] sm:right-[3rem] z-[5000] flex items-center justify-center pointer-events-none">
+      <div className="fixed bottom-6 right-6 sm:bottom-[3.625rem] sm:right-[3rem] z-[5000] flex items-center justify-center pointer-events-none">
         
         {/* Origin Center Point */}
         <div className="relative w-0 h-0 flex justify-center items-center pointer-events-auto">
@@ -51,7 +52,7 @@ export function CircularMenu() {
           {/* Sub-container responsivo para reduzir dimensões e evitar transbordos de SVG no mobile */}
           <div className="absolute w-0 h-0 flex justify-center items-center scale-[0.68] sm:scale-100 origin-center pointer-events-none">
             <AnimatePresence>
-              {isOpen && menuItems.map((item, index) => {
+              {isMenuOpen && menuItems.map((item, index) => {
                 const R = item.size / 2; // Radius
                 const innerR = index === menuItems.length - 1 ? 40 : menuItems[index + 1].size / 2;
                 const textR = (R + innerR) / 2; 
@@ -130,7 +131,7 @@ export function CircularMenu() {
 
           {/* Botão de revelar player se oculto (aparece acima do menu) */}
           <AnimatePresence>
-            {isOpen && isPlayerHidden && currentTrack && (
+            {isMenuOpen && isPlayerHidden && currentTrack && (
               <motion.button
                 initial={{ opacity: 0, scale: 0, y: 0 }}
                 animate={{ opacity: 1, scale: 1, y: -75 }}
@@ -138,7 +139,7 @@ export function CircularMenu() {
                 transition={{ type: "spring", stiffness: 350, damping: 25 }}
                 onClick={() => {
                   setPlayerHidden(false);
-                  setIsOpen(false);
+                  setMenuOpen(false);
                 }}
                 className="absolute w-12 h-12 rounded-full bg-surface/90 hover:bg-surface border border-primary/50 hover:border-primary text-primary flex items-center justify-center shadow-2xl transition-all hover:scale-110 active:scale-95 z-[5030] pointer-events-auto cursor-pointer"
                 title="Mostrar Player de Áudio"
@@ -155,13 +156,13 @@ export function CircularMenu() {
             whileTap={{ scale: 0.95 }}
             className={cn(
                "absolute rounded-full flex items-center justify-center transition-all duration-300 shadow-2xl z-[5020]",
-               isOpen 
-                ? "bg-surface/90 backdrop-blur-md text-text-high w-[70px] h-[70px] border border-white/5" 
-                : "bg-surface/30 backdrop-blur-lg border border-white/10 text-text-high w-[60px] h-[60px] hover:bg-surface/50"
+               isMenuOpen 
+                ? "bg-surface/90 backdrop-blur-md text-text-high w-[72px] h-[72px] border border-white/5" 
+                : "bg-surface/30 backdrop-blur-lg border border-white/10 text-text-high w-[64px] h-[64px] hover:bg-surface/50"
             )}
           >
             <AnimatePresence mode="wait">
-              {isOpen ? (
+              {isMenuOpen ? (
                 <motion.div
                   key="close"
                   initial={{ rotate: -90, opacity: 0 }}

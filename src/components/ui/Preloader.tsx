@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useStore } from '@/store/useStore';
 import { getLoreChapters, getAlbums, getAllTracks, getFeaturedTracksSettings } from '@/lib/apiCache';
+import { startPreloadingAlbumsFrames } from '@/lib/albumsFrameCache';
 
 const CRYPTIC_PHRASES = [
   "INICIANDO RITUAL DE CONEXÃO...",
@@ -22,16 +23,17 @@ export function Preloader() {
   const [progress, setProgress] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
   const [phraseIndex, setPhraseIndex] = useState(0);
-  const [loadedSteps, setLoadedSteps] = useState<{fonts: boolean, video: boolean, audio: boolean}>({
+  const [loadedSteps, setLoadedSteps] = useState<{fonts: boolean, video: boolean, audio: boolean, frames: boolean}>({
     fonts: false,
     video: false,
-    audio: false
+    audio: false,
+    frames: false
   });
   const theme = useStore((state) => state.theme);
 
   const videoUrl = THEME_VIDEOS[theme] || THEME_VIDEOS.abissal;
 
-  const loadedStepsRef = useRef({ fonts: false, video: false, audio: false });
+  const loadedStepsRef = useRef({ fonts: false, video: false, audio: false, frames: false });
 
   // Cycle cryptic text
   useEffect(() => {
@@ -51,7 +53,25 @@ export function Preloader() {
     getAllTracks().catch(() => {});
     getFeaturedTracksSettings().catch(() => {});
 
-    // 1. Preload and warm up active theme's video element natively
+    // 1. Pré-carregar os 165 frames da sequência de imagens da página de Álbuns na memória
+    startPreloadingAlbumsFrames((loaded, total) => {
+      if (active && loaded >= total * 0.85) {
+        setLoadedSteps(prev => ({ ...prev, frames: true }));
+        loadedStepsRef.current.frames = true;
+      }
+    }).then(() => {
+      if (active) {
+        setLoadedSteps(prev => ({ ...prev, frames: true }));
+        loadedStepsRef.current.frames = true;
+      }
+    }).catch(() => {
+      if (active) {
+        setLoadedSteps(prev => ({ ...prev, frames: true }));
+        loadedStepsRef.current.frames = true;
+      }
+    });
+
+    // 2. Preload and warm up active theme's video element natively
     const videoElement = document.createElement('video');
     videoElement.preload = "auto";
     videoElement.muted = true;
@@ -67,7 +87,7 @@ export function Preloader() {
     videoElement.src = videoUrl;
     videoElement.load();
 
-    // 2. Check and wait for active typography readiness
+    // 3. Check and wait for active typography readiness
     if (document.fonts) {
       document.fonts.ready.then(() => {
         if (active) {
@@ -80,7 +100,7 @@ export function Preloader() {
       loadedStepsRef.current.fonts = true;
     }
 
-    // 3. Check/Initialize synthetic audio compatibility
+    // 4. Check/Initialize synthetic audio compatibility
     setTimeout(() => {
       if (active) {
         setLoadedSteps(prev => ({ ...prev, audio: true }));
@@ -94,11 +114,12 @@ export function Preloader() {
       if (!active) return;
 
       const currentSteps = loadedStepsRef.current;
-      const allLoaded = currentSteps.fonts && currentSteps.video && currentSteps.audio;
+      const allLoaded = currentSteps.fonts && currentSteps.video && currentSteps.audio && currentSteps.frames;
       const targetMax = 
-        (currentSteps.fonts ? 40 : 25) + 
-        (currentSteps.video ? 35 : 20) + 
-        (currentSteps.audio ? 25 : 15);
+        (currentSteps.fonts ? 25 : 15) + 
+        (currentSteps.video ? 25 : 15) + 
+        (currentSteps.audio ? 20 : 10) +
+        (currentSteps.frames ? 30 : 15);
 
       if (allLoaded) {
         // Boost progression rate if all hardware resources are buffered and validated
@@ -153,26 +174,6 @@ export function Preloader() {
           console.error("[Kyvra Preloader] Error updating store with video URLs:", stateErr);
         }
       }
-
-      // 4. Lazy double-buffering: Silent load non-active themes' videos after 1.5s delay
-      setTimeout(() => {
-        keys.forEach(k => {
-          if (k !== theme) {
-            const v = document.createElement('video');
-            v.preload = "auto";
-            v.muted = true;
-            v.playsInline = true;
-            v.src = THEME_VIDEOS[k];
-            v.load();
-            
-            // Safeguard from garbage collection to ensure steady network caching
-            if (!(window as any).__kyvra_background_videos) {
-              (window as any).__kyvra_background_videos = [];
-            }
-            (window as any).__kyvra_background_videos.push(v);
-          }
-        });
-      }, 1500);
     };
 
     startPreload();
@@ -269,6 +270,10 @@ export function Preloader() {
               <div className="flex items-center gap-2 transition-opacity duration-300">
                 <span className={`w-1.5 h-1.5 rounded-full ${loadedSteps.video ? 'bg-primary shadow-[0_0_8px_var(--primary)] animate-pulse' : 'bg-white/10'}`} />
                 <span className={loadedSteps.video ? 'text-white/70' : 'text-white/20'}>HARMONIA DE VÍDEO CONECTADA ({theme.toUpperCase()})</span>
+              </div>
+              <div className="flex items-center gap-2 transition-opacity duration-300">
+                <span className={`w-1.5 h-1.5 rounded-full ${loadedSteps.frames ? 'bg-primary shadow-[0_0_8px_var(--primary)] animate-pulse' : 'bg-white/10'}`} />
+                <span className={loadedSteps.frames ? 'text-white/70' : 'text-white/20'}>CRÔNICA VISUAL DAS RELÍQUIAS SINCRONIZADA</span>
               </div>
               <div className="flex items-center gap-2 transition-opacity duration-300">
                 <span className={`w-1.5 h-1.5 rounded-full ${loadedSteps.audio ? 'bg-primary shadow-[0_0_8px_var(--primary)] animate-pulse' : 'bg-white/10'}`} />

@@ -20,7 +20,6 @@ import { cn } from "@/lib/utils";
 import { useStore } from "@/store/useStore";
 import { registerAudioElement, useAudioAnalyser } from "@/hooks/useAudioAnalyser";
 import { FrequencyVisualizer } from "@/components/ui/FrequencyVisualizer";
-import { LiquidChrome } from "@/components/ui/LiquidChrome";
 import { KyvraAudio, isNativeAudioAvailable } from "@/lib/nativeAudio";
 
 const formatTime = (seconds: number = 0) => {
@@ -637,9 +636,6 @@ export function MiniPlayer() {
                 }}
                 layout
               >
-                {/* Background Liquid Chrome WebGL */}
-                <LiquidChrome className="absolute inset-0 z-0 opacity-30 pointer-events-none" isPlaying={isPlaying} />
-
                 <AnimatePresence mode="popLayout">
                   {isActive ? (
                     <motion.div
