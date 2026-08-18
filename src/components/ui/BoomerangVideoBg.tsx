@@ -50,8 +50,9 @@ export function BoomerangVideoBg({
       if (video.currentTime !== lastTime) {
         lastTime = video.currentTime;
 
-        // Calcular tamanho proporcional com largura máxima de 960px
-        const maxW = 960;
+        // Calcular tamanho proporcional econômico (max 540px) para economizar 75% de VRAM em low-end devices
+        const isMobile = window.innerWidth < 768;
+        const maxW = isMobile ? 420 : 540;
         let targetW = videoW;
         let targetH = videoH;
 
@@ -61,18 +62,20 @@ export function BoomerangVideoBg({
           targetH = Math.round(videoH * ratio);
         }
 
-        // Criar canvas offscreen para guardar o frame
-        const offscreen = document.createElement('canvas');
-        offscreen.width = targetW;
-        offscreen.height = targetH;
-        const ctx = offscreen.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(video, 0, 0, targetW, targetH);
-          framesRef.current.push(offscreen);
+        // Criar canvas offscreen para guardar o frame (limite máximo de 45 frames para preservar RAM)
+        if (framesRef.current.length < 45) {
+          const offscreen = document.createElement('canvas');
+          offscreen.width = targetW;
+          offscreen.height = targetH;
+          const ctx = offscreen.getContext('2d', { alpha: false });
+          if (ctx) {
+            ctx.drawImage(video, 0, 0, targetW, targetH);
+            framesRef.current.push(offscreen);
 
-          // Atualizar progresso visual aproximado baseado na duração
-          if (video.duration) {
-            setLoadingProgress(Math.min(100, Math.round((video.currentTime / video.duration) * 100)));
+            // Atualizar progresso visual aproximado baseado na duração
+            if (video.duration) {
+              setLoadingProgress(Math.min(100, Math.round((video.currentTime / video.duration) * 100)));
+            }
           }
         }
       }
@@ -137,8 +140,26 @@ export function BoomerangVideoBg({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) return;
+
+    let isVisible = true;
+    let isTabActive = true;
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        isVisible = e.isIntersecting;
+      });
+    }, { threshold: 0.01 });
+
+    if (canvas.parentElement) {
+      observer.observe(canvas.parentElement);
+    }
+
+    const handleVisibility = () => {
+      isTabActive = !document.hidden;
+    };
+    document.addEventListener('visibilitychange', handleVisibility, { passive: true });
 
     let animationFrameId: number;
     let currentFrameIndex = 0;
@@ -146,18 +167,21 @@ export function BoomerangVideoBg({
     let lastTimestamp = 0;
     const fpsInterval = 1000 / 30; // 30fps em ms
 
-    // Redimensionar canvas de acordo com o tamanho do elemento pai e pixels do dispositivo
+    // Redimensionar canvas de acordo com o tamanho do elemento pai e DPR com clamp seguro
     const resizeCanvas = () => {
       if (!canvas || !canvas.parentElement) return;
-      canvas.width = canvas.parentElement.clientWidth * window.devicePixelRatio;
-      canvas.height = canvas.parentElement.clientHeight * window.devicePixelRatio;
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.25);
+      canvas.width = Math.floor(canvas.parentElement.clientWidth * dpr);
+      canvas.height = Math.floor(canvas.parentElement.clientHeight * dpr);
     };
 
     resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('resize', resizeCanvas, { passive: true });
 
     const playLoop = (timestamp: number) => {
       animationFrameId = requestAnimationFrame(playLoop);
+
+      if (!isVisible || !isTabActive) return;
 
       const elapsed = timestamp - lastTimestamp;
       if (elapsed >= fpsInterval) {
@@ -165,8 +189,6 @@ export function BoomerangVideoBg({
 
         const frame = framesRef.current[currentFrameIndex];
         if (frame && canvas) {
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          
           // Desenhar o frame cobrindo todo o canvas (object-fit: cover via 2D)
           const canvasW = canvas.width;
           const canvasH = canvas.height;
@@ -203,6 +225,8 @@ export function BoomerangVideoBg({
     return () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', resizeCanvas);
+      observer.disconnect();
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [isPlayingCanvas]);
 

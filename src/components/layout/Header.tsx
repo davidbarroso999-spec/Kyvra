@@ -46,16 +46,24 @@ export function Header() {
   useEffect(() => {
     let prevScrolled = window.scrollY > 80;
     setIsScrolled(prevScrolled);
+    let rafId: number | null = null;
     
     const handleScroll = () => {
-      const currentScrolled = window.scrollY > 80;
-      if (currentScrolled !== prevScrolled) {
-        setIsScrolled(currentScrolled);
-        prevScrolled = currentScrolled;
-      }
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        const currentScrolled = window.scrollY > 80;
+        if (currentScrolled !== prevScrolled) {
+          setIsScrolled(currentScrolled);
+          prevScrolled = currentScrolled;
+        }
+        rafId = null;
+      });
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   return (

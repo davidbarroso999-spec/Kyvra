@@ -208,11 +208,18 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
   glow = true
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   // Usamos fftSize 256 por padrão para maior densidade de resposta e performance estelar
   const { analyser, audioElement } = useAudioAnalyser({ fftSize: 256 });
   const themeColorRef = useRef<string>('#a78bfa'); // Cor primária de Kyvra
   const animationRef = useRef<number>(0);
   const smoothedHeights = useRef<number[]>([]);
+  
+  // Buffers estáticos reutilizáveis (Zero alocações no loop de 60fps)
+  const cachedUint8ArrayRef = useRef<Uint8Array | null>(null);
+  const cachedFloat32ArrayRef = useRef<Float32Array>(new Float32Array(52));
+  const isVisibleRef = useRef<boolean>(true);
+  const isTabActiveRef = useRef<boolean>(true);
 
   // Monitora as classes do documento para obter dinamicamente a cor de acento de cada tema (--primary)
   useEffect(() => {
@@ -238,7 +245,22 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
+
+    // Viewport Culling & Visibility Management
+    const observerIntersection = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        isVisibleRef.current = entry.isIntersecting;
+      });
+    }, { threshold: 0.01 });
+
+    observerIntersection.observe(container);
+
+    const handleVisibilityChange = () => {
+      isTabActiveRef.current = !document.hidden;
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange, { passive: true });
 
     // Tentamos usar o WebGL para renderização de alta fidelidade via GPU
     let gl: WebGLRenderingContext | null = null;
@@ -256,8 +278,8 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
     let uGlowEnabledLoc: WebGLUniformLocation | null = null;
 
     try {
-      gl = (canvas.getContext('webgl', { alpha: true, antialias: true, premultipliedAlpha: false }) ||
-            canvas.getContext('experimental-webgl', { alpha: true, antialias: true, premultipliedAlpha: false })) as WebGLRenderingContext;
+      gl = (canvas.getContext('webgl', { alpha: true, antialias: false, powerPreference: 'low-power', premultipliedAlpha: false }) ||
+            canvas.getContext('experimental-webgl', { alpha: true, antialias: false, premultipliedAlpha: false })) as WebGLRenderingContext;
       
       if (gl) {
         // 1. Compilar Vertex Shader
@@ -343,9 +365,11 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
     }
 
     let resizeObserver: ResizeObserver | null = null;
-
     let isUnmounted = false;
     let resizeFrameId: number | null = null;
+
+    // DPR Clamping: Max 1.25x para evitar gargalo de fillrate em GPUs móveis de entrada
+    const getClampedDPR = () => Math.min(window.devicePixelRatio || 1, 1.25);
 
     const handleResize = (entries: ResizeObserverEntry[]) => {
       if (!entries || entries.length === 0) return;
@@ -356,11 +380,12 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
       }
       
       resizeFrameId = requestAnimationFrame(() => {
-        if (isUnmounted) return;
-        canvas.width = width * window.devicePixelRatio;
-        canvas.height = height * window.devicePixelRatio;
+        if (isUnmounted || !canvas) return;
+        const dpr = getClampedDPR();
+        canvas.width = Math.floor(width * dpr);
+        canvas.height = Math.floor(height * dpr);
         if (!isWebGL && fallbackCtx) {
-          fallbackCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+          fallbackCtx.scale(dpr, dpr);
         }
       });
     };
@@ -369,37 +394,42 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
       resizeObserver = new ResizeObserver(handleResize);
       resizeObserver.observe(canvas.parentElement);
       
-      canvas.width = canvas.parentElement.clientWidth * window.devicePixelRatio;
-      canvas.height = canvas.parentElement.clientHeight * window.devicePixelRatio;
+      const dpr = getClampedDPR();
+      canvas.width = Math.floor(canvas.parentElement.clientWidth * dpr);
+      canvas.height = Math.floor(canvas.parentElement.clientHeight * dpr);
       if (!isWebGL && fallbackCtx) {
-        fallbackCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        fallbackCtx.scale(dpr, dpr);
       }
+    }
+
+    const visualBins = 52;
+    if (smoothedHeights.current.length !== visualBins) {
+      smoothedHeights.current = new Array(visualBins).fill(0.02);
     }
 
     const draw = () => {
       if (isUnmounted) return;
       animationRef.current = requestAnimationFrame(draw);
 
-      const width = canvas.width / window.devicePixelRatio;
-      const height = canvas.height / window.devicePixelRatio;
+      // Culling quando fora de visão ou aba inativa
+      if (!isVisibleRef.current || !isTabActiveRef.current) return;
+
+      const dpr = getClampedDPR();
+      const width = canvas.width / dpr;
+      const height = canvas.height / dpr;
 
       const isPlaying = audioElement && !audioElement.paused;
       const time = Date.now() * 0.002;
-
-      // Definir quantidade de barras e canais de frequência
-      const visualBins = 52;
-      
-      // Inicializar array de alturas suavizadas se necessário
-      if (smoothedHeights.current.length !== visualBins) {
-        smoothedHeights.current = new Array(visualBins).fill(0.02);
-      }
 
       let bassIntensity = 0;
 
       // 1. LEITURA DOS DADOS EM TEMPO REAL OU FALLBACK SUTIL
       if (analyser && isPlaying) {
         const bufferLength = analyser.frequencyBinCount;
-        const dataArray = new Uint8Array(bufferLength);
+        if (!cachedUint8ArrayRef.current || cachedUint8ArrayRef.current.length !== bufferLength) {
+          cachedUint8ArrayRef.current = new Uint8Array(bufferLength);
+        }
+        const dataArray = cachedUint8ArrayRef.current;
         analyser.getByteFrequencyData(dataArray);
 
         // Extrai a energia dos graves para modular a pulsação do glow de fundo
@@ -419,7 +449,7 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
           smoothedHeights.current[i] += (targetPercent - smoothedHeights.current[i]) * 0.28;
         }
       } else {
-        // Fallback: Respiração cósmica calma e poética quando em repouso
+        // Fallback: Respiração calma quando em repouso
         bassIntensity = (Math.sin(time * 0.5) * 0.5 + 0.5) * 0.15;
         
         for (let i = 0; i < visualBins; i++) {
@@ -447,18 +477,24 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
         if (program) {
           gl.useProgram(program);
           
+          // Reutiliza o Float32Array estático para evitar Garbage Collector stutter
+          const floatBuf = cachedFloat32ArrayRef.current;
+          for (let i = 0; i < visualBins; i++) {
+            floatBuf[i] = smoothedHeights.current[i];
+          }
+
           // Enviar Uniforms para a GPU
           gl.uniform2f(uResolutionLoc, canvas.width, canvas.height);
           gl.uniform3f(uColorLoc, rgb[0], rgb[1], rgb[2]);
           gl.uniform1f(uTimeLoc, time);
           gl.uniform1f(uBassIntensityLoc, bassIntensity);
-          gl.uniform1fv(uFrequenciesLoc, new Float32Array(smoothedHeights.current));
+          gl.uniform1fv(uFrequenciesLoc, floatBuf);
           gl.uniform1f(uGlowEnabledLoc, glow ? 1.0 : 0.0);
 
           gl.drawArrays(gl.TRIANGLES, 0, 6);
         }
       } else if (fallbackCtx) {
-        // 2B. RENDER FALLBACK EM CANVAS 2D (caso WebGL falhe ou não seja suportado)
+        // 2B. RENDER FALLBACK EM CANVAS 2D
         fallbackCtx.clearRect(0, 0, width, height);
 
         // Glow radial pulsante de fundo
@@ -534,6 +570,8 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
       if (resizeObserver) {
         resizeObserver.disconnect();
       }
+      observerIntersection.disconnect();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       
       // Limpeza de recursos WebGL para evitar vazamento de memória de GPU
       if (isWebGL && gl) {
@@ -550,6 +588,7 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
   return (
     <div 
       id="audio-visualizer" 
+      ref={containerRef}
       className={`relative w-full h-full overflow-hidden ${className}`}
       style={{ transform: 'translateZ(0)' }}
     >

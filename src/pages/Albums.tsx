@@ -11,7 +11,7 @@ import { AlbumsFirstFrameHero } from '@/components/ui/AlbumsFirstFrameHero';
 import { CinematicAtmosphere } from '@/components/ui/CinematicAtmosphere';
 import { ScrollProgressBar } from '@/components/ui/ScrollProgressBar';
 import { useScrollProgress } from '@/hooks/useScrollProgress';
-import { cn } from '@/lib/utils';
+import { cn, getOptimizedImageUrl } from '@/lib/utils';
 
 const ALBUM_ORDER = [
   "sob a última luz",
@@ -57,7 +57,7 @@ export function Albums() {
           id: a.id,
           title: a.title,
           year: a.release_year,
-          coverUrl: a.cover_url,
+          coverUrl: getOptimizedImageUrl(a.cover_url, 600, 75),
           description: a.description,
           tracks: a.tracks?.[0]?.count || 0
         }));
@@ -80,7 +80,7 @@ export function Albums() {
   }, []);
 
   return (
-    <div ref={containerRef} className="relative w-full h-screen overflow-hidden bg-void text-white font-helvetica select-none">
+    <div ref={containerRef} className="relative w-full h-screen overflow-hidden bg-void text-white font-helvetica select-none touch-none">
       <div className="absolute inset-0 w-full h-full">
         {/* 1. Background: Scroll-scrubbed Image Sequence */}
         <AlbumsSceneSequence progress={progress} onFrameChange={handleFrameChange} />

@@ -5,6 +5,8 @@ export const FRAME_BASE_URL =
 
 export function frameUrl(index: number): string {
   const padded = String(index + 1).padStart(3, '0');
+  // Revertido para o GitHub Raw direto (Fastly). 
+  // O wsrv.nl estava estrangulando as conexões ao receber 165 requests simultâneos.
   return `${FRAME_BASE_URL}${padded}.jpg`;
 }
 

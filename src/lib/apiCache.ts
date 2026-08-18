@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { parseChapterNumber } from './utils';
+import { parseChapterNumber, getOptimizedImageUrl } from './utils';
 
 const cache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 1000 * 60 * 15; // 15 minutos
@@ -140,7 +140,7 @@ export async function getFeaturedFragmentData() {
         artist: track.artist || 'Kyvra',
         vibe: track.vibe || 'Intuitivo',
         duration: track.duration || '0:00',
-        coverUrl: track.albums?.cover_url || '',
+        coverUrl: getOptimizedImageUrl(track.albums?.cover_url || '', 800, 75),
         audioUrl: track.audio_url,
         narrativeNote: 'Esta é a recomendação periódica do abismo, um fragmento selecionado por forças além da nossa compreensão. A cada ciclo de 10 dias, os ventos cósmicos trazem uma nova vibração à tona.',
         loreConnection: 'Essa recomendação abre portas para reinterpretar os símbolos perdidos da cosmogonia de Kyvra.',

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { MotionValue } from 'motion/react';
 import {
   FRAME_COUNT,
   getAlbumsImageElement,
@@ -9,14 +10,14 @@ import {
 } from '@/lib/albumsFrameCache';
 
 interface AlbumsSceneSequenceProps {
-  progress: number;
+  progress: MotionValue<number>;
   onFrameChange?: (currentFrame: number, maxFrame: number) => void;
 }
 
 export function AlbumsSceneSequence({ progress, onFrameChange }: AlbumsSceneSequenceProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const lastDrawnIndex = useRef<number>(-1);
-
   const [loadedCount, setLoadedCount] = useState<number>(getAlbumsFramesLoadedCount);
   const [isFullyLoaded, setIsFullyLoaded] = useState<boolean>(isAlbumsFramesComplete);
 
@@ -31,8 +32,10 @@ export function AlbumsSceneSequence({ progress, onFrameChange }: AlbumsSceneSequ
     const dpr = isMobile ? 1.0 : Math.min(window.devicePixelRatio || 1, 1.5);
     const clientW = canvas.clientWidth || window.innerWidth;
     const clientH = canvas.clientHeight || window.innerHeight;
+
     const w = Math.round(clientW * dpr);
     const h = Math.round(clientH * dpr);
+
     if (w === 0 || h === 0) return;
 
     if (canvas.width !== w || canvas.height !== h) {
@@ -45,7 +48,9 @@ export function AlbumsSceneSequence({ progress, onFrameChange }: AlbumsSceneSequ
 
     const imgRatio = img.naturalWidth / img.naturalHeight;
     const canvasRatio = w / h;
+
     let drawW = w, drawH = h, offX = 0, offY = 0;
+
     if (imgRatio > canvasRatio) {
       drawH = h;
       drawW = h * imgRatio;
@@ -63,6 +68,7 @@ export function AlbumsSceneSequence({ progress, onFrameChange }: AlbumsSceneSequ
   const getBestAvailableImage = (index: number): HTMLImageElement | null => {
     let img = getAlbumsImageElement(index);
     if (img && img.complete && img.naturalWidth > 0) return img;
+
     for (let offset = 1; offset < FRAME_COUNT; offset++) {
       const prev = getAlbumsImageElement(index - offset);
       if (prev && prev.complete && prev.naturalWidth > 0) return prev;
@@ -87,7 +93,6 @@ export function AlbumsSceneSequence({ progress, onFrameChange }: AlbumsSceneSequ
     const unsubscribe = subscribeToAlbumsFrames((loaded, _total, complete) => {
       setLoadedCount(loaded);
       setIsFullyLoaded(complete);
-
       const idx = lastDrawnIndex.current >= 0 ? lastDrawnIndex.current : 0;
       const currentImg = getBestAvailableImage(idx);
       if (currentImg && currentImg.complete && currentImg.naturalWidth > 0) {
@@ -98,22 +103,27 @@ export function AlbumsSceneSequence({ progress, onFrameChange }: AlbumsSceneSequ
     return unsubscribe;
   }, []);
 
-  // Desenha DIRETAMENTE o frame correspondente ao progresso real —
-  // sem motor de "correr atrás". É isso que garante resposta 1:1 ao
-  // scroll do usuário, em qualquer velocidade, nos dois sentidos.
   useEffect(() => {
-    const targetIndex = Math.min(
-      FRAME_COUNT - 1,
-      Math.max(0, Math.round(progress * (FRAME_COUNT - 1)))
-    );
+    return progress.on('change', (v) => {
+      const targetIndex = Math.min(
+        FRAME_COUNT - 1,
+        Math.max(0, Math.round(v * (FRAME_COUNT - 1)))
+      );
+      
+      onFrameChange?.(targetIndex, FRAME_COUNT - 1);
+      
+      // Update zoom directly on DOM node to bypass React re-renders
+      if (containerRef.current) {
+         const zoom = 1.0 + 0.05 * v;
+         containerRef.current.style.transform = `scale(${zoom})`;
+      }
 
-    onFrameChange?.(targetIndex, FRAME_COUNT - 1);
-
-    if (targetIndex === lastDrawnIndex.current) return;
-    lastDrawnIndex.current = targetIndex;
-
-    const img = getBestAvailableImage(targetIndex);
-    if (img) drawFrame(img);
+      if (targetIndex === lastDrawnIndex.current) return;
+      
+      lastDrawnIndex.current = targetIndex;
+      const img = getBestAvailableImage(targetIndex);
+      if (img) drawFrame(img);
+    });
   }, [progress, onFrameChange]);
 
   useEffect(() => {
@@ -125,23 +135,25 @@ export function AlbumsSceneSequence({ progress, onFrameChange }: AlbumsSceneSequ
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  const zoom = 1.0 + 0.05 * progress;
-
   return (
     <div className="absolute inset-0 z-0 bg-void overflow-hidden">
-      <canvas
-        ref={canvasRef}
+      <div 
+        ref={containerRef}
         className="absolute inset-0 w-full h-full"
-        style={{
-          transform: `scale(${zoom})`,
-          transformOrigin: 'center center',
-          filter: 'contrast(1.08) saturate(1.12) brightness(0.97)',
-          willChange: 'transform',
-        }}
-      />
+        style={{ transformOrigin: 'center center', willChange: 'transform' }}
+      >
+        <canvas
+          ref={canvasRef}
+          className="absolute inset-0 w-full h-full"
+          style={{
+            filter: 'contrast(1.08) saturate(1.12) brightness(0.97)',
+          }}
+        />
+      </div>
       <div className="absolute inset-0 pointer-events-none mix-blend-color opacity-70 z-[1]" style={{ background: 'var(--primary)' }} />
       <div className="absolute inset-0 bg-gradient-to-t from-void via-void/40 to-void/70 pointer-events-none z-[2]" />
       <div className="absolute inset-0 bg-radial-gradient from-transparent via-void/45 to-void pointer-events-none z-[2]" />
+      
       {!isFullyLoaded && loadedCount === 0 && (
         <div className="absolute inset-0 z-30 flex items-center justify-center bg-void transition-opacity duration-500">
           <div className="flex flex-col items-center gap-3 w-48">

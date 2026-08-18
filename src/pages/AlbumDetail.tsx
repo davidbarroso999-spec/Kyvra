@@ -5,7 +5,7 @@ import { Play, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { getAlbumWithTracks } from '@/lib/apiCache';
 import { TrackDuration } from '@/components/ui/TrackDuration';
-import { saveForOffline, cn, copyToClipboard } from '@/lib/utils';
+import { saveForOffline, cn, copyToClipboard, getOptimizedImageUrl } from '@/lib/utils';
 import { KyvraButton } from '@/components/ui/KyvraButton';
 
 import { generateTrackShareText } from '@/lib/share';
@@ -29,9 +29,16 @@ export function AlbumDetail() {
   };
 
   useEffect(() => {
-    const closeMenu = () => setOpenMenuId(null);
-    window.addEventListener('scroll', closeMenu);
-    return () => window.removeEventListener('scroll', closeMenu);
+    let rafId: number;
+    const closeMenu = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => setOpenMenuId(null));
+    };
+    window.addEventListener('scroll', closeMenu, { passive: true });
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener('scroll', closeMenu);
+    };
   }, []);
 
   useEffect(() => {
@@ -49,14 +56,14 @@ export function AlbumDetail() {
           title: data.title,
           artist: 'Kyvra',
           year: data.release_year,
-          coverUrl: data.cover_url,
+          coverUrl: getOptimizedImageUrl(data.cover_url, 600, 75),
           description: data.description,
           tracks: sortedTracks.map((t: any) => ({
             id: t.id,
             title: t.title,
             duration: t.duration || '0:00',
             audioUrl: t.audio_url,
-            coverUrl: data.cover_url,
+            coverUrl: getOptimizedImageUrl(data.cover_url, 600, 75),
             albumTitle: data.title,
             vibe: t.vibe || 'Introspectivo',
             lyrics: t.lyrics,

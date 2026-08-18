@@ -1,13 +1,25 @@
-import { motion } from 'motion/react';
+import { motion, MotionValue, useTransform } from 'motion/react';
 import { cn } from '@/lib/utils';
+import { useEffect, useState } from 'react';
 
 interface ScrollProgressBarProps {
-  progress: number;
+  progress: MotionValue<number>;
 }
 
 export function ScrollProgressBar({ progress }: ScrollProgressBarProps) {
   // Esconde o indicador suavemente se já tiver chegado ao final
-  const isComplete = progress > 0.98;
+  const [isComplete, setIsComplete] = useState(false);
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    return progress.on('change', (v) => {
+      setIsComplete(v > 0.98);
+      setDisplayValue(Math.round(v * 100));
+    });
+  }, [progress]);
+
+  const height = useTransform(progress, [0, 1], ['0%', '100%']);
+  const top = useTransform(progress, [0, 1], ['0%', '100%']);
 
   return (
     <div 
@@ -19,7 +31,7 @@ export function ScrollProgressBar({ progress }: ScrollProgressBarProps) {
       <motion.div 
         className="w-full bg-primary relative rounded-full"
         style={{ 
-          height: `${progress * 100}%`,
+          height,
           boxShadow: '0 0 15px var(--primary), 0 0 30px var(--primary)'
         }}
       >
@@ -30,9 +42,9 @@ export function ScrollProgressBar({ progress }: ScrollProgressBarProps) {
       {/* Label flutuante do lado da fagulha */}
       <motion.div 
         className="absolute left-4 sm:left-6 font-mono text-[9px] sm:text-[10px] text-white/70 tracking-[0.3em] uppercase flex flex-col items-start whitespace-nowrap"
-        style={{ top: `${progress * 100}%`, y: '-50%' }}
+        style={{ top, y: '-50%' }}
       >
-        <span className="text-primary font-bold drop-shadow-[0_0_8px_var(--primary)]">{Math.round(progress * 100)}%</span>
+        <span className="text-primary font-bold drop-shadow-[0_0_8px_var(--primary)]">{displayValue}%</span>
         <span className="text-[7px] sm:text-[8px] opacity-50 mt-0.5">Sincronizando</span>
       </motion.div>
     </div>

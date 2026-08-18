@@ -5,6 +5,15 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Encaminha URLs de imagens (como capas do Supabase) para o CDN WSRV
+ * Acelera drasticamente o carregamento usando formato WebP e re-escala sob demanda.
+ */
+export function getOptimizedImageUrl(url: string, width: number = 800, quality: number = 75): string {
+  // Rollback do CDN WSRV temporariamente para contornar rate-limits
+  return url;
+}
+
 export async function copyToClipboard(text: string): Promise<boolean> {
   // Try modern Clipboard API first
   try {

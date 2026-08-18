@@ -221,10 +221,10 @@ export const LiquidChrome = memo(function LiquidChrome({
     setUniforms();
     resize();
 
-    window.addEventListener('resize', resize);
+    window.addEventListener('resize', resize, { passive: true });
     if (opts.interactive) {
-      container.addEventListener('mousemove', onMouseMove);
-      container.addEventListener('touchmove', onTouchMove);
+      container.addEventListener('mousemove', onMouseMove, { passive: true });
+      container.addEventListener('touchmove', onTouchMove, { passive: true });
     }
 
     // Controle de FPS (Framerate throttling) com acumulação de tempo para tocar/pausar:

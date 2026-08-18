@@ -17,8 +17,13 @@ export function useVirtualization<T>(
   const [viewportHeight, setViewportHeight] = useState(typeof window !== 'undefined' ? window.innerHeight : 800);
 
   useEffect(() => {
+    let rafId: number | null = null;
     const handleScroll = () => {
-      setScrollTop(window.scrollY);
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        setScrollTop(window.scrollY);
+        rafId = null;
+      });
     };
 
     const handleResize = () => {

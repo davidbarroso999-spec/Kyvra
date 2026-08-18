@@ -4,7 +4,7 @@ import { getFeaturedTracksSettings, getTracksByIds, getTrackSynopses } from '@/l
 import { useStore } from '@/store/useStore';
 import { FeaturedSlider } from '@/components/ui/FeaturedSlider';
 import { LampContainer } from '@/components/ui/lamp';
-import { cn } from '@/lib/utils';
+import { cn, getOptimizedImageUrl } from '@/lib/utils';
 import { useIdleCallback, useGPUAcceleration } from '@/modules/performance-optimization';
 
 import { FeaturedFragmentSection } from '@/components/ui/FeaturedFragmentSection';
@@ -286,7 +286,7 @@ export function Home() {
               artist: track.artist || 'Kyvra',
               vibe: track.vibe || 'Introspectivo',
               duration: track.duration || '0:00',
-              coverUrl: track.albums?.cover_url || '',
+              coverUrl: getOptimizedImageUrl(track.albums?.cover_url || '', 400, 75),
               audioUrl: track.audio_url,
               albumTitle: track.albums?.title || '',
               lyrics: track.lyrics,

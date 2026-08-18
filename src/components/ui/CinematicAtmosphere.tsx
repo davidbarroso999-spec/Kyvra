@@ -1,24 +1,41 @@
 import React, { useEffect, useRef } from 'react';
+import { MotionValue } from 'motion/react';
 
 interface CinematicAtmosphereProps {
-  progress: number;
+  progress: MotionValue<number>;
 }
 
 export function CinematicAtmosphere({ progress }: CinematicAtmosphereProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animFrameRef = useRef<number>(0);
   const isRunningRef = useRef<boolean>(false);
-
-  // Primeiro frame: visível de 0.0 até 0.16 (pico em 0.0)
-  const firstFrameWeight = Math.max(0, 1 - progress / 0.14);
-  // Último frame: visível de 0.88 até 1.0 (pico em 1.0)
-  const lastFrameWeight = Math.max(0, (progress - 0.88) / 0.12);
-
-  const isActive = firstFrameWeight > 0.01 || lastFrameWeight > 0.01;
+  const renderLoopRef = useRef<() => void>(() => {});
 
   // Refs de estado dinâmico para evitar recriação de listeners
-  const weightsRef = useRef({ first: firstFrameWeight, last: lastFrameWeight, active: isActive });
-  weightsRef.current = { first: firstFrameWeight, last: lastFrameWeight, active: isActive };
+  const weightsRef = useRef({ first: 0, last: 0, active: false });
+
+  useEffect(() => {
+    // Initial sync
+    const syncWeights = (v: number) => {
+      const firstFrameWeight = Math.max(0, 1 - v / 0.14);
+      const lastFrameWeight = Math.max(0, (v - 0.88) / 0.12);
+      const isActive = firstFrameWeight > 0.01 || lastFrameWeight > 0.01;
+      weightsRef.current = { first: firstFrameWeight, last: lastFrameWeight, active: isActive };
+      
+      if (isActive && !isRunningRef.current && canvasRef.current) {
+        isRunningRef.current = true;
+        canvasRef.current.style.opacity = "1";
+        if (renderLoopRef.current) {
+          animFrameRef.current = requestAnimationFrame(renderLoopRef.current);
+        }
+      } else if (!isActive && canvasRef.current) {
+        canvasRef.current.style.opacity = "0";
+      }
+    };
+    
+    syncWeights(progress.get());
+    return progress.on('change', syncWeights);
+  }, [progress]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -26,13 +43,15 @@ export function CinematicAtmosphere({ progress }: CinematicAtmosphereProps) {
     const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) return;
 
-    let width = (canvas.width = window.innerWidth);
-    let height = (canvas.height = window.innerHeight);
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.25);
+    let width = (canvas.width = Math.floor(window.innerWidth * dpr));
+    let height = (canvas.height = Math.floor(window.innerHeight * dpr));
 
     const handleResize = () => {
       if (!canvas) return;
-      width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
+      const currentDpr = Math.min(window.devicePixelRatio || 1, 1.25);
+      width = canvas.width = Math.floor(window.innerWidth * currentDpr);
+      height = canvas.height = Math.floor(window.innerHeight * currentDpr);
     };
     window.addEventListener('resize', handleResize, { passive: true });
 
@@ -51,9 +70,7 @@ export function CinematicAtmosphere({ progress }: CinematicAtmosphereProps) {
       life: number;
       type: 'fog' | 'ember' | 'dust';
     }
-
     const stormParticles: StormParticle[] = [];
-
     for (let i = 0; i < MAX_STORM_PARTICLES; i++) {
       stormParticles.push({
         x: Math.random() * width,
@@ -90,7 +107,6 @@ export function CinematicAtmosphere({ progress }: CinematicAtmosphereProps) {
       // 1. EFEITO DE TEMPESTADE: Relâmpagos e Névoa no Céu
       // =========================================================================
       const stormWeight = Math.max(first, last);
-
       if (stormWeight > 0.01) {
         lightningTimer--;
         if (lightningTimer <= 0) {
@@ -103,12 +119,10 @@ export function CinematicAtmosphere({ progress }: CinematicAtmosphereProps) {
           lightningFlashDuration--;
           const flicker = Math.sin(frameCount * 2.5) * 0.2 + 0.8;
           const currentFlash = lightningIntensity * flicker * stormWeight;
-
           const grad = ctx.createLinearGradient(0, 0, 0, height * 0.5);
           grad.addColorStop(0, `rgba(210, 225, 255, ${currentFlash * 0.5})`);
           grad.addColorStop(0.3, `rgba(180, 205, 255, ${currentFlash * 0.25})`);
           grad.addColorStop(1, 'rgba(180, 205, 255, 0)');
-
           ctx.fillStyle = grad;
           ctx.fillRect(0, 0, width, height * 0.5);
         }
@@ -117,7 +131,6 @@ export function CinematicAtmosphere({ progress }: CinematicAtmosphereProps) {
         const skyFogGrad = ctx.createLinearGradient(0, 0, 0, height * 0.4);
         skyFogGrad.addColorStop(0, `rgba(15, 23, 42, ${0.35 * stormWeight})`);
         skyFogGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-
         ctx.fillStyle = skyFogGrad;
         ctx.fillRect(0, 0, width, height * 0.4);
       }
@@ -130,7 +143,6 @@ export function CinematicAtmosphere({ progress }: CinematicAtmosphereProps) {
         const fogPulse = Math.sin(frameCount * 0.02) * 0.03 + 0.12;
         groundFog.addColorStop(0, 'rgba(0, 0, 0, 0)');
         groundFog.addColorStop(1, `rgba(10, 15, 30, ${fogPulse * first})`);
-
         ctx.fillStyle = groundFog;
         ctx.fillRect(0, height * 0.55, width, height * 0.45);
 
@@ -174,8 +186,10 @@ export function CinematicAtmosphere({ progress }: CinematicAtmosphereProps) {
       animFrameRef.current = requestAnimationFrame(render);
     };
 
-    // Inicia a animação apenas se ativo
-    if (isActive && !isRunningRef.current) {
+    renderLoopRef.current = render;
+
+    // Inicia a animação se os pesos estiverem ativos
+    if (weightsRef.current.active) {
       isRunningRef.current = true;
       animFrameRef.current = requestAnimationFrame(render);
     }
@@ -183,18 +197,19 @@ export function CinematicAtmosphere({ progress }: CinematicAtmosphereProps) {
     return () => {
       cancelAnimationFrame(animFrameRef.current);
       isRunningRef.current = false;
+      renderLoopRef.current = () => {};
       window.removeEventListener('resize', handleResize);
     };
-  }, [isActive]);
+  }, []);
 
   return (
     <canvas
       ref={canvasRef}
       className="absolute inset-0 w-full h-full pointer-events-none z-10"
       style={{
-        opacity: isActive ? 1 : 0,
         transition: 'opacity 0.3s ease-out',
         mixBlendMode: 'screen',
+        opacity: 0, // Inicia invisível
       }}
     />
   );

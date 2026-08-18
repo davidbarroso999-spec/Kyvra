@@ -21,7 +21,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
-import { cn, saveForOffline, copyToClipboard } from '@/lib/utils';
+import { cn, saveForOffline, copyToClipboard, getOptimizedImageUrl } from '@/lib/utils';
 import { getAllTracks } from '@/lib/apiCache';
 import { generateTrackShareText } from '@/lib/share';
 import { TrackDuration } from '@/components/ui/TrackDuration';
@@ -275,9 +275,16 @@ export function Archive() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   useEffect(() => {
-    const closeMenu = () => setOpenMenuId(null);
-    window.addEventListener('scroll', closeMenu);
-    return () => window.removeEventListener('scroll', closeMenu);
+    let rafId: number;
+    const closeMenu = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => setOpenMenuId(null));
+    };
+    window.addEventListener('scroll', closeMenu, { passive: true });
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener('scroll', closeMenu);
+    };
   }, []);
 
   const location = useLocation();
@@ -319,7 +326,7 @@ export function Archive() {
           artist: t.artist || 'Kyvra',
           vibe: t.vibe || '',
           duration: t.duration || '0:00',
-          coverUrl: t.albums?.cover_url || '',
+          coverUrl: getOptimizedImageUrl(t.albums?.cover_url || '', 400, 75),
           audioUrl: t.audio_url,
           albumTitle: t.albums?.title || '',
           lyrics: t.lyrics
