@@ -12,6 +12,7 @@ import { CookieBanner } from './components/ui/CookieBanner';
 import { PwaInstallPrompt } from './components/ui/PwaInstallPrompt';
 import { ShareSpinner } from './components/ui/ShareSpinner';
 import { ScrollToTop } from './components/layout/ScrollToTop';
+import { initSmoothScroll, destroySmoothScroll } from '@/lib/smoothScroll';
 
 // Lazy loading das páginas para melhorar a performance inicial
 const Home = React.lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
@@ -24,6 +25,14 @@ const Admin = React.lazy(() => import('./pages/Admin').then(m => ({ default: m.A
 export default function App() {
   const theme = useStore((state) => state.theme);
   const setTheme = useStore((state) => state.setTheme);
+
+  // Inicializa Lenis + GSAP ScrollTrigger para toda a aplicação
+  React.useEffect(() => {
+    initSmoothScroll();
+    return () => {
+      destroySmoothScroll();
+    };
+  }, []);
 
   React.useEffect(() => {
     const validThemes = ['abissal', 'sangue-de-drago', 'floresta-negra', 'monolito'];
