@@ -9,6 +9,7 @@ import { AlbumSlider } from '@/components/ui/AlbumSlider';
 import { AlbumsSceneSequence } from '@/components/ui/AlbumsSceneSequence';
 import { AlbumsFirstFrameHero } from '@/components/ui/AlbumsFirstFrameHero';
 import { CinematicAtmosphere } from '@/components/ui/CinematicAtmosphere';
+import { ScrollProgressBar } from '@/components/ui/ScrollProgressBar';
 import { useScrollProgress } from '@/hooks/useScrollProgress';
 import { cn } from '@/lib/utils';
 
@@ -24,9 +25,6 @@ const ALBUM_ORDER = [
 export function Albums() {
   const containerRef = useRef<HTMLDivElement>(null);
   const progress = useScrollProgress(containerRef);
-
-  // Scroll calibrado para a sequência de 165 frames
-  const pinnedHeight = '800vh';
 
   // Aciona a aparição do menu ao atingir o final do scroll
   const [reachedFinalFrame, setReachedFinalFrame] = useState(false);
@@ -44,26 +42,6 @@ export function Albums() {
   
   // Estado de controle de visualização dos álbuns
   const [viewingAlbums, setViewingAlbums] = useState(false);
-
-  // Scroll via Keyboard (Arrows)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
-      
-      const SCROLL_AMOUNT = window.innerHeight * 0.4;
-
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        window.scrollBy({ top: SCROLL_AMOUNT, behavior: 'smooth' });
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        window.scrollBy({ top: -SCROLL_AMOUNT, behavior: 'smooth' });
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown, { passive: false });
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
 
   // Carregar os álbuns reais de Kyvra
   useEffect(() => {
@@ -102,8 +80,8 @@ export function Albums() {
   }, []);
 
   return (
-    <div ref={containerRef} className="relative w-full bg-void text-white font-helvetica select-none" style={{ height: pinnedHeight }}>
-      <div className="sticky top-0 h-screen w-full overflow-hidden">
+    <div ref={containerRef} className="relative w-full h-screen overflow-hidden bg-void text-white font-helvetica select-none">
+      <div className="absolute inset-0 w-full h-full">
         {/* 1. Background: Scroll-scrubbed Image Sequence */}
         <AlbumsSceneSequence progress={progress} onFrameChange={handleFrameChange} />
 
@@ -112,6 +90,9 @@ export function Albums() {
 
         {/* 3. Primeiro Frame Minimalista & Indutor de Scroll */}
         <AlbumsFirstFrameHero progress={progress} />
+
+        {/* 3.5. Barra de Progresso Lateral (Incentivador) */}
+        <ScrollProgressBar progress={progress} />
 
         {/* 4. Menu & Conteúdo de Álbuns (layout e posições originais preservados) */}
         <AnimatePresence>

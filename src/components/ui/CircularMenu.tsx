@@ -50,7 +50,7 @@ export function CircularMenu() {
         <div className="relative w-0 h-0 flex justify-center items-center pointer-events-auto">
           
           {/* Sub-container responsivo para reduzir dimensões e evitar transbordos de SVG no mobile */}
-          <div className="absolute w-0 h-0 flex justify-center items-center scale-[0.68] sm:scale-100 origin-center pointer-events-none">
+          <div className="absolute w-0 h-0 flex justify-center items-center scale-[0.68] sm:scale-[0.80] lg:scale-[0.90] xl:scale-100 origin-center pointer-events-none">
             <AnimatePresence>
               {isMenuOpen && menuItems.map((item, index) => {
                 const R = item.size / 2; // Radius

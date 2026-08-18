@@ -67,7 +67,7 @@ export function AlbumsFirstFrameHero({ progress }: AlbumsFirstFrameHeroProps) {
           className="flex flex-col items-center gap-3"
         >
           <span className="font-mono text-[8px] sm:text-[9px] text-white/30 tracking-[0.4em] uppercase">
-            Scroll <span className="mx-2 opacity-50">ou</span> <span className="inline-flex gap-1 items-center -translate-y-px"><span className="border border-white/20 rounded px-1.5 py-0.5 leading-none">↓</span><span className="border border-white/20 rounded px-1.5 py-0.5 leading-none">↑</span></span>
+            Scroll
           </span>
 
           {/* Luxury Vertical Beacon Line */}

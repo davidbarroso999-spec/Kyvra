@@ -109,7 +109,7 @@ export function ThemeDock() {
     <aside
       aria-label="Seleção de Tema Visual"
       className={cn(
-        "fixed right-3.5 sm:right-6 top-1/2 sm:top-12 -translate-y-1/2 sm:translate-y-0 z-[6000] flex items-center select-none transition-all duration-500 ease-out",
+        "fixed right-3.5 sm:right-6 top-1/2 -translate-y-1/2 z-[6000] flex items-center select-none transition-all duration-500 ease-out",
         isMenuOpen ? "opacity-100 translate-x-0 pointer-events-auto" : "opacity-0 translate-x-8 pointer-events-none"
       )}
     >
