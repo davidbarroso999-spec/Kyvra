@@ -122,7 +122,11 @@ export function startPreloadingAlbumsFrames(
         }
       };
 
-      img.onload = handleDone;
+      img.onload = () => {
+        // Força o decode em thread paralela ANTES de liberar o frame pro Canvas
+        // Isso remove o engasgo no momento de fazer o scrub (onde o ctx.drawImage decodificaria bloqueando a main thread)
+        img.decode().then(handleDone).catch(handleDone);
+      };
       img.onerror = handleDone;
       img.src = frameUrl(i);
     };

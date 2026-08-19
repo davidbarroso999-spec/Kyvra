@@ -1,6 +1,6 @@
 import { motion, MotionValue, useTransform } from 'motion/react';
 import { cn } from '@/lib/utils';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 interface ScrollProgressBarProps {
   progress: MotionValue<number>;
@@ -9,12 +9,18 @@ interface ScrollProgressBarProps {
 export function ScrollProgressBar({ progress }: ScrollProgressBarProps) {
   // Esconde o indicador suavemente se já tiver chegado ao final
   const [isComplete, setIsComplete] = useState(false);
-  const [displayValue, setDisplayValue] = useState(0);
+  const textRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     return progress.on('change', (v) => {
-      setIsComplete(v > 0.98);
-      setDisplayValue(Math.round(v * 100));
+      setIsComplete(prev => {
+        const next = v > 0.98;
+        return prev !== next ? next : prev;
+      });
+      
+      if (textRef.current) {
+        textRef.current.innerText = `${Math.round(v * 100)}%`;
+      }
     });
   }, [progress]);
 
@@ -44,7 +50,7 @@ export function ScrollProgressBar({ progress }: ScrollProgressBarProps) {
         className="absolute left-4 sm:left-6 font-mono text-[9px] sm:text-[10px] text-white/70 tracking-[0.3em] uppercase flex flex-col items-start whitespace-nowrap"
         style={{ top, y: '-50%' }}
       >
-        <span className="text-primary font-bold drop-shadow-[0_0_8px_var(--primary)]">{displayValue}%</span>
+        <span ref={textRef} className="text-primary font-bold drop-shadow-[0_0_8px_var(--primary)]">0%</span>
         <span className="text-[7px] sm:text-[8px] opacity-50 mt-0.5">Sincronizando</span>
       </motion.div>
     </div>

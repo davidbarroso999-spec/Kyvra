@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { MotionValue } from 'motion/react';
 import {
   FRAME_COUNT,
@@ -20,22 +20,39 @@ export function AlbumsSceneSequence({ progress, onFrameChange }: AlbumsSceneSequ
   const lastDrawnIndex = useRef<number>(-1);
   const [loadedCount, setLoadedCount] = useState<number>(getAlbumsFramesLoadedCount);
   const [isFullyLoaded, setIsFullyLoaded] = useState<boolean>(isAlbumsFramesComplete);
+  const dimensionsRef = useRef({ w: 0, h: 0, dpr: 1, isMobile: false });
+
+  // Pré-calcula dimensões para evitar Layout Thrashing no loop do rAF
+  const updateDimensions = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const isMobile = window.innerWidth < 768;
+    const dpr = isMobile ? 1.0 : Math.min(window.devicePixelRatio || 1, 1.5);
+    const clientW = window.innerWidth;
+    const clientH = window.innerHeight;
+    
+    dimensionsRef.current = {
+      w: Math.round(clientW * dpr),
+      h: Math.round(clientH * dpr),
+      dpr,
+      isMobile
+    };
+  }, []);
 
   const drawFrame = (img: HTMLImageElement) => {
     if (!img || !img.complete || img.naturalWidth === 0) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
     if (!ctx) return;
 
-    const isMobile = window.innerWidth < 768;
-    const dpr = isMobile ? 1.0 : Math.min(window.devicePixelRatio || 1, 1.5);
-    const clientW = canvas.clientWidth || window.innerWidth;
-    const clientH = canvas.clientHeight || window.innerHeight;
+    // Se as dimensões ainda não foram calculadas, calcula agora
+    if (dimensionsRef.current.w === 0) {
+      updateDimensions();
+    }
 
-    const w = Math.round(clientW * dpr);
-    const h = Math.round(clientH * dpr);
-
+    const { w, h, isMobile } = dimensionsRef.current;
     if (w === 0 || h === 0) return;
 
     if (canvas.width !== w || canvas.height !== h) {
@@ -44,7 +61,9 @@ export function AlbumsSceneSequence({ progress, onFrameChange }: AlbumsSceneSequ
     }
 
     ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
+    if (!isMobile) {
+      ctx.imageSmoothingQuality = 'high';
+    }
 
     const imgRatio = img.naturalWidth / img.naturalHeight;
     const canvasRatio = w / h;
@@ -65,17 +84,29 @@ export function AlbumsSceneSequence({ progress, onFrameChange }: AlbumsSceneSequ
     ctx.drawImage(img, offX, offY, drawW, drawH);
   };
 
-  const getBestAvailableImage = (index: number): HTMLImageElement | null => {
-    let img = getAlbumsImageElement(index);
-    if (img && img.complete && img.naturalWidth > 0) return img;
+  const lastValidImageRef = useRef<HTMLImageElement | null>(null);
 
-    for (let offset = 1; offset < FRAME_COUNT; offset++) {
-      const prev = getAlbumsImageElement(index - offset);
-      if (prev && prev.complete && prev.naturalWidth > 0) return prev;
-      const next = getAlbumsImageElement(index + offset);
-      if (next && next.complete && next.naturalWidth > 0) return next;
+  const getBestAvailableImage = (index: number): HTMLImageElement | null => {
+    // Tenta pegar o frame exato
+    const img = getAlbumsImageElement(index);
+    if (img && img.complete && img.naturalWidth > 0) {
+      lastValidImageRef.current = img;
+      return img;
     }
-    return getAlbumsImageElement(0) || null;
+
+    // Se o frame atual não estiver carregado, recicla o último frame que deu certo
+    // Isso elimina o loop massivo (O(N)) que estava causando engasgos (GC e network thrashing) no mobile
+    if (lastValidImageRef.current && lastValidImageRef.current.complete && lastValidImageRef.current.naturalWidth > 0) {
+      return lastValidImageRef.current;
+    }
+
+    // Fallback extremo
+    const firstImg = getAlbumsImageElement(0);
+    if (firstImg && firstImg.complete && firstImg.naturalWidth > 0) {
+      return firstImg;
+    }
+
+    return null;
   };
 
   useEffect(() => {
@@ -128,12 +159,13 @@ export function AlbumsSceneSequence({ progress, onFrameChange }: AlbumsSceneSequ
 
   useEffect(() => {
     const onResize = () => {
+      updateDimensions();
       const img = getBestAvailableImage(Math.max(0, lastDrawnIndex.current));
       if (img) drawFrame(img);
     };
     window.addEventListener('resize', onResize, { passive: true });
     return () => window.removeEventListener('resize', onResize);
-  }, []);
+  }, [updateDimensions]);
 
   return (
     <div className="absolute inset-0 z-0 bg-void overflow-hidden">
@@ -145,9 +177,6 @@ export function AlbumsSceneSequence({ progress, onFrameChange }: AlbumsSceneSequ
         <canvas
           ref={canvasRef}
           className="absolute inset-0 w-full h-full"
-          style={{
-            filter: 'contrast(1.08) saturate(1.12) brightness(0.97)',
-          }}
         />
       </div>
       <div className="absolute inset-0 pointer-events-none mix-blend-color opacity-70 z-[1]" style={{ background: 'var(--primary)' }} />

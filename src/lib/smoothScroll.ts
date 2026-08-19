@@ -15,7 +15,8 @@ export function initSmoothScroll() {
   lenisInstance = new Lenis({
     duration: 1.1,
     easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-    syncTouch: true, // suaviza touch em mobile também, sem travar gestos nativos
+    syncTouch: false, // Desativado para mobile-first (usar scroll nativo e suave do celular em vez de emulação)
+    touchMultiplier: 2, // Se estiver ativo o scroll, isso dá um multiplicador
   });
 
   lenisInstance.on('scroll', ScrollTrigger.update);

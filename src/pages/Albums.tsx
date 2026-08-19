@@ -30,11 +30,11 @@ export function Albums() {
   const [reachedFinalFrame, setReachedFinalFrame] = useState(false);
 
   const handleFrameChange = useCallback((currentFrame: number, maxFrame: number) => {
-    if (currentFrame >= maxFrame - 1) {
-      setReachedFinalFrame(true);
-    } else if (currentFrame < maxFrame - 8) {
-      setReachedFinalFrame(false);
-    }
+    setReachedFinalFrame(prev => {
+      if (currentFrame >= maxFrame - 1 && !prev) return true;
+      if (currentFrame < maxFrame - 8 && prev) return false;
+      return prev;
+    });
   }, []);
 
   const [albums, setAlbums] = useState<any[]>([]);
@@ -80,31 +80,30 @@ export function Albums() {
   }, []);
 
   return (
-    <div ref={containerRef} className="relative w-full h-[450vh] bg-void text-white font-helvetica select-none">
-      <div className="sticky top-0 w-full h-screen overflow-hidden">
-        <div className="absolute inset-0 w-full h-full">
-          {/* 1. Background: Scroll-scrubbed Image Sequence */}
-          <AlbumsSceneSequence progress={progress} onFrameChange={handleFrameChange} />
+    <div ref={containerRef} className="relative w-full h-[500vh] bg-void text-white font-helvetica select-none">
+      <div className="sticky top-0 w-full h-[100dvh] overflow-hidden">
+        {/* 1. Background: Scroll-scrubbed Image Sequence */}
+        <AlbumsSceneSequence progress={progress} onFrameChange={handleFrameChange} />
 
-          {/* 2. Efeitos Cinemáticos Vivos: Tempestade, Relâmpagos e Vento */}
-          <CinematicAtmosphere progress={progress} />
+        {/* 2. Efeitos Cinemáticos Vivos: Tempestade, Relâmpagos e Vento */}
+        <CinematicAtmosphere progress={progress} />
 
-          {/* 3. Primeiro Frame Minimalista & Indutor de Scroll */}
-          <AlbumsFirstFrameHero progress={progress} />
+        {/* 3. Primeiro Frame Minimalista & Indutor de Scroll */}
+        <AlbumsFirstFrameHero progress={progress} />
 
-          {/* 3.5. Barra de Progresso Lateral (Incentivador) */}
-          <ScrollProgressBar progress={progress} />
+        {/* 3.5. Barra de Progresso Lateral (Incentivador) */}
+        <ScrollProgressBar progress={progress} />
 
-          {/* 4. Menu & Conteúdo de Álbuns (layout e posições originais preservados) */}
-          <AnimatePresence>
-            {reachedFinalFrame && (
-              <motion.main 
-                initial={{ opacity: 0, y: 30, filter: 'blur(8px)' }}
-                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                exit={{ opacity: 0, y: 20, filter: 'blur(6px)' }}
-                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                className="absolute inset-0 z-20 flex flex-col lg:flex-row items-start lg:items-center justify-center lg:justify-between px-6 md:px-12 xl:px-16 pt-24 lg:pt-16 h-full w-full pointer-events-auto"
-              >
+        {/* 4. Menu & Conteúdo de Álbuns (layout e posições originais preservados) */}
+        <AnimatePresence>
+          {reachedFinalFrame && (
+            <motion.main 
+              initial={{ opacity: 0, y: 30, filter: 'blur(8px)' }}
+              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, y: 20, filter: 'blur(6px)' }}
+              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+              className="absolute inset-0 z-20 flex flex-col lg:flex-row items-start lg:items-center justify-center lg:justify-between px-6 md:px-12 xl:px-16 pt-24 lg:pt-16 h-full w-full pointer-events-auto"
+            >
               {/* LAYOUT PARA DESKTOP (visível de lg para cima) */}
               <div className="hidden lg:flex w-full h-full items-center justify-between gap-12">
                 {/* Coluna Esquerda: Texto Principal */}
@@ -283,6 +282,5 @@ export function Albums() {
         </AnimatePresence>
       </div>
     </div>
-  </div>
   );
 }
