@@ -80,8 +80,8 @@ export function Albums() {
   }, []);
 
   return (
-    <div ref={containerRef} className="relative w-full h-[500vh] bg-void text-white font-helvetica select-none">
-      <div className="sticky top-0 w-full h-[100dvh] overflow-hidden">
+    <div ref={containerRef} className="relative w-full h-[500vh] bg-void text-white font-helvetica select-none touch-pan-y">
+      <div className="sticky top-0 w-full h-[100dvh] overflow-hidden transform-gpu will-change-transform">
         {/* 1. Background: Scroll-scrubbed Image Sequence */}
         <AlbumsSceneSequence progress={progress} onFrameChange={handleFrameChange} />
 

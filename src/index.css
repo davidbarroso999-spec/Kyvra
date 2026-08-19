@@ -115,11 +115,13 @@
     padding: env(safe-area-inset);
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* IE / Edge */
+    overscroll-behavior-y: none;
   }
 
   html {
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* IE / Edge */
+    overscroll-behavior-y: none;
   }
 
   body::before {
