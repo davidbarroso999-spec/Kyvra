@@ -556,7 +556,10 @@ export function Lore() {
                     <img 
                       src={currentChapter.image_url || undefined} 
                       alt={currentChapter.title} 
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-auto max-h-[50vh] object-cover rounded-xl mb-16 opacity-80"
+                      referrerPolicy="no-referrer"
                     />
                   ) : null}
 

@@ -129,6 +129,8 @@ export function FeaturedFragmentSection({ className }: FeaturedFragmentSectionPr
               <img
                 src={fragment.coverUrl || undefined}
                 alt={fragment.title}
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover transition-transform duration-700"
                 style={{ transform: isHovered ? 'scale(1.05)' : 'scale(1)' }}
                 referrerPolicy="no-referrer"

@@ -141,6 +141,8 @@ const TrackRow = React.memo(({
           src={imgLoadedSrc}
           onLoad={handleLoad}
           alt={track.title}
+          loading="lazy"
+          decoding="async"
           className={cn(
             "w-full h-full object-cover transition-opacity duration-300",
             isLoaded ? "opacity-100" : "opacity-30"

@@ -23,17 +23,18 @@ export function Preloader() {
   const [progress, setProgress] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
   const [phraseIndex, setPhraseIndex] = useState(0);
-  const [loadedSteps, setLoadedSteps] = useState<{fonts: boolean, video: boolean, audio: boolean, frames: boolean}>({
+  const [loadedSteps, setLoadedSteps] = useState<{fonts: boolean, video: boolean, audio: boolean, frames: boolean, database: boolean}>({
     fonts: false,
     video: false,
     audio: false,
-    frames: false
+    frames: false,
+    database: false
   });
   const theme = useStore((state) => state.theme);
 
   const videoUrl = THEME_VIDEOS[theme] || THEME_VIDEOS.abissal;
 
-  const loadedStepsRef = useRef({ fonts: false, video: false, audio: false, frames: false });
+  const loadedStepsRef = useRef({ fonts: false, video: false, audio: false, frames: false, database: false });
 
   // Cycle cryptic text
   useEffect(() => {
@@ -48,14 +49,28 @@ export function Preloader() {
     let active = true;
 
     // 0. Proactively query and warm up memory cache with database assets
-    getLoreChapters().catch(() => {});
-    getAlbums().catch(() => {});
-    getAllTracks().catch(() => {});
-    getFeaturedTracksSettings().catch(() => {});
+    Promise.all([
+      getLoreChapters(),
+      getAlbums(),
+      getAllTracks(),
+      getFeaturedTracksSettings()
+    ]).then(() => {
+      if (active) {
+        setLoadedSteps(prev => ({ ...prev, database: true }));
+        loadedStepsRef.current.database = true;
+      }
+    }).catch((err) => {
+      console.error("[Preloader] DB warm-up error:", err);
+      // We still mark it true so we don't block the app forever on network fail
+      if (active) {
+        setLoadedSteps(prev => ({ ...prev, database: true }));
+        loadedStepsRef.current.database = true;
+      }
+    });
 
-    // 1. Pré-carregar os 165 frames da sequência de imagens da página de Álbuns na memória
+    // 1. Pré-carregar TODOS (100%) os frames da sequência de imagens da página de Álbuns na memória
     startPreloadingAlbumsFrames((loaded, total) => {
-      if (active && loaded >= total * 0.85) {
+      if (active && loaded >= total) {
         setLoadedSteps(prev => ({ ...prev, frames: true }));
         loadedStepsRef.current.frames = true;
       }
@@ -64,7 +79,8 @@ export function Preloader() {
         setLoadedSteps(prev => ({ ...prev, frames: true }));
         loadedStepsRef.current.frames = true;
       }
-    }).catch(() => {
+    }).catch((err) => {
+      console.error("[Preloader] Frames preload error:", err);
       if (active) {
         setLoadedSteps(prev => ({ ...prev, frames: true }));
         loadedStepsRef.current.frames = true;
@@ -114,20 +130,21 @@ export function Preloader() {
       if (!active) return;
 
       const currentSteps = loadedStepsRef.current;
-      const allLoaded = currentSteps.fonts && currentSteps.video && currentSteps.audio && currentSteps.frames;
+      const allLoaded = currentSteps.fonts && currentSteps.video && currentSteps.audio && currentSteps.frames && currentSteps.database;
       const targetMax = 
-        (currentSteps.fonts ? 25 : 15) + 
-        (currentSteps.video ? 25 : 15) + 
-        (currentSteps.audio ? 20 : 10) +
-        (currentSteps.frames ? 30 : 15);
+        (currentSteps.fonts ? 10 : 5) + 
+        (currentSteps.video ? 15 : 5) + 
+        (currentSteps.audio ? 10 : 5) +
+        (currentSteps.database ? 25 : 10) +
+        (currentSteps.frames ? 40 : 10);
 
       if (allLoaded) {
         // Boost progression rate if all hardware resources are buffered and validated
         currentProgress += Math.random() * 8 + 8;
       } else if (currentProgress < targetMax) {
-        currentProgress += Math.random() * 3 + 1.5;
+        currentProgress += Math.random() * 2 + 1;
       } else if (currentProgress < 99) {
-        currentProgress += 0.3; // Micro crawl while awaiting assets
+        currentProgress += 0.1; // Slower micro crawl since frames take a bit to download
       }
 
       const finalProgress = Math.min(100, currentProgress);
@@ -178,13 +195,15 @@ export function Preloader() {
 
     startPreload();
 
-    // Safety fallback: ensure loading closes after 3.5 seconds maximum to protect UX
+    // Fallback Extremo: Força o encerramento após 25 segundos caso a conexão do usuário
+    // falhe em baixar todos os frames ou trave o banco de dados.
     const forceReadyTimer = setTimeout(() => {
       if (active) {
+        console.warn("[Preloader] Timeout reached. Forcing app start.");
         setProgress(100);
         setIsVisible(false);
       }
-    }, 3500);
+    }, 25000);
 
     return () => {
       active = false;
@@ -263,6 +282,10 @@ export function Preloader() {
 
             {/* Elegant live diagnostics checklist of the resource system */}
             <div className="flex flex-col gap-2 items-start text-[9px] font-mono tracking-widest text-left transform translate-x-4">
+              <div className="flex items-center gap-2 transition-opacity duration-300">
+                <span className={`w-1.5 h-1.5 rounded-full ${loadedSteps.database ? 'bg-primary shadow-[0_0_8px_var(--primary)] animate-pulse' : 'bg-white/10'}`} />
+                <span className={loadedSteps.database ? 'text-white/70' : 'text-white/20'}>CONEXÃO COM O ARQUIVO CENTRAL ESTABELECIDA</span>
+              </div>
               <div className="flex items-center gap-2 transition-opacity duration-300">
                 <span className={`w-1.5 h-1.5 rounded-full ${loadedSteps.fonts ? 'bg-primary shadow-[0_0_8px_var(--primary)] animate-pulse' : 'bg-white/10'}`} />
                 <span className={loadedSteps.fonts ? 'text-white/70' : 'text-white/20'}>FONTES TIPOGRÁFICAS REGISTRADAS</span>

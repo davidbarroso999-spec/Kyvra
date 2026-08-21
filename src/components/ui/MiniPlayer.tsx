@@ -811,6 +811,8 @@ export function MiniPlayer() {
                         <img
                           src={currentTrack.coverUrl || undefined}
                           alt="cover"
+                          loading="lazy"
+                          decoding="async"
                           className="w-8 h-8 rounded-full object-cover shrink-0 ml-1 pointer-events-none"
                           referrerPolicy="no-referrer"
                         />

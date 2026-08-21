@@ -1,0 +1,32 @@
+{
+  "rewrites": [
+    {
+      "source": "/cdn/frames/:id",
+      "destination": "https://raw.githubusercontent.com/davidbarroso999-spec/Aleatoriedades/main/:id"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/cdn/frames/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ]
+}
