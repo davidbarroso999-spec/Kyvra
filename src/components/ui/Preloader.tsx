@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useStore } from '@/store/useStore';
 import { getLoreChapters, getAlbums, getAllTracks, getFeaturedTracksSettings } from '@/lib/apiCache';
 import { startPreloadingAlbumsFrames } from '@/lib/albumsFrameCache';
+import { resumeSmoothScroll } from '@/lib/smoothScroll';
 
 const CRYPTIC_PHRASES = [
   "INICIANDO RITUAL DE CONEXÃO...",
@@ -153,7 +154,14 @@ export function Preloader() {
       if (finalProgress >= 100) {
         clearInterval(intervalTimer);
         setTimeout(() => {
-          if (active) setIsVisible(false);
+          if (active) {
+            setIsVisible(false);
+            resumeSmoothScroll();
+            const state = useStore.getState();
+            if (state.setIsLoadingFinished) {
+              state.setIsLoadingFinished(true);
+            }
+          }
         }, 300);
       }
     }, 30);
@@ -184,9 +192,6 @@ export function Preloader() {
         try {
           const state = useStore.getState();
           state.setThemeVideoUrls(localThemeVideoUrls);
-          if (state.setIsLoadingFinished) {
-            state.setIsLoadingFinished(true);
-          }
         } catch (stateErr) {
           console.error("[Kyvra Preloader] Error updating store with video URLs:", stateErr);
         }
@@ -202,6 +207,11 @@ export function Preloader() {
         console.warn("[Preloader] Timeout reached. Forcing app start.");
         setProgress(100);
         setIsVisible(false);
+        resumeSmoothScroll();
+        const state = useStore.getState();
+        if (state.setIsLoadingFinished) {
+          state.setIsLoadingFinished(true);
+        }
       }
     }, 25000);
 
