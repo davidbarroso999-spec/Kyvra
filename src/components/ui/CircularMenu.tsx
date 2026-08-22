@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useLocation } from 'react-router-dom';
-import { X, Eye } from 'lucide-react';
+import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useStore } from '@/store/useStore';
 
@@ -17,9 +17,6 @@ export function CircularMenu() {
   const isMenuOpen = useStore((state) => state.isMenuOpen);
   const setMenuOpen = useStore((state) => state.setMenuOpen);
   const location = useLocation();
-  const isPlayerHidden = useStore((state) => state.isPlayerHidden);
-  const setPlayerHidden = useStore((state) => state.setPlayerHidden);
-  const currentTrack = useStore((state) => state.currentTrack);
 
   const toggleMenu = () => setMenuOpen(!isMenuOpen);
 
@@ -44,7 +41,7 @@ export function CircularMenu() {
       </AnimatePresence>
 
       {/* Origin perfectly at bottom-right, spaced a bit from edges to align with MiniPlayer */}
-      <div className="fixed bottom-6 right-6 sm:bottom-[3.625rem] sm:right-[3rem] z-[5000] flex items-center justify-center pointer-events-none">
+      <div className="fixed bottom-[3.25rem] right-6 sm:bottom-[3.625rem] sm:right-[3rem] z-[5000] flex items-center justify-center pointer-events-none">
         
         {/* Origin Center Point */}
         <div className="relative w-0 h-0 flex justify-center items-center pointer-events-auto">
@@ -128,26 +125,6 @@ export function CircularMenu() {
               })}
             </AnimatePresence>
           </div>
-
-          {/* Botão de revelar player se oculto (aparece acima do menu) */}
-          <AnimatePresence>
-            {isMenuOpen && isPlayerHidden && currentTrack && (
-              <motion.button
-                initial={{ opacity: 0, scale: 0, y: 0 }}
-                animate={{ opacity: 1, scale: 1, y: -75 }}
-                exit={{ opacity: 0, scale: 0, y: 0 }}
-                transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                onClick={() => {
-                  setPlayerHidden(false);
-                  setMenuOpen(false);
-                }}
-                className="absolute w-12 h-12 rounded-full bg-surface/90 hover:bg-surface border border-primary/50 hover:border-primary text-primary flex items-center justify-center shadow-2xl transition-all hover:scale-110 active:scale-95 z-[5030] pointer-events-auto cursor-pointer"
-                title="Mostrar Player de Áudio"
-              >
-                <Eye size={20} strokeWidth={2} />
-              </motion.button>
-            )}
-          </AnimatePresence>
 
           {/* Botão Principal Toggle */}
           <motion.button
