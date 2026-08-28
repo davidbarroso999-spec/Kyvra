@@ -1,9 +1,8 @@
-import React, { useRef, useCallback } from 'react';
-import { motion } from 'motion/react';
+import React, { useState, useMemo, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Play, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useHorizontalSlider } from '@/hooks/useHorizontalSlider';
 import { useStore } from '@/store/useStore';
-import { cn } from '@/lib/utils';
+import MorphSlider, { MorphSliderRef } from './MorphSlider';
 
 interface FeaturedTrack {
   id: string | number;
@@ -26,69 +25,12 @@ export function FeaturedSlider({ tracks }: FeaturedSliderProps) {
   const setCurrentTrack = useStore((state) => state.setCurrentTrack);
   const setIsPlaying = useStore((state) => state.setIsPlaying);
   const setQueue = useStore((state) => state.setQueue);
+  
+  const sliderRef = useRef<MorphSliderRef>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
 
-  const [activeCardId, setActiveCardId] = React.useState<string | number | null>(null);
-
-  React.useEffect(() => {
-    const handleOutsideClick = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setActiveCardId(null);
-      }
-    };
-    window.addEventListener('click', handleOutsideClick);
-    return () => window.removeEventListener('click', handleOutsideClick);
-  }, []);
-
-  const [dimensions, setDimensions] = React.useState({
-    cardWidth: 320,
-    cardGap: 48,
-    sectionHeight: 750
-  });
-
-  React.useEffect(() => {
-    const handleResize = () => {
-      const h = window.innerHeight;
-      const w = window.innerWidth;
-      const isShort = h < 600;
-      
-      if (isShort) {
-        setDimensions({
-          cardWidth: w < 480 ? 180 : 220,
-          cardGap: w < 480 ? 16 : 24,
-          sectionHeight: w < 480 ? 330 : 410
-        });
-      } else {
-        setDimensions({
-          cardWidth: 320,
-          cardGap: 48,
-          sectionHeight: 750
-        });
-      }
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  const CARD_W = dimensions.cardWidth;
-  const CARD_GAP = dimensions.cardGap;
-
-  const wrapperRef  = useRef<HTMLDivElement>(null);
-  const slideRefs   = useRef<HTMLDivElement[]>([]);
-
-  const { scrollBy } = useHorizontalSlider(wrapperRef, slideRefs, {
-    ease: 0.075,
-    scaleMax: 1.4,
-    scaleMin: 0.7,
-    offsetMultiplier: 160,
-  });
-
-  const setSlideRef = useCallback((el: HTMLDivElement | null, idx: number) => {
-    if (el) slideRefs.current[idx] = el;
-  }, []);
-
-  const handlePlay = (track: FeaturedTrack, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handlePlay = (track: FeaturedTrack, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     const t = {
       id: String(track.id),
       title: track.title,
@@ -107,141 +49,95 @@ export function FeaturedSlider({ tracks }: FeaturedSliderProps) {
 
   if (!tracks.length) return null;
 
-  const sidePad = `calc(50vw - ${CARD_W / 2}px)`;
+  const activeTrack = tracks[activeIndex] || tracks[0];
+
+  const sliderItems = useMemo(() => tracks.map(t => ({ image: t.coverUrl || '' })), [tracks]);
 
   return (
-    <section className="relative w-full overflow-hidden" style={{ height: dimensions.sectionHeight }}>
-      {/* label da seção */}
-      <div className="absolute top-12 left-12 z-20">
-        <span className="font-sc text-[11px] tracking-[0.3em] text-primary/80 block uppercase">
-          Fragmentos em Destaque
-        </span>
-      </div>
+    <section className="relative w-full py-20 lg:py-32 overflow-hidden">
+      <div className="w-full max-w-7xl mx-auto px-6 flex flex-col items-center">
+        {/* label da seção */}
+        <div className="mb-12 w-full text-center">
+          <span className="font-sc text-[11px] tracking-[0.3em] text-primary/80 block uppercase">
+            Fragmentos em Destaque
+          </span>
+        </div>
 
-      {/* botões de navegação (desktop) */}
-      <button
-        onClick={() => scrollBy(-(CARD_W + CARD_GAP))}
-        className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 flex items-center justify-center glass rounded-full text-text-mid hover:text-primary transition-colors hidden md:flex"
-        aria-label="Anterior"
-      >
-        <ChevronLeft size={20} />
-      </button>
-      <button
-        onClick={() => scrollBy(CARD_W + CARD_GAP)}
-        className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 flex items-center justify-center glass rounded-full text-text-mid hover:text-primary transition-colors hidden md:flex"
-        aria-label="Próxima"
-      >
-        <ChevronRight size={20} />
-      </button>
-
-      {/* wrapper do slider */}
-      <div
-        ref={wrapperRef}
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          height: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          gap: CARD_GAP,
-          paddingLeft: sidePad,
-          paddingRight: sidePad,
-          willChange: 'transform',
-        }}
-      >
-        {tracks.map((track, idx) => (
-          <div
-            key={track.id}
-            ref={(el) => setSlideRef(el, idx)}
-            style={{
-              width: CARD_W,
-              flexShrink: 0,
-              transformOrigin: 'center center',
-              willChange: 'transform',
-            }}
-          >
-            {/* card do destaque */}
-            <div
-              className="group relative cursor-pointer select-none"
-              style={{ width: CARD_W }}
-              onClick={(e) => {
-                const isTouch = typeof window !== 'undefined' && (window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0);
-                if (isTouch) {
-                  if (activeCardId === track.id) {
-                    handlePlay(track, e);
-                  } else {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setActiveCardId(track.id);
-                  }
-                } else {
-                  handlePlay(track, e);
-                }
-              }}
-            >
-              {/* capa — aspect 3:4 */}
-              <div
-                className="relative overflow-hidden"
-                style={{ borderRadius: 'var(--radius-md)', aspectRatio: '3/4' }}
-              >
-                <img
-                  src={track.coverUrl || undefined}
-                  alt={track.title}
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                  referrerPolicy="no-referrer"
-                  draggable={false}
-                />
-
-                {/* overlay escuro no hover */}
-                <div className="absolute inset-0 bg-void/0 group-hover:bg-void/40 transition-colors duration-400" />
-
-                {/* play reveal — sobe de baixo no hover */}
-                <button
-                  onClick={(e) => handlePlay(track, e)}
-                  className="play-reveal"
-                  style={{
-                    transform: activeCardId === track.id ? 'translateY(0)' : undefined
-                  }}
-                  aria-label={`Tocar ${track.title}`}
-                >
-                  <span className="font-sc text-[10px] tracking-[0.2em] text-text-mid">REPRODUZIR</span>
-                  <span className="play-reveal-icon">
-                    <Play size={14} className="ml-0.5" />
-                  </span>
-                </button>
-
-                {/* badge de vibe no canto superior esquerdo */}
-                {track.vibe && (
-                  <span
-                    className={cn(
-                      "absolute top-3 left-3 px-2.5 py-1 rounded-full font-mono text-[9px] uppercase tracking-wider text-primary border border-primary/30 transition-all duration-300 md:group-hover:opacity-100",
-                      activeCardId === track.id ? "opacity-100 scale-100" : "opacity-0 md:opacity-0"
-                    )}
-                    style={{ background: 'rgba(5,5,8,0.75)', backdropFilter: 'blur(8px)' }}
-                  >
-                    {track.vibe.split(' | ')[0]}
-                  </span>
-                )}
-              </div>
-
-              {/* info abaixo da capa */}
-              <div className="mt-3 px-1">
-                <h3 className="font-display text-text-high text-xl leading-tight truncate">
-                  {track.title}
-                </h3>
-                <p className="font-mono text-text-low text-xs mt-1 truncate">
-                  {track.artist}
-                  {track.albumTitle && (
-                    <span className="text-text-low/60"> · {track.albumTitle}</span>
-                  )}
-                </p>
-              </div>
+        <div className="w-full max-w-2xl mx-auto flex flex-col items-center">
+          
+          {/* Square Card Container */}
+          <div className="relative aspect-square w-full rounded-2xl overflow-hidden shadow-2xl mb-8">
+            <div className="absolute inset-0 z-0">
+              <MorphSlider
+                ref={sliderRef}
+                items={sliderItems}
+                onActiveIndexChange={setActiveIndex}
+                showCaptions={false}
+                showControls={false}
+                showIndicators={false}
+                transition="melt"
+                duration={1.2}
+                intensity={0.4}
+                radius={16}
+                autoplay={true}
+                autoplayDelay={4.5}
+              />
             </div>
           </div>
-        ))}
+
+          {/* Text Content (Title & Vibe) */}
+          <div className="flex flex-col items-center text-center w-full mb-8">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTrack.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.4 }}
+                className="flex flex-col items-center gap-4"
+              >
+                {activeTrack.vibe && (
+                  <span className="inline-block px-4 py-1.5 rounded-full border border-primary/30 bg-primary/10 backdrop-blur-md font-mono text-[10px] tracking-[0.15em] text-primary uppercase">
+                    {activeTrack.vibe}
+                  </span>
+                )}
+                
+                <h3 className="font-display text-4xl md:text-5xl lg:text-6xl text-white tracking-wide">
+                  {activeTrack.title}
+                </h3>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          {/* External Controls */}
+          <div className="w-full flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <button 
+                type="button" 
+                className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/5 hover:border-white/20 transition-all"
+                onClick={() => sliderRef.current?.prev()}
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <button 
+                type="button" 
+                className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/5 hover:border-white/20 transition-all"
+                onClick={() => sliderRef.current?.next()}
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+
+            <button
+              onClick={(e) => handlePlay(activeTrack, e)}
+              className="inline-flex items-center justify-center gap-3 px-8 h-12 rounded-full bg-primary text-void hover:bg-primary/90 hover:scale-105 transition-all duration-300 shadow-[0_0_30px_rgba(167,139,250,0.4)] hover:shadow-[0_0_40px_rgba(167,139,250,0.6)] font-sc tracking-[0.2em] text-[10px] uppercase w-full md:w-auto"
+              aria-label={`Reproduzir ${activeTrack.title}`}
+            >
+              <Play size={16} fill="currentColor" />
+              Reproduzir
+            </button>
+          </div>
+        </div>
       </div>
     </section>
   );

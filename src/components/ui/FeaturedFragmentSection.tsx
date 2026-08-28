@@ -12,7 +12,7 @@ interface FeaturedFragment {
   vibe: string;
   duration: string;
   coverUrl: string;
-  audioUrl: string;
+  audioUrl?: string;
   narrativeNote: string;
   loreConnection: string;
 }
@@ -222,7 +222,6 @@ export function FeaturedFragmentSection({ className }: FeaturedFragmentSectionPr
           </div>
         </div>
       </motion.div>
-
     </section>
   );
 }

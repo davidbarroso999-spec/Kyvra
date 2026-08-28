@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { getFeaturedTracksSettings, getTracksByIds, getTrackSynopses } from '@/lib/apiCache';
+import { getAllTracks } from '@/lib/apiCache';
 import { useStore } from '@/store/useStore';
 import { FeaturedSlider } from '@/components/ui/FeaturedSlider';
 import { LampContainer } from '@/components/ui/lamp';
 import { cn, getOptimizedImageUrl } from '@/lib/utils';
 import { useIdleCallback, useGPUAcceleration } from '@/modules/performance-optimization';
 
-import { FeaturedFragmentSection } from '@/components/ui/FeaturedFragmentSection';
 import { AudioVisualizer } from '@/components/ui/AudioVisualizer';
 
 const THEME_VIDEOS: Record<string, string> = {
@@ -262,40 +261,54 @@ export function Home() {
 
   useEffect(() => {
     async function fetchFeatured() {
-      const { data: trackIds } = await getFeaturedTracksSettings();
+      const { data: allTracks, error } = await getAllTracks();
       
-      if (trackIds && trackIds.length > 0) {
-        const { data: tracks, error: tracksError } = await getTracksByIds(trackIds);
-          
-        if (tracksError) {
-          console.error("Error fetching featured tracks details:", tracksError);
-          return;
+      if (error) {
+        console.error("Error fetching tracks:", error);
+        return;
+      }
+        
+      if (allTracks && allTracks.length > 0) {
+        // Group all tracks by album to guarantee unique album covers (no repeating albums)
+        const albumGroups = new Map<string, any[]>();
+        
+        for (const track of allTracks) {
+          const albumKey = track.albums?.title || track.album_id || String(track.id);
+          if (!albumGroups.has(albumKey)) {
+            albumGroups.set(albumKey, []);
+          }
+          albumGroups.get(albumKey)!.push(track);
         }
-          
-        if (tracks && tracks.length > 0) {
-          const sortedTracks = trackIds.map((id: string) => tracks.find((t: any) => t.id.toString() === id.toString())).filter(Boolean);
-          const { data: synopses } = await getTrackSynopses(trackIds);
 
-          const tracksWithSynopses = sortedTracks.map((track: any) => {
-            const specificSynopsis = synopses?.find((s: any) => s.title === `__SYNOPSIS_${track.id}__`);
-            const fallbackSynopsis = synopses?.find((s: any) => s.title === '__FEATURED_TRACK_SYNOPSIS__');
-            
-            return {
-              id: track.id,
-              title: track.title,
-              artist: track.artist || 'Kyvra',
-              vibe: track.vibe || 'Introspectivo',
-              duration: track.duration || '0:00',
-              coverUrl: getOptimizedImageUrl(track.albums?.cover_url || '', 400, 75),
-              audioUrl: track.audio_url,
-              albumTitle: track.albums?.title || '',
-              lyrics: track.lyrics,
-              synopsis: specificSynopsis?.content || fallbackSynopsis?.content || ''
-            };
-          });
-
-          setFeaturedTracks(tracksWithSynopses);
+        // Pick one track randomly from each album group so all songs across all albums rotate over time
+        const selectedTracks: any[] = [];
+        for (const [, tracksInAlbum] of albumGroups.entries()) {
+          const randomIndex = Math.floor(Math.random() * tracksInAlbum.length);
+          selectedTracks.push(tracksInAlbum[randomIndex]);
         }
+
+        // Shuffle the album order so the presentation is dynamic
+        const shuffledUniqueAlbumTracks = selectedTracks.sort(() => 0.5 - Math.random());
+
+        const finalTracks = shuffledUniqueAlbumTracks.map((track: any) => {
+          const vibe = track.vibe || 'Introspectivo';
+          const albumTitle = track.albums?.title || 'Desconhecido';
+          
+          return {
+            id: track.id,
+            title: track.title,
+            artist: track.artist || 'Kyvra',
+            vibe: vibe,
+            duration: track.duration || '0:00',
+            coverUrl: getOptimizedImageUrl(track.albums?.cover_url || '', 800, 75),
+            audioUrl: track.audio_url,
+            albumTitle: albumTitle,
+            lyrics: track.lyrics,
+            synopsis: `Um fragmento sonoro explorando vibrações de ${vibe.toLowerCase()}, ecoando a essência do álbum ${albumTitle}.`
+          };
+        });
+
+        setFeaturedTracks(finalTracks);
       }
     }
     fetchFeatured();
@@ -537,8 +550,6 @@ export function Home() {
         </section>
       )}
 
-      {/* Featured Fragment Section */}
-      <FeaturedFragmentSection className="bg-void border-t border-white/5" />
     </div>
   );
 }
