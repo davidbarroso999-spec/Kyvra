@@ -1,4 +1,6 @@
 # Preserve binary files in git (prevents line ending CRLF/LF corruption)
+android/gradle/wrapper/gradle-wrapper.jar binary
+android/gradlew text eol=lf
 *.jar binary
 *.aar binary
 *.so binary

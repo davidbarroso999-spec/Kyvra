@@ -56,23 +56,7 @@ dependencies {
     implementation "androidx.media3:media3-database:$media3Version"
     implementation "androidx.media3:media3-common:$media3Version"
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-
-    // Firebase BoM, Performance Monitoring, Analytics & Crashlytics
-    implementation platform('com.google.firebase:firebase-bom:33.9.0')
-    implementation 'com.google.firebase:firebase-perf'
-    implementation 'com.google.firebase:firebase-analytics'
-    implementation 'com.google.firebase:firebase-crashlytics'
 }
 
 apply from: 'capacitor.build.gradle'
 
-try {
-    def servicesJSON = file('google-services.json')
-    if (servicesJSON.exists() && servicesJSON.text) {
-        apply plugin: 'com.google.gms.google-services'
-        apply plugin: 'com.google.firebase.firebase-perf'
-        apply plugin: 'com.google.firebase.crashlytics'
-    }
-} catch(Exception e) {
-    logger.info("google-services.json not found, google-services plugins not applied.")
-}

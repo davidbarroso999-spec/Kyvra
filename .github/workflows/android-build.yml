@@ -36,6 +36,7 @@ jobs:
       - name: Configurar Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
+          gradle-version: '8.5'
           cache-disabled: true
 
       - name: Instalar Dependências Web
@@ -54,6 +55,11 @@ jobs:
         run: |
           chmod +x android/gradlew
           cd android
+          if ! ./gradlew --version >/dev/null 2>&1; then
+            echo "Regenerando Gradle Wrapper limpo via Gradle 8.5..."
+            gradle wrapper --gradle-version 8.5
+            chmod +x gradlew
+          fi
           ./gradlew --version
           cd ..
 

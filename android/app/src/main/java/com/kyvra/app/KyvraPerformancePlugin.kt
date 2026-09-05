@@ -1,19 +1,27 @@
 package com.kyvra.app
 
+import android.util.Log
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
-import com.google.firebase.perf.FirebasePerformance
-import com.google.firebase.perf.metrics.HttpMetric
-import com.google.firebase.perf.metrics.Trace
 import java.util.concurrent.ConcurrentHashMap
 
 @CapacitorPlugin(name = "KyvraPerformance")
 class KyvraPerformancePlugin : Plugin() {
 
-    private val activeTraces = ConcurrentHashMap<String, Trace>()
+    companion object {
+        private const val TAG = "KyvraPerformance"
+    }
+
+    private data class ActiveTraceData(
+        val name: String,
+        val startTimeMs: Long,
+        val metrics: ConcurrentHashMap<String, Long> = ConcurrentHashMap()
+    )
+
+    private val activeTraces = ConcurrentHashMap<String, ActiveTraceData>()
 
     @PluginMethod
     fun startTrace(call: PluginCall) {
@@ -23,18 +31,13 @@ class KyvraPerformancePlugin : Plugin() {
             return
         }
 
-        try {
-            val trace = FirebasePerformance.getInstance().newTrace(traceName)
-            trace.start()
-            activeTraces[traceName] = trace
-            
-            val ret = JSObject()
-            ret.put("status", "started")
-            ret.put("traceName", traceName)
-            call.resolve(ret)
-        } catch (e: Exception) {
-            call.reject("Failed to start trace: ${e.message}")
-        }
+        activeTraces[traceName] = ActiveTraceData(traceName, System.currentTimeMillis())
+        Log.d(TAG, "[Trace Start] '$traceName'")
+
+        val ret = JSObject()
+        ret.put("status", "started")
+        ret.put("traceName", traceName)
+        call.resolve(ret)
     }
 
     @PluginMethod
@@ -51,25 +54,23 @@ class KyvraPerformancePlugin : Plugin() {
             return
         }
 
-        try {
-            val metrics = call.getObject("metrics")
-            if (metrics != null) {
-                val keys = metrics.keys()
-                while (keys.hasNext()) {
-                    val key = keys.next()
-                    val value = metrics.getLong(key, 0L)
-                    trace.putMetric(key, value)
-                }
+        val elapsedMs = System.currentTimeMillis() - trace.startTimeMs
+        val metrics = call.getObject("metrics")
+        if (metrics != null) {
+            val keys = metrics.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                trace.metrics[key] = metrics.getLong(key, 0L)
             }
-
-            trace.stop()
-            val ret = JSObject()
-            ret.put("status", "stopped")
-            ret.put("traceName", traceName)
-            call.resolve(ret)
-        } catch (e: Exception) {
-            call.reject("Failed to stop trace: ${e.message}")
         }
+
+        Log.i(TAG, "[Trace Finished] '$traceName': took ${elapsedMs}ms | metrics: ${trace.metrics}")
+
+        val ret = JSObject()
+        ret.put("status", "stopped")
+        ret.put("traceName", traceName)
+        ret.put("elapsedMs", elapsedMs)
+        call.resolve(ret)
     }
 
     @PluginMethod
@@ -85,21 +86,10 @@ class KyvraPerformancePlugin : Plugin() {
             return
         }
 
-        try {
-            val metric: HttpMetric = FirebasePerformance.getInstance().newHttpMetric(url, httpMethod)
-            metric.setHttpResponseCode(responseCode)
-            metric.setResponsePayloadSize(responsePayloadBytes)
-            metric.start()
-            if (durationMs > 0) {
-                Thread.sleep(0) // metric duration is tracked automatically between start and stop
-            }
-            metric.stop()
+        Log.d(TAG, "[Network] $httpMethod $url -> Code: $responseCode | Duration: ${durationMs}ms | Size: ${responsePayloadBytes}B")
 
-            val ret = JSObject()
-            ret.put("status", "recorded")
-            call.resolve(ret)
-        } catch (e: Exception) {
-            call.reject("Failed to record network metric: ${e.message}")
-        }
+        val ret = JSObject()
+        ret.put("status", "recorded")
+        call.resolve(ret)
     }
 }
