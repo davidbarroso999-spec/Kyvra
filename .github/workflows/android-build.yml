@@ -33,6 +33,9 @@ jobs:
           node-version: 22
           cache: 'npm'
 
+      - name: Configurar Gradle
+        uses: gradle/actions/setup-gradle@v3
+
       - name: Instalar Dependências Web
         run: |
           npm install --legacy-peer-deps
@@ -45,8 +48,15 @@ jobs:
         run: |
           npx cap sync android
 
-      - name: Configurar Permissões do Gradle Wrapper
+      - name: Validar e Garantir Gradle Wrapper
         run: |
+          if ! java -jar android/gradle/wrapper/gradle-wrapper.jar --version >/dev/null 2>&1; then
+            echo "Gradle wrapper JAR corrompido detectado. Regenerando wrapper limpo..."
+            sudo apt-get update && sudo apt-get install -y gradle
+            cd android
+            gradle wrapper --gradle-version 8.14.3
+            cd ..
+          fi
           chmod +x android/gradlew
 
       - name: Compilar APK Android (Debug Universal)

@@ -1,0 +1,12 @@
+# Preserve binary files in git (prevents line ending CRLF/LF corruption)
+*.jar binary
+*.aar binary
+*.so binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.keystore binary
+*.jks binary
