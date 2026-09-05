@@ -36,7 +36,7 @@ jobs:
       - name: Configurar Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
-          gradle-version: '8.5'
+          cache-disabled: true
 
       - name: Instalar Dependências Web
         run: |
@@ -50,11 +50,11 @@ jobs:
         run: |
           npx cap sync android
 
-      - name: Gerar e Validar Gradle Wrapper
+      - name: Garantir Permissões e Validar Gradle Wrapper
         run: |
+          chmod +x android/gradlew
           cd android
-          gradle wrapper --gradle-version 8.5
-          chmod +x gradlew
+          ./gradlew --version
           cd ..
 
       - name: Compilar APK Android (Debug Universal)
