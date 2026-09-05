@@ -48,16 +48,19 @@ jobs:
         run: |
           npx cap sync android
 
-      - name: Validar e Garantir Gradle Wrapper
+      - name: Validar e Garantir Executabilidade do Gradle Wrapper
         run: |
-          if ! java -jar android/gradle/wrapper/gradle-wrapper.jar --version >/dev/null 2>&1; then
-            echo "Gradle wrapper JAR corrompido detectado. Regenerando wrapper limpo..."
-            sudo apt-get update && sudo apt-get install -y gradle
-            cd android
-            gradle wrapper --gradle-version 8.14.3
-            cd ..
-          fi
           chmod +x android/gradlew
+          cd android
+          if ! ./gradlew --version >/dev/null 2>&1; then
+            echo "Gradle Wrapper falhou ao executar. Regenerando wrapper limpo..."
+            sudo apt-get update && sudo apt-get install -y gradle
+            gradle wrapper --gradle-version 8.5
+            chmod +x gradlew
+          else
+            echo "Gradle Wrapper verificado e funcional!"
+          fi
+          cd ..
 
       - name: Compilar APK Android (Debug Universal)
         run: |
