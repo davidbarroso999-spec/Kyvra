@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Shield, Cookie, X } from 'lucide-react';
+import NeonButton from '@/components/ui/NeonButton';
 
 export function CookieBanner() {
   const [isOpen, setIsOpen] = useState(false);
@@ -82,14 +83,16 @@ export function CookieBanner() {
               >
                 Declinar
               </button>
-              <button
+              <NeonButton
                 onClick={handleAccept}
-                className="w-full sm:w-auto px-5 py-2.5 text-[10px] sm:text-xs font-mono text-black font-semibold bg-white hover:bg-white/90 active:scale-95 transition-all uppercase tracking-widest rounded-lg flex items-center justify-center gap-2"
+                variant="square"
+                size="sm"
+                className="w-full sm:w-auto px-5 py-2.5 text-[10px] sm:text-xs font-mono uppercase tracking-widest text-white flex items-center justify-center gap-2"
                 id="cookie-btn-accept"
               >
-                <Shield className="w-3.5 h-3.5" />
-                Aceitar Ritual
-              </button>
+                <Shield className="w-3.5 h-3.5 text-primary" />
+                <span>Aceitar Ritual</span>
+              </NeonButton>
             </div>
           </div>
         </motion.div>

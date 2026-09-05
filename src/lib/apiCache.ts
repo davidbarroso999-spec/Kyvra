@@ -1,10 +1,13 @@
 import { supabase } from './supabase';
 import { parseChapterNumber, getOptimizedImageUrl } from './utils';
+import { recordNetworkLatency } from './performance';
 
 const cache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_TTL = 1000 * 60 * 15; // 15 minutos
+const CACHE_TTL = 1000 * 60 * 60; // 60 minutos em memória
+const LOCAL_STORAGE_PREFIX = 'kyvra_api_cache_';
 
 export async function fetchWithCache(key: string, fetcher: () => Promise<any>, forceRefresh = false) {
+  // 1. Verificar cache em memória RAM rápido
   if (!forceRefresh) {
     const cached = cache.get(key);
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
@@ -12,23 +15,86 @@ export async function fetchWithCache(key: string, fetcher: () => Promise<any>, f
     }
   }
 
-  const response = await fetcher();
-  const { data, error } = response;
-  
-  if (!error && data) {
-    cache.set(key, { data, timestamp: Date.now() });
+  // 2. Se offline, tentar imediatamente ler do localStorage
+  if (typeof navigator !== 'undefined' && !navigator.onLine && !forceRefresh) {
+    try {
+      const persisted = localStorage.getItem(LOCAL_STORAGE_PREFIX + key);
+      if (persisted) {
+        const parsed = JSON.parse(persisted);
+        cache.set(key, parsed);
+        return { data: parsed.data, error: null };
+      }
+    } catch (e) {}
   }
-  
-  return response;
+
+  // 3. Executar fetch na rede
+  const startTime = performance.now();
+  try {
+    const response = await fetcher();
+    const durationMs = Math.round(performance.now() - startTime);
+    const { data, error } = response || {};
+    
+    recordNetworkLatency(`supabase_api://${key}`, {
+      httpMethod: 'GET',
+      responseCode: error ? 500 : 200,
+      durationMs,
+      responsePayloadBytes: data ? JSON.stringify(data).length : 0,
+    });
+    
+    if (!error && data !== undefined && data !== null) {
+      const cacheObj = { data, timestamp: Date.now() };
+      cache.set(key, cacheObj);
+      try {
+        localStorage.setItem(LOCAL_STORAGE_PREFIX + key, JSON.stringify(cacheObj));
+      } catch (e) {
+        // quota excedida em modo estrito — continua silenciosamente
+      }
+      return response;
+    }
+
+    // Se a query retornou erro de rede/servidor, tenta fallback do localStorage
+    try {
+      const persisted = localStorage.getItem(LOCAL_STORAGE_PREFIX + key);
+      if (persisted) {
+        const parsed = JSON.parse(persisted);
+        cache.set(key, parsed);
+        return { data: parsed.data, error: null };
+      }
+    } catch (e) {}
+
+    return response;
+  } catch (err) {
+    // Falha de conexão de rede -> Recupera do storage persistido
+    try {
+      const persisted = localStorage.getItem(LOCAL_STORAGE_PREFIX + key);
+      if (persisted) {
+        const parsed = JSON.parse(persisted);
+        cache.set(key, parsed);
+        return { data: parsed.data, error: null };
+      }
+    } catch (e) {}
+    
+    return { data: null, error: err };
+  }
 }
 
 export function clearCache(keyPrefix?: string) {
   if (!keyPrefix) {
     cache.clear();
+    try {
+      Object.keys(localStorage).forEach(k => {
+        if (k.startsWith(LOCAL_STORAGE_PREFIX)) localStorage.removeItem(k);
+      });
+    } catch (e) {}
   } else {
     for (const key of cache.keys()) {
       if (key.startsWith(keyPrefix)) cache.delete(key);
     }
+    try {
+      Object.keys(localStorage).forEach(k => {
+        if (k.startsWith(LOCAL_STORAGE_PREFIX + keyPrefix)) localStorage.removeItem(k);
+      });
+    } catch (e) {}
   }
 }
 
@@ -116,13 +182,8 @@ export async function getTrackSynopses(trackIds: string[], force = false) {
 
 export async function getFeaturedFragmentData() {
   try {
-    // Instead of using a predefined config or most recent track, 
-    // pick a random track that changes every 10 days.
-
-    const { data: allTracks } = await supabase
-      .from('tracks')
-      .select('*, albums(*)')
-      .order('id', { ascending: true }); // keep stable order
+    // Reutiliza a query estável de todas as faixas (já persistida e offline-ready)
+    const { data: allTracks } = await getAllTracks();
 
     if (allTracks && allTracks.length > 0) {
       // Calculate a consistently changing index every 10 days

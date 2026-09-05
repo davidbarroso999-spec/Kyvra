@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Download, X, Share2, MoreVertical, Smartphone } from 'lucide-react';
+import NeonButton from '@/components/ui/NeonButton';
 
 export function PwaInstallPrompt() {
   const [isOpen, setIsOpen] = useState(false);
@@ -110,14 +111,16 @@ export function PwaInstallPrompt() {
                   >
                     AGORA NÃO
                   </button>
-                  <button
+                  <NeonButton
                     onClick={handleInstall}
-                    className="relative overflow-hidden group px-5 py-2 rounded-lg bg-primary text-black font-semibold transition-all duration-300 cursor-pointer shadow-[0_0_20px_rgba(var(--primary-rgb),0.2)]"
+                    variant="square"
+                    size="sm"
+                    className="font-mono tracking-widest uppercase text-white"
                   >
-                    <span className="relative z-10 text-xs font-mono tracking-widest uppercase">
+                    <span className="text-xs font-mono tracking-widest uppercase text-white">
                       INSTALAR
                     </span>
-                  </button>
+                  </NeonButton>
                 </div>
               </>
             ) : (

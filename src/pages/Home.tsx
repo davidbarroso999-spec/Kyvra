@@ -4,10 +4,9 @@ import { getAllTracks } from '@/lib/apiCache';
 import { useStore } from '@/store/useStore';
 import { FeaturedSlider } from '@/components/ui/FeaturedSlider';
 import { LampContainer } from '@/components/ui/lamp';
-import { cn, getOptimizedImageUrl } from '@/lib/utils';
+import { cn, getOptimizedImageUrl, getOfflineUrl } from '@/lib/utils';
 import { useIdleCallback, useGPUAcceleration } from '@/modules/performance-optimization';
 
-import { AudioVisualizer } from '@/components/ui/AudioVisualizer';
 
 const THEME_VIDEOS: Record<string, string> = {
   abissal: "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_abissal.webm",
@@ -34,47 +33,6 @@ const logPerformanceMeasure = (measureName: string, startMark: string, endMark: 
   }
 };
 
-const trackFPSSlowdown = (themeName: string, startTime: number) => {
-  const frameTimes: number[] = [];
-  
-  const measureFPS = () => {
-    const now = performance.now();
-    frameTimes.push(now);
-    if (now - startTime < 1200) {
-      if (typeof requestAnimationFrame !== 'undefined') {
-        requestAnimationFrame(measureFPS);
-      }
-    } else {
-      let stutters = 0;
-      for (let i = 1; i < frameTimes.length; i++) {
-        const delta = frameTimes[i] - frameTimes[i-1];
-        if (delta > 20) { // Se o frame demorar mais de 20ms (queda de FPS abaixo de 50 FPS)
-          stutters++;
-        }
-      }
-
-      if (stutters > 15) {
-        console.warn("[KYVRA TELEMETER] Evento de frame atrasado detectado. Iniciando compensação de clock de CPU e otimização de renderização interna.");
-      }
-
-      console.log(
-        `%c[KYVRA TELEMETER] %cTroca concluída para %c${themeName}%c. Tempo de renderização/estabilização: %c${(performance.now() - startTime).toFixed(2)}ms%c | Quadros com stutter detectados: %c${stutters}`,
-        "color: #00e5ff; font-weight: bold;",
-        "color: #ffffff;",
-        "color: #ffd200; font-weight: bold;",
-        "color: #ffffff;",
-        "color: #00ff73; font-weight: bold;",
-        "color: #ffffff;",
-        stutters > 0 ? "color: #ff3c00; font-weight: bold;" : "color: #00ff73; font-weight: bold;"
-      );
-    }
-  };
-  
-  if (typeof requestAnimationFrame !== 'undefined') {
-    requestAnimationFrame(measureFPS);
-  }
-};
-
 export function Home() {
   const theme = useStore((state) => state.theme);
   const currentTrack = useStore((state) => state.currentTrack);
@@ -86,20 +44,38 @@ export function Home() {
   const backgroundEngineRef = useRef<HTMLDivElement>(null);
   useGPUAcceleration(backgroundEngineRef);
 
+  const [themeVideoUrls, setThemeVideoUrls] = useState<Record<string, string>>(THEME_VIDEOS);
+
+  // Resolve para o Blob do Cache local se os vídeos foram salvos offline
+  useEffect(() => {
+    let isCurrent = true;
+    const resolveOfflineVideos = async () => {
+      const resolved: Record<string, string> = { ...THEME_VIDEOS };
+      for (const [key, remoteUrl] of Object.entries(THEME_VIDEOS)) {
+        try {
+          const offlineUrl = await getOfflineUrl(remoteUrl);
+          if (isCurrent && offlineUrl) {
+            resolved[key] = offlineUrl;
+          }
+        } catch (e) {}
+      }
+      if (isCurrent) {
+        setThemeVideoUrls(resolved);
+      }
+    };
+    resolveOfflineVideos();
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
+
   const [currentVideoTheme, setCurrentVideoTheme] = useState(theme);
   const [previousVideoTheme, setPreviousVideoTheme] = useState<string | null>(null);
   const [fadeActive, setFadeActive] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState<Record<string, boolean>>({});
   const [loopFading, setLoopFading] = useState<Record<string, boolean>>({});
   const prevThemeRef = useRef(theme);
-  const [initialDelayOver, setInitialDelayOver] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setInitialDelayOver(true);
-    }, 800);
-    return () => clearTimeout(timer);
-  }, []);
+  const [initialDelayOver, setInitialDelayOver] = useState(true);
 
   const handleVideoError = (tName: string, e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
     const video = e.currentTarget;
@@ -149,10 +125,6 @@ export function Home() {
       setCurrentVideoTheme(theme);
       setFadeActive(false);
       prevThemeRef.current = theme;
-
-      try {
-        trackFPSSlowdown(theme, performance.now());
-      } catch (e) {}
 
       // Trigger animation on next paint
       const frame = requestAnimationFrame(() => {
@@ -234,26 +206,16 @@ export function Home() {
       if (document.visibilityState === 'visible') {
         const activeVid = videoRefs.current[theme];
         if (activeVid && activeVid.paused) {
+          activeVid.muted = true;
           activeVid.play().catch(() => {});
         }
       }
     };
 
-    const heartbeatTimer = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        const activeVid = videoRefs.current[theme];
-        if (activeVid && activeVid.paused) {
-          activeVid.muted = true;
-          activeVid.play().catch(() => {});
-        }
-      }
-    }, 1500);
-
     document.addEventListener('visibilitychange', handleAutoplayRecovery, { passive: true });
     window.addEventListener('focus', handleAutoplayRecovery, { passive: true });
 
     return () => {
-      clearInterval(heartbeatTimer);
       document.removeEventListener('visibilitychange', handleAutoplayRecovery);
       window.removeEventListener('focus', handleAutoplayRecovery);
     };
@@ -342,35 +304,8 @@ export function Home() {
         
         {/* UNIFIED HARDWARE-ACCELERATED BACKGROUND ENGINE */}
         <div ref={backgroundEngineRef} className="absolute inset-0 w-full h-full bg-[#030303] z-0 overflow-hidden pointer-events-none select-none">
-          {/* Cinematic Fallback Gradient Background */}
-          <div className="absolute inset-0 bg-[#030303] opacity-100 z-[1] transition-all duration-[2000ms]">
-            <div 
-              className="absolute top-[20%] left-[20%] w-[70vw] h-[70vw] max-w-[800px] max-h-[800px] rounded-full transition-all duration-[2000ms] ease-in-out mix-blend-screen opacity-25 md:opacity-25 animate-pulse"
-              style={{
-                background: theme === 'abissal' ? 'radial-gradient(circle, rgba(168,85,247,0.38) 0%, transparent 70%)' :
-                            theme === 'sangue-de-drago' ? 'radial-gradient(circle, rgba(239,68,68,0.38) 0%, transparent 70%)' :
-                            theme === 'floresta-negra' ? 'radial-gradient(circle, rgba(16,185,129,0.33) 0%, transparent 70%)' :
-                            'radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%)',
-                transform: 'translate3d(0,0,0)',
-                willChange: 'transform'
-              }}
-            />
-            <div 
-              className="absolute bottom-[20%] right-[10%] w-[60vw] h-[60vw] max-w-[700px] max-h-[700px] rounded-full transition-all duration-[2000ms] ease-in-out mix-blend-screen opacity-15 md:opacity-15 animate-pulse"
-              style={{
-                background: theme === 'abissal' ? 'radial-gradient(circle, rgba(99,102,241,0.28) 0%, transparent 70%)' :
-                            theme === 'sangue-de-drago' ? 'radial-gradient(circle, rgba(220,38,38,0.28) 0%, transparent 70%)' :
-                            theme === 'floresta-negra' ? 'radial-gradient(circle, rgba(5,150,105,0.28) 0%, transparent 70%)' :
-                            'radial-gradient(circle, rgba(148,163,184,0.15) 0%, transparent 70%)',
-                transform: 'translate3d(0,0,0)',
-                willChange: 'transform'
-              }}
-            />
-            {/* Subtle noise grains for luxury texturing */}
-            <div className="absolute inset-0 opacity-[0.035] pointer-events-none" style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`
-            }} />
-          </div>
+          {/* Clean Modern Solid Dark Canvas */}
+          <div className="absolute inset-0 bg-[#030303] opacity-100 z-[1] transition-colors duration-700" />
 
           {/* Dual-Video Hardware-Accelerated Crossfade Engine (Max 2 simultaneous players to satisfy low-resource devices and browser limits) */}
           {initialDelayOver && [previousVideoTheme, currentVideoTheme].map((tName) => {
@@ -418,7 +353,7 @@ export function Home() {
                     ? "opacity 1000ms cubic-bezier(0.25, 1, 0.5, 1), transform 1000ms cubic-bezier(0.25, 1, 0.5, 1)"
                     : "opacity 2000ms ease-in-out, transform 2000ms ease-in-out"
                 }}
-                src={THEME_VIDEOS[tName]}
+                src={themeVideoUrls[tName] || THEME_VIDEOS[tName]}
                 onError={(e) => handleVideoError(tName, e)}
                 onTimeUpdate={(e) => {
                   const video = e.currentTarget;

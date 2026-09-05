@@ -1,16 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Upload, Lock, X, Plus, Sparkles, CheckCircle2, Edit3, Save, Trash2, ChevronDown, ChevronUp, RefreshCw, Edit2, Book, Loader2 } from 'lucide-react';
+import { Upload, Lock, Unlock, KeyRound, HelpCircle, ShieldAlert, X, Plus, Sparkles, CheckCircle2, Edit3, Save, Trash2, ChevronDown, ChevronUp, RefreshCw, Edit2, Book, Loader2 } from 'lucide-react';
 import { cn, parseChapterNumber } from '@/lib/utils';
 import { getAI, MODELS, generateText, generateMultimodal } from '@/lib/ai';
 import { supabase } from '@/lib/supabase';
 import { getAudioMetadata } from '@/lib/audioMetadata';
 import { CombinationLock } from '@/components/ui/CombinationLock';
+import NeonButton from '@/components/ui/NeonButton';
 export function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeTab, setActiveTab] = useState<'musicas' | 'lore' | 'editar_letras' | 'destaque' | 'acervo'>('musicas');
   const [password, setPassword] = useState('0000');
   const [error, setError] = useState('');
+  const [shake, setShake] = useState(false);
+  const [showHint, setShowHint] = useState(false);
   
   const [albumTracks, setAlbumTracks] = useState<{ id: number; title: string; file: File | null; duration?: string; vibe?: string; lyrics?: string; artist?: string; trackNumber?: number }[]>([{ id: 1, title: '', file: null }]);
   const [albumTitle, setAlbumTitle] = useState('');
@@ -952,6 +955,8 @@ export function Admin() {
       setError('');
     } else {
       setError('Combinação incorreta. O arquivo permanece selado.');
+      setShake(true);
+      setTimeout(() => setShake(false), 600);
     }
   };
 
@@ -971,37 +976,116 @@ export function Admin() {
 
   if (!isAuthenticated) {
     return (
-      <div className="w-full min-h-screen flex items-center justify-center px-6">
+      <div 
+        className="w-full min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden"
+        onKeyDown={handleKeyDown}
+      >
+        {/* Ambient atmospheric backdrop */}
+        <div className="absolute inset-0 bg-radial-vignette opacity-70 pointer-events-none" />
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/10 rounded-full blur-[100px] pointer-events-none" />
+
         <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="glass p-8 rounded-xl w-full max-w-md flex flex-col items-center relative overflow-hidden"
+          initial={{ opacity: 0, y: 16, scale: 0.96 }}
+          animate={{ 
+            opacity: 1, 
+            y: 0, 
+            scale: 1,
+            x: shake ? [-8, 8, -6, 6, -3, 3, 0] : 0
+          }}
+          transition={{
+            duration: shake ? 0.5 : 0.4,
+            ease: [0.16, 1, 0.3, 1]
+          }}
+          className="relative w-full max-w-md rounded-2xl bg-[#0f0f15]/90 border border-white/10 p-6 sm:p-8 backdrop-blur-2xl shadow-[0_24px_60px_rgba(0,0,0,0.85)] flex flex-col items-center overflow-hidden z-10"
         >
-          {/* Noise effect */}
-          <div className="absolute inset-0 bg-white/5 pointer-events-none mix-blend-overlay" />
+          {/* Subtle noise overlay */}
+          <div className="absolute inset-0 bg-white/[0.02] pointer-events-none mix-blend-overlay" />
+
+          {/* Archivist Insignia / Vault Crest */}
+          <div className="relative mb-5 flex items-center justify-center">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-b from-primary/20 via-primary/5 to-transparent border border-primary/30 flex items-center justify-center shadow-[0_0_24px_rgba(168,85,247,0.25)]">
+              <KeyRound className="text-primary stroke-[1.75]" size={28} />
+            </div>
+            <div className="absolute -inset-1 rounded-2xl border border-primary/20 animate-pulse pointer-events-none" />
+          </div>
           
-          <Lock className="text-primary mb-4 relative z-10" size={32} />
-          <h1 className="font-display text-3xl mb-2 relative z-10">O ARQUIVISTA</h1>
-          <span className="font-sc text-xs tracking-[0.2em] text-text-low mb-8 relative z-10">ACESSO RESTRITO</span>
+          {/* Typography Header */}
+          <div className="text-center mb-6">
+            <h1 className="font-display text-2xl sm:text-3xl text-white tracking-wide mb-1">
+              O ARQUIVISTA
+            </h1>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/[0.04] border border-white/10">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              <span className="font-mono text-[10px] tracking-[0.2em] text-text-low uppercase">
+                CAMARA DE ACERVO // RESTRITO
+              </span>
+            </div>
+          </div>
           
-          <div className="mb-4 relative z-10 w-full flex flex-col items-center">
+          {/* Mechanical Rolling Lock (O único lugar onde a senha aparece) */}
+          <div className="w-full flex flex-col items-center mb-4">
              <CombinationLock 
                 value={password}
-                onChange={setPassword}
-                className="mt-2"
+                onChange={(newVal) => {
+                  setPassword(newVal);
+                  if (error) setError('');
+                }}
+                className="w-full"
              />
              
-             {error && (
-               <span className="text-red-400 text-xs mt-6 text-center h-4">{error}</span>
-             )}
-             {!error && <div className="h-4 mt-6" />}
+             {/* Dynamic Error Status */}
+             <div className="min-h-[32px] mt-3 flex items-center justify-center w-full">
+               <AnimatePresence mode="wait">
+                 {error && (
+                   <motion.div
+                     initial={{ opacity: 0, y: -4 }}
+                     animate={{ opacity: 1, y: 0 }}
+                     exit={{ opacity: 0, y: -4 }}
+                     className="flex items-center gap-1.5 text-xs text-red-400 bg-red-950/40 border border-red-500/30 px-3 py-1.5 rounded-lg text-center"
+                   >
+                     <ShieldAlert size={14} className="shrink-0 text-red-400" />
+                     <span>{error}</span>
+                   </motion.div>
+                 )}
+               </AnimatePresence>
+             </div>
              
+             {/* Unlock Button */}
              <button 
-               onClick={handleLogin}
-               className="w-full mt-4 bg-primary text-void font-medium py-3 rounded hover:bg-primary/90 transition-colors"
-             >
-               Entrar no Arquivo
-             </button>
+                type="button"
+                onClick={handleLogin}
+                className="w-full mt-2 py-3.5 px-6 rounded-xl bg-gradient-to-r from-primary via-purple-600 to-primary hover:opacity-95 active:scale-[0.98] text-white font-medium flex items-center justify-center gap-2.5 shadow-[0_0_25px_rgba(168,85,247,0.35)] transition-all cursor-pointer group"
+              >
+                <Unlock size={18} className="group-hover:rotate-12 transition-transform stroke-[2]" />
+                <span className="tracking-wide">Desbloquear Arquivo</span>
+              </button>
+
+              {/* Discreet Hint Toggle */}
+              <div className="mt-4 pt-3 border-t border-white/5 w-full flex flex-col items-center">
+                <button
+                  type="button"
+                  onClick={() => setShowHint(!showHint)}
+                  className="text-xs text-text-low hover:text-text-mid flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <HelpCircle size={13} />
+                  <span>{showHint ? 'Ocultar pista' : 'Pista do Arquivista'}</span>
+                </button>
+
+                <AnimatePresence>
+                  {showHint && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden w-full"
+                    >
+                      <div className="mt-2.5 p-3 rounded-lg bg-white/[0.03] border border-white/5 text-[11px] font-mono text-text-low text-center leading-relaxed">
+                        Chaves canônicas gravadas no manifesto: a data sagrada da tripulação (<span className="text-primary font-bold">1117</span>) ou o ciclo de fundação (<span className="text-primary font-bold">2024</span>).
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
           </div>
         </motion.div>
       </div>
@@ -1259,14 +1343,16 @@ export function Admin() {
                 {isGeneratingSynopses ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Sparkles size={20} />}
                 {isGeneratingSynopses ? 'Gerando...' : 'Gerar Sinopses Pendentes'}
               </button>
-              <button 
+              <NeonButton 
                 onClick={handlePublishAlbum}
                 disabled={isPublishingAlbum}
-                className="w-full sm:w-auto px-8 py-3 bg-primary text-void font-medium rounded hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                variant="rounded"
+                size="md"
+                className="w-full sm:w-auto px-8 py-3 font-medium text-white flex items-center justify-center gap-2"
               >
-                {isPublishingAlbum ? <div className="w-4 h-4 border-2 border-void border-t-transparent rounded-full animate-spin" /> : null}
-                {isPublishingAlbum ? 'Publicando...' : 'Publicar Álbum'}
-              </button>
+                {isPublishingAlbum ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : null}
+                <span>{isPublishingAlbum ? 'Publicando...' : 'Publicar Álbum'}</span>
+              </NeonButton>
             </div>
           </div>
 
@@ -1460,7 +1546,7 @@ export function Admin() {
             <div className="flex flex-col space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-display text-text-high uppercase tracking-widest">Capítulos da Lore</h2>
-                <button
+                <NeonButton
                   onClick={() => {
                     setEditingLoreId(null);
                     setLoreTitle('');
@@ -1471,11 +1557,13 @@ export function Admin() {
                     setLoreImageFile(null);
                     setLoreView('form');
                   }}
-                  className="flex items-center gap-2 px-6 py-3 bg-primary text-void rounded-xl font-medium hover:bg-primary/90 transition-all shadow-lg"
+                  variant="rounded"
+                  size="md"
+                  className="flex items-center gap-2 px-6 py-3 font-medium text-white"
                 >
                   <Book size={18} />
                   <span>Novo Capítulo</span>
-                </button>
+                </NeonButton>
               </div>
 
               <div className="grid gap-4 mt-6">
@@ -1594,14 +1682,16 @@ export function Admin() {
             )}
 
             <div className="mt-8 flex justify-end">
-              <button 
+              <NeonButton 
                 onClick={handlePublishLore}
                 disabled={isPublishingLore}
-                className="px-6 py-2 bg-primary text-void font-medium rounded hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+                variant="rounded"
+                size="sm"
+                className="px-6 py-2 font-medium text-white flex items-center gap-2"
               >
-                {isPublishingLore ? <div className="w-4 h-4 border-2 border-void border-t-transparent rounded-full animate-spin" /> : null}
-                {isPublishingLore ? 'Registrando...' : 'Registrar no Cosmos'}
-              </button>
+                {isPublishingLore ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : null}
+                <span>{isPublishingLore ? 'Registrando...' : 'Registrar no Cosmos'}</span>
+              </NeonButton>
             </div>
           </div>
 
@@ -1718,15 +1808,17 @@ export function Admin() {
                         >
                           Cancelar
                         </button>
-                        <button
+                        <NeonButton
                           type="button"
                           onClick={() => handleSaveLyrics(track.id)}
                           disabled={isSavingLyrics}
-                          className="px-6 py-2 bg-primary text-void font-medium rounded hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2 text-sm"
+                          variant="rounded"
+                          size="sm"
+                          className="px-6 py-2 font-medium text-white flex items-center gap-2 text-sm"
                         >
-                          {isSavingLyrics ? <div className="w-4 h-4 border-2 border-void border-t-transparent rounded-full animate-spin" /> : <Save size={16} />}
-                          {isSavingLyrics ? 'Salvando...' : 'Salvar Letra'}
-                        </button>
+                          {isSavingLyrics ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Save size={16} />}
+                          <span>{isSavingLyrics ? 'Salvando...' : 'Salvar Letra'}</span>
+                        </NeonButton>
                       </div>
                     </div>
                   )}
@@ -1854,12 +1946,14 @@ export function Admin() {
 
               <div className="border-t border-border pt-4 mt-4 flex justify-between items-center text-xs text-text-low">
                 <span>Total de {parsedPreviewLines.length} linhas cronometradas</span>
-                <button
+                <NeonButton
                   onClick={() => setShowSyncPreview(false)}
-                  className="px-5 py-2 bg-primary text-void font-medium rounded hover:bg-primary/90 transition-colors text-xs"
+                  variant="rounded"
+                  size="sm"
+                  className="px-5 py-2 font-medium text-white text-xs"
                 >
-                  Entendi
-                </button>
+                  <span>Entendi</span>
+                </NeonButton>
               </div>
             </motion.div>
           </div>

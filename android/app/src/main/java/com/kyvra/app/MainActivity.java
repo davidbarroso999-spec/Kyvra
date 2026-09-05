@@ -16,6 +16,9 @@ public class MainActivity extends BridgeActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(KyvraAudioPlugin.class);
+        registerPlugin(KyvraPerformancePlugin.class);
+        registerPlugin(KyvraCrashlyticsPlugin.class);
+        registerPlugin(KyvraStoragePlugin.class);
         super.onCreate(savedInstanceState);
         
         // Solicita permissão de notificação nativamente para Android 13+

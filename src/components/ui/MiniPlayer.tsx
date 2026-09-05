@@ -14,7 +14,7 @@ import {
   AlignLeft
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { cn } from "@/lib/utils";
+import { cn, getOfflineUrl } from "@/lib/utils";
 import { useStore } from "@/store/useStore";
 import { registerAudioElement, useAudioAnalyser } from "@/hooks/useAudioAnalyser";
 import { FrequencyVisualizer } from "@/components/ui/FrequencyVisualizer";
@@ -538,6 +538,34 @@ export function MiniPlayer() {
     }
   }, [volume]);
 
+  const [resolvedAudioUrl, setResolvedAudioUrl] = useState<string | undefined>(currentTrack?.audioUrl);
+  const activeBlobUrlRef = useRef<string | null>(null);
+
+  // Resolve para o Blob do Cache local se a faixa estiver armazenada offline
+  useEffect(() => {
+    let isCurrent = true;
+    const targetUrl = currentTrack?.audioUrl;
+
+    if (!targetUrl) {
+      setResolvedAudioUrl(undefined);
+      return;
+    }
+
+    getOfflineUrl(targetUrl).then((url) => {
+      if (isCurrent) {
+        if (activeBlobUrlRef.current && activeBlobUrlRef.current.startsWith('blob:') && activeBlobUrlRef.current !== url) {
+          URL.revokeObjectURL(activeBlobUrlRef.current);
+        }
+        activeBlobUrlRef.current = url.startsWith('blob:') ? url : null;
+        setResolvedAudioUrl(url);
+      }
+    });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [currentTrack?.audioUrl]);
+
   useEffect(() => {
     if (isNativeAudioAvailable()) {
       if (audioRef.current) {
@@ -560,7 +588,7 @@ export function MiniPlayer() {
         audioRef.current.pause();
       }
     }
-  }, [isPlaying, currentTrack?.audioUrl]);
+  }, [isPlaying, resolvedAudioUrl]);
 
   // Always render background audio engines so they are initialized and ready immediately
   const renderEngines = () => (
@@ -575,7 +603,7 @@ export function MiniPlayer() {
         }}
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleEnded}
-        src={isNativeAudioAvailable() ? undefined : (currentTrack?.audioUrl || undefined)}
+        src={isNativeAudioAvailable() ? undefined : (resolvedAudioUrl || currentTrack?.audioUrl || undefined)}
         className="hidden"
         crossOrigin="anonymous"
         preload="auto"

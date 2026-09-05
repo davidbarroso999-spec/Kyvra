@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { ChevronUp, ChevronDown } from 'lucide-react';
+import { ChevronUp, ChevronDown, ShieldCheck } from 'lucide-react';
 
 interface CombinationLockProps {
   length?: number;
@@ -33,11 +33,10 @@ export function CombinationLock({ length = 4, value, onChange, className }: Comb
     if (!el) return;
 
     const handleWheel = (e: WheelEvent) => {
-      // Find the dial that was scrolled
       const target = e.target as HTMLElement;
       const dial = target.closest('.dial');
       if (dial) {
-        e.preventDefault(); // Prevent page scroll
+        e.preventDefault();
         e.stopPropagation();
         const dialIndexStr = dial.getAttribute('data-index');
         if (dialIndexStr !== null) {
@@ -64,8 +63,7 @@ export function CombinationLock({ length = 4, value, onChange, className }: Comb
     if (!dragRef.current) return;
     
     const diff = dragRef.current.lastY - e.clientY;
-    // Sensibilidade do arrasto
-    if (Math.abs(diff) > 15) {
+    if (Math.abs(diff) > 14) {
       incrementRef.current(dragRef.current.index, diff > 0 ? 1 : -1);
       dragRef.current.lastY = e.clientY;
     }
@@ -81,84 +79,139 @@ export function CombinationLock({ length = 4, value, onChange, className }: Comb
   };
 
   return (
-    <div className={cn("flex flex-col items-center select-none", className)} ref={lockRef}>
-      {/* High-Contrast Digital Combination Display */}
-      <div className="flex gap-2.5 mb-8 relative z-10">
-        {values.map((num, i) => (
-          <div 
-            key={`readout-${i}`} 
-            className="w-11 h-14 rounded-lg bg-surface/90 border border-primary/30 flex items-center justify-center font-mono text-2xl font-bold text-primary shadow-[0_0_15px_rgba(168,85,247,0.35)] select-none"
-            style={{ textShadow: '0 0 8px rgba(168,85,247,0.6)' }}
-          >
-            {num}
+    <div className={cn("flex flex-col items-center select-none w-full max-w-sm", className)} ref={lockRef}>
+      {/* Mechanical Vault Capsule / Chassis */}
+      <div className="w-full relative rounded-2xl bg-gradient-to-b from-[#14141d] via-[#0d0d12] to-[#0a0a0e] p-5 sm:p-6 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.1)]">
+        
+        {/* Hardware details: Machined Hex Bolts */}
+        <div className="absolute top-3 left-3 w-2 h-2 rounded-full bg-[#2a2a35] border border-white/10 shadow-inner" />
+        <div className="absolute top-3 right-3 w-2 h-2 rounded-full bg-[#2a2a35] border border-white/10 shadow-inner" />
+        <div className="absolute bottom-3 left-3 w-2 h-2 rounded-full bg-[#2a2a35] border border-white/10 shadow-inner" />
+        <div className="absolute bottom-3 right-3 w-2 h-2 rounded-full bg-[#2a2a35] border border-white/10 shadow-inner" />
+
+        {/* Chassis Plate Header */}
+        <div className="flex items-center justify-between pb-4 mb-3 border-b border-white/5">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+            </span>
+            <span className="font-mono text-[10px] tracking-[0.25em] text-text-low uppercase">
+              CYPHER LOCK 04
+            </span>
           </div>
-        ))}
-      </div>
+          <div className="flex items-center gap-1.5 text-[9px] font-mono text-text-low/60 uppercase">
+            <ShieldCheck size={12} className="text-primary/70" />
+            <span>ALINHAMENTO ATIVO</span>
+          </div>
+        </div>
 
-      {/* 3D Lock with interactive buttons */}
-      <div className="combination-lock flex items-center gap-3 sm:gap-6">
-        {Array.from({ length }).map((_, dialIndex) => (
-          <div key={`dial-column-${dialIndex}`} className="flex flex-col items-center gap-2">
-            {/* Increment Arrow (Button) */}
-            <button
-              type="button"
-              onClick={() => incrementRef.current(dialIndex, 1)}
-              className="w-10 h-10 rounded-full glass border border-white/10 hover:border-primary/50 text-white/70 hover:text-primary hover:scale-110 active:scale-90 transition-all flex items-center justify-center cursor-pointer pointer-events-auto"
-              title="Aumentar dístico"
-            >
-              <ChevronUp size={20} className="stroke-[2.5]" />
-            </button>
+        {/* 3D Rolling Object Container with Horizontal Optical Reticle */}
+        <div className="relative flex items-center justify-center py-2">
+          
+          {/* Left Alignment Needle / Marker */}
+          <div className="absolute -left-1.5 sm:-left-2 top-1/2 -translate-y-1/2 z-20 flex items-center pointer-events-none">
+            <div className="w-0 h-0 border-y-[6px] border-y-transparent border-l-[8px] border-l-primary filter drop-shadow-[0_0_6px_var(--primary)]" />
+          </div>
 
-            {/* Cylinder / Dial */}
-            <div 
-              data-index={dialIndex}
-              className="dial touch-none cursor-ns-resize"
-              onPointerDown={(e) => handlePointerDown(e, dialIndex)}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              onPointerCancel={handlePointerUp}
-            >
-              <div className="nonagon pointer-events-none">
-                {Array.from({ length: 10 }).map((_, faceIndex) => {
-                  const faceNum = faceIndex.toString();
-                  const isSelected = values[dialIndex] === faceNum;
-                  return (
-                    <div 
-                      key={`face-${faceIndex}`} 
-                      className={cn(
-                        "face", 
-                        `face-${faceIndex}`,
-                        isSelected && "face-active text-primary"
-                      )}
-                    >
-                      <input
-                        type="radio"
-                        name={`dial-${dialIndex}`}
-                        value={faceNum}
-                        checked={isSelected}
-                        onChange={() => {}}
-                        className={`radio radio-${faceIndex} pointer-events-none`}
-                      />
-                      <span>{faceNum}</span>
-                    </div>
-                  );
-                })}
+          {/* Right Alignment Needle / Marker */}
+          <div className="absolute -right-1.5 sm:-right-2 top-1/2 -translate-y-1/2 z-20 flex items-center pointer-events-none">
+            <div className="w-0 h-0 border-y-[6px] border-y-transparent border-r-[8px] border-r-primary filter drop-shadow-[0_0_6px_var(--primary)]" />
+          </div>
+
+          {/* Center Optical Horizon Guide (Combinação em Foco) */}
+          <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[48px] border-y border-primary/25 bg-primary/[0.03] pointer-events-none z-10 shadow-[0_0_15px_rgba(168,85,247,0.1)]" />
+
+          {/* Dials Column Group */}
+          <div className="combination-lock flex items-center gap-2.5 sm:gap-4 relative z-10">
+            {Array.from({ length }).map((_, dialIndex) => (
+              <div key={`dial-column-${dialIndex}`} className="flex flex-col items-center gap-2">
+                
+                {/* Upper Increment Ratchet Button */}
+                <button
+                  type="button"
+                  onClick={() => incrementRef.current(dialIndex, 1)}
+                  className="w-10 h-8 rounded-md bg-[#181822] hover:bg-[#222232] active:bg-primary/20 border border-white/10 hover:border-primary/50 text-text-mid hover:text-primary transition-all flex items-center justify-center cursor-pointer shadow-sm group"
+                  title="Girar para cima"
+                  aria-label={`Aumentar dígito ${dialIndex + 1}`}
+                >
+                  <ChevronUp size={16} className="stroke-[2.5] transition-transform group-hover:-translate-y-0.5" />
+                </button>
+
+                {/* 3D Rolling Cylinder (O ÚNICO LUGAR DA SENHA) */}
+                <div 
+                  data-index={dialIndex}
+                  className="dial touch-none cursor-ns-resize rounded-lg select-none"
+                  onPointerDown={(e) => handlePointerDown(e, dialIndex)}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={handlePointerUp}
+                  onPointerCancel={handlePointerUp}
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      incrementRef.current(dialIndex, 1);
+                    } else if (e.key === 'ArrowDown') {
+                      e.preventDefault();
+                      incrementRef.current(dialIndex, -1);
+                    }
+                  }}
+                  title="Role com o mouse ou arraste para alterar"
+                >
+                  <div className="nonagon pointer-events-none">
+                    {Array.from({ length: 10 }).map((_, faceIndex) => {
+                      const faceNum = faceIndex.toString();
+                      const isSelected = values[dialIndex] === faceNum;
+                      return (
+                        <div 
+                          key={`face-${faceIndex}`} 
+                          className={cn(
+                            "face", 
+                            `face-${faceIndex}`,
+                            isSelected && "face-active"
+                          )}
+                        >
+                          <input
+                            type="radio"
+                            name={`dial-${dialIndex}`}
+                            value={faceNum}
+                            checked={isSelected}
+                            onChange={() => {}}
+                            className={`radio radio-${faceIndex} pointer-events-none`}
+                            aria-hidden="true"
+                          />
+                          <span className="tabular-nums font-mono">{faceNum}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Lower Decrement Ratchet Button */}
+                <button
+                  type="button"
+                  onClick={() => incrementRef.current(dialIndex, -1)}
+                  className="w-10 h-8 rounded-md bg-[#181822] hover:bg-[#222232] active:bg-primary/20 border border-white/10 hover:border-primary/50 text-text-mid hover:text-primary transition-all flex items-center justify-center cursor-pointer shadow-sm group"
+                  title="Girar para baixo"
+                  aria-label={`Diminuir dígito ${dialIndex + 1}`}
+                >
+                  <ChevronDown size={16} className="stroke-[2.5] transition-transform group-hover:translate-y-0.5" />
+                </button>
               </div>
-            </div>
-
-            {/* Decrement Arrow (Button) */}
-            <button
-              type="button"
-              onClick={() => incrementRef.current(dialIndex, -1)}
-              className="w-10 h-10 rounded-full glass border border-white/10 hover:border-primary/50 text-white/70 hover:text-primary hover:scale-110 active:scale-90 transition-all flex items-center justify-center cursor-pointer pointer-events-auto"
-              title="Diminuir dístico"
-            >
-              <ChevronDown size={20} className="stroke-[2.5]" />
-            </button>
+            ))}
           </div>
-        ))}
+        </div>
+
+        {/* Chassis Subtitle / Instruction */}
+        <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-center text-center">
+          <p className="text-[11px] font-mono text-text-low tracking-wide flex items-center gap-1.5">
+            <span className="w-1 h-1 rounded-full bg-primary/60" />
+            Role os tambores ou use as setas para alinhar o código
+          </p>
+        </div>
       </div>
     </div>
   );
 }
+
 

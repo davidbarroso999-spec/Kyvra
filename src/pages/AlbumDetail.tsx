@@ -6,7 +6,7 @@ import { useStore } from '@/store/useStore';
 import { getAlbumWithTracks } from '@/lib/apiCache';
 import { TrackDuration } from '@/components/ui/TrackDuration';
 import { saveForOffline, cn, copyToClipboard, getOptimizedImageUrl } from '@/lib/utils';
-import { KyvraButton } from '@/components/ui/KyvraButton';
+import NeonButton from '@/components/ui/NeonButton';
 
 import { generateTrackShareText } from '@/lib/share';
 
@@ -254,16 +254,15 @@ export function AlbumDetail() {
       <div className="max-w-5xl mx-auto px-6 mt-12">
         <div className="flex flex-col gap-8 mb-12">
           <div>
-            <KyvraButton 
+            <NeonButton 
               onClick={handlePlayAlbum}
-              variant="album"
-              ledColor="red"
-              showLed
-              className="flex items-center justify-center sm:justify-start gap-3 px-8 py-4 w-full sm:w-auto bg-primary text-void rounded-xl shadow-[0_0_30px_var(--glow-purple)]"
+              variant="rounded"
+              size="lg"
+              className="flex items-center justify-center sm:justify-start gap-3 px-8 py-4 w-full sm:w-auto font-display tracking-widest text-sm uppercase"
             >
-              <Play size={20} className="fill-current" />
-              Tocar Álbum Completo
-            </KyvraButton>
+              <Play size={18} className="fill-current text-white" />
+              <span className="text-white">Tocar Álbum Completo</span>
+            </NeonButton>
           </div>
         </div>
 

@@ -3,58 +3,75 @@ name: Build Android APK
 on:
   push:
     branches: [ main, master ]
+    tags: [ 'v*' ]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
-    name: Compile Android App
+    name: Compilar APK Android
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Source Code
+      - name: Checkout Código Fonte
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Configurar JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
+      - name: Configurar Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Set up Node.js
+      - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: 'npm'
 
-      - name: Install Dependencies
+      - name: Instalar Dependências Web
         run: |
-          npm install
+          npm install --legacy-peer-deps
 
-      - name: Build Web Application
+      - name: Compilar Aplicação Web (Vite + React)
         run: |
           npm run build
 
-      - name: Sync Capacitor Android Project
+      - name: Sincronizar Projeto Android (Capacitor Sync)
         run: |
           npx cap sync android
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.13'
-          validate-wrappers: false
+      - name: Configurar Permissões do Gradle Wrapper
+        run: |
+          chmod +x android/gradlew
 
-      - name: Build Android APK (Debug)
+      - name: Compilar APK Android (Debug Universal)
         run: |
           cd android
-          gradle assembleDebug
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
-      - name: Upload Compiled APK
+      - name: Preparar Artefato com Nome Amigável
+        run: |
+          mkdir -p build-output
+          cp android/app/build/outputs/apk/debug/app-debug.apk build-output/Kyvra-Player-Android.apk
+
+      - name: Disponibilizar APK para Download
         uses: actions/upload-artifact@v4
         with:
-          name: kyvra-app-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: Kyvra-Player-Android-APK
+          path: build-output/Kyvra-Player-Android.apk
+          retention-days: 30
+
+      - name: Resumo do Build
+        run: |
+          echo "### 🎵 Kyvra APK Android compilado com sucesso!" >> $GITHUB_STEP_SUMMARY
+          echo "- **Arquivo:** \`Kyvra-Player-Android.apk\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Compatibilidade:** Android 7.0 (Nougat) até Android 15" >> $GITHUB_STEP_SUMMARY
+          echo "- **Recursos:** Player em segundo plano, MediaSession na barra de notificações, controles de fone de ouvido e cache local." >> $GITHUB_STEP_SUMMARY
+          echo "- **Como baixar:** Vá na seção **Artifacts** abaixo e baixe o arquivo para instalar direto no seu celular." >> $GITHUB_STEP_SUMMARY
+
 

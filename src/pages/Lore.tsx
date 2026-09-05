@@ -13,6 +13,7 @@ import {
  } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
+import NeonButton from '@/components/ui/NeonButton';
 
 const LORE_THEME_VIDEOS: Record<string, string> = {
   abissal: "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/LOREVIDEO/YouCut_LOREABISSAL.webm",
@@ -290,29 +291,8 @@ export function Lore() {
     <div className="w-full h-[100dvh] overflow-hidden bg-black text-white font-inter flex flex-col relative">
       {/* Background Video (z-index 0) */}
       <div className="fixed inset-0 z-0 flex items-center justify-center bg-black overflow-hidden">
-        {/* Elegant Cinematic Fallback Background for Lore */}
-        <div className="absolute inset-0 bg-black opacity-100 z-[1] pointer-events-none transition-all duration-[2000ms]">
-          <div 
-            className="absolute top-[30%] left-[20%] w-[80vw] h-[80vw] rounded-full transition-all duration-[2000ms] ease-in-out mix-blend-screen opacity-25 animate-pulse"
-            style={{
-              background: theme === 'abissal' ? 'radial-gradient(circle, rgba(168,85,247,0.3) 0%, transparent 70%)' :
-                          theme === 'sangue-de-drago' ? 'radial-gradient(circle, rgba(239,68,68,0.3) 0%, transparent 70%)' :
-                          theme === 'floresta-negra' ? 'radial-gradient(circle, rgba(16,185,129,0.25) 0%, transparent 70%)' :
-                          'radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)',
-              transform: 'translateZ(0)'
-            }}
-          />
-          <div 
-            className="absolute bottom-[20%] right-[10%] w-[70vw] h-[70vw] rounded-full transition-all duration-[2000ms] ease-in-out mix-blend-screen opacity-15 animate-pulse"
-            style={{
-              background: theme === 'abissal' ? 'radial-gradient(circle, rgba(99,102,241,0.2) 0%, transparent 70%)' :
-                          theme === 'sangue-de-drago' ? 'radial-gradient(circle, rgba(220,38,38,0.2) 0%, transparent 70%)' :
-                          theme === 'floresta-negra' ? 'radial-gradient(circle, rgba(5,150,105,0.18) 0%, transparent 70%)' :
-                          'radial-gradient(circle, rgba(148,163,184,0.1) 0%, transparent 70%)',
-              transform: 'translateZ(0)'
-            }}
-          />
-        </div>
+        {/* Clean Deep Black Background Canvas for Lore */}
+        <div className="absolute inset-0 bg-black opacity-100 z-[1] pointer-events-none transition-colors duration-700" />
 
         {/* Dual-Video Hardware-Accelerated Crossfade Engine (Max 2 simultaneous players to satisfy low-resource devices and browser limits) */}
         {initialDelayOver && [previousVideoTheme, currentVideoTheme].map((tName) => {
@@ -471,13 +451,15 @@ export function Lore() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 md:gap-6 w-full pt-6 border-t border-white/10 pointer-events-auto lore-footer">
             {/* CTA Buttons */}
             <div className="flex items-center justify-center md:justify-start gap-3 sm:gap-4 shrink-0 w-full md:w-auto">
-              <button 
+              <NeonButton 
                 onClick={() => setReadingModalOpen(true)}
-                className="w-full md:w-auto justify-center bg-white text-black rounded-full font-medium px-8 py-3 flex items-center gap-2 hover:bg-gray-200 transition-colors shadow-lg pointer-events-auto lore-btn"
+                variant="pill"
+                size="md"
+                className="w-full md:w-auto font-medium px-8 py-3 text-white shadow-lg pointer-events-auto lore-btn"
               >
-                <FileText size={18} fill="currentColor" />
-                Explorar Capítulo
-              </button>
+                <FileText size={18} className="fill-current text-white" />
+                <span>Explorar Capítulo</span>
+              </NeonButton>
             </div>
 
             {/* Brief explanation occupying space between button and arrows in a single line (Desktop only) */}

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useScroll, useSpring } from 'motion/react';
 import { DownloadCloud, RefreshCw, CheckCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, isAppSyncedOffline } from '@/lib/utils';
 import { syncEverythingForOffline, OfflineProgress } from '@/lib/offlineManager';
 
 const navLinks = [
@@ -16,7 +16,12 @@ export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [syncProgress, setSyncProgress] = useState<OfflineProgress | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle');
+  const [isSynced, setIsSynced] = useState<boolean>(() => isAppSyncedOffline());
   const location = useLocation();
+
+  useEffect(() => {
+    setIsSynced(isAppSyncedOffline());
+  }, []);
 
   const handleOfflineSync = async () => {
     setSyncStatus('syncing');
@@ -26,13 +31,14 @@ export function Header() {
     
     if (success) {
       setSyncStatus('done');
+      setIsSynced(true);
       setTimeout(() => {
         setSyncStatus('idle');
         setSyncProgress(null);
-      }, 3000);
+      }, 3500);
     } else {
       setSyncStatus('error');
-      setTimeout(() => setSyncStatus('idle'), 3000);
+      setTimeout(() => setSyncStatus('idle'), 3500);
     }
   };
 
@@ -125,10 +131,12 @@ export function Header() {
                 onClick={handleOfflineSync}
                 disabled={syncStatus === 'syncing'}
                 className={cn(
-                  "p-2 rounded-full transition-all duration-300 flex items-center gap-2",
-                  syncStatus === 'syncing' ? "bg-primary/20 text-primary px-3" : "hover:bg-overlay text-text-mid hover:text-primary"
+                  "p-2 rounded-full transition-all duration-300 flex items-center gap-2 relative",
+                  syncStatus === 'syncing' ? "bg-primary/20 text-primary px-3" : (
+                    isSynced ? "text-primary hover:bg-overlay" : "hover:bg-overlay text-text-mid hover:text-primary"
+                  )
                 )}
-                title="Salvar App para uso Offline"
+                title={isSynced ? "App baixado para uso Offline (Clique para atualizar)" : "Salvar todos os recursos para uso Offline"}
               >
                 {syncStatus === 'syncing' ? (
                   <>
@@ -138,11 +146,24 @@ export function Header() {
                     </span>
                   </>
                 ) : syncStatus === 'done' ? (
-                  <CheckCircle size={16} className="text-accent" />
+                  <div className="flex items-center gap-1.5 text-accent">
+                    <CheckCircle size={16} />
+                    <span className="text-[10px] font-mono font-bold hidden sm:inline">Salvo!</span>
+                  </div>
+                ) : isSynced ? (
+                  <CheckCircle size={17} className="text-primary/90" />
                 ) : (
                   <DownloadCloud size={18} />
                 )}
               </button>
+
+              {/* Toast de Progresso Granular Flutuante */}
+              {syncStatus === 'syncing' && syncProgress?.label && (
+                <div className="absolute top-full right-0 mt-2 px-3 py-1.5 rounded-lg bg-black/95 border border-primary/30 text-[10px] font-mono text-text-high whitespace-nowrap pointer-events-none shadow-2xl backdrop-blur-md z-50">
+                  <span className="text-primary font-bold mr-1.5">●</span>
+                  {syncProgress.label}
+                </div>
+              )}
             </div>
 
             <Link

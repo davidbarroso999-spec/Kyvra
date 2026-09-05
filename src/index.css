@@ -44,8 +44,7 @@
     --text-low: #475569;
     --radius-sm: 2px;
     --radius-md: 8px;
-    --theme-bg-gradient: radial-gradient(circle at 0% 0%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
-                         radial-gradient(circle at 100% 100%, rgba(45, 212, 191, 0.08) 0%, transparent 50%);
+    --theme-bg-gradient: none;
   }
 
   html.theme-sangue-de-drago {
@@ -63,8 +62,7 @@
     --text-high: #fff1f1;
     --text-mid: #b89494;
     --text-low: #733d3d;
-    --theme-bg-gradient: radial-gradient(circle at 0% 0%, rgba(220, 38, 38, 0.18) 0%, transparent 45%),
-                         radial-gradient(circle at 100% 100%, rgba(185, 28, 28, 0.12) 0%, transparent 45%);
+    --theme-bg-gradient: none;
   }
 
   html.theme-floresta-negra {
@@ -82,8 +80,7 @@
     --text-high: #f0fff4;
     --text-mid: #94b8a3;
     --text-low: #3f624d;
-    --theme-bg-gradient: radial-gradient(circle at 0% 0%, rgba(5, 150, 105, 0.15) 0%, transparent 50%),
-                         radial-gradient(circle at 100% 100%, rgba(132, 204, 22, 0.08) 0%, transparent 50%);
+    --theme-bg-gradient: none;
   }
 
 
@@ -103,8 +100,7 @@
     --text-high: #ffffff;
     --text-mid: #737373;
     --text-low: #404040;
-    --theme-bg-gradient: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 50%),
-                         linear-gradient(315deg, rgba(59, 130, 246, 0.05) 0%, transparent 50%);
+    --theme-bg-gradient: none;
   }
 
   body {
@@ -317,22 +313,6 @@
     mask-image: linear-gradient(to right, transparent 0%, black 15%, black 85%, transparent 100%);
   }
 
-  .noise-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    pointer-events: none;
-    z-index: 9999;
-    opacity: 0.02;
-    mix-blend-mode: normal;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-    transform: translateZ(0);
-    will-change: transform;
-    backface-visibility: hidden;
-  }
-
   /* Typography Refinement */
   .display-large {
     @apply font-display text-5xl md:text-8xl leading-[0.9] tracking-tight;
@@ -344,22 +324,6 @@
 
   .label-secondary {
     @apply font-sc text-xs uppercase tracking-[0.2em] text-text-mid;
-  }
-
-  .scanlines {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    pointer-events: none;
-    z-index: 9998;
-    background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1));
-    background-size: 100% 4px;
-    opacity: 0.02;
-    transform: translateZ(0);
-    will-change: transform;
-    backface-visibility: hidden;
   }
 
   .animate-spin-slow {
@@ -427,7 +391,7 @@
   background: var(--primary);
 }
 
-/* From Uiverse.io by dexter-st */ 
+/* Kyvra Cryptographic Vault - 3D Mechanical Cypher Lock */
 .combination-lock {
   position: relative;
   display: flex;
@@ -435,90 +399,96 @@
 }
 
 .dial {
-  width: 44px;
-  height: 120px;
+  width: 48px;
+  height: 124px;
   overflow: hidden;
   perspective: 500px;
-  border-radius: 10px / 250px;
-  outline: solid 3px #111;
-  outline-offset: 1px;
-  filter: drop-shadow(4px 0 0px #0006) drop-shadow(8px -1px 1px #0003)
-    drop-shadow(8px 10px 1px #0003) contrast(1.2);
+  border-radius: 8px;
+  background: #0d0d11;
+  outline: 1.5px solid rgba(255, 255, 255, 0.08);
+  outline-offset: -1px;
   box-shadow:
-    -2px -3px 0 4px #1115,
-    0 -3px 0 2px #333,
-    0 2px 0 3px #222,
-    0 4px 0 4px #0009;
+    inset 0 0 12px rgba(0, 0, 0, 0.95),
+    inset 0 2px 4px rgba(255, 255, 255, 0.06),
+    0 10px 25px rgba(0, 0, 0, 0.75),
+    0 2px 4px rgba(0, 0, 0, 0.5);
+  position: relative;
+  cursor: ns-resize;
 }
 
+/* Photorealistic Cylinder Curvature Overlay (Lens + Shadow Occlusion) */
 .dial::after {
   content: "";
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(circle at 50% 50%, #000 40%, 40.5%, #fff0),
-    linear-gradient(to bottom, #444, 50%, #111);
-
-  background-position:
-    0 16px,
-    0 0;
-  background-repeat: no-repeat;
-  mix-blend-mode: soft-light;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.92) 0%,
+    rgba(0, 0, 0, 0.45) 24%,
+    rgba(255, 255, 255, 0.04) 48%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.04) 52%,
+    rgba(0, 0, 0, 0.45) 76%,
+    rgba(0, 0, 0, 0.92) 100%
+  );
   pointer-events: none;
+  z-index: 10;
 }
 
 .nonagon {
   width: 100%;
   height: 100%;
   position: relative;
-  top: 36px;
+  top: 38px;
   transform-style: preserve-3d;
   transform-origin: 0 24px;
   transform: rotateX(0deg);
-  transition: transform 300ms ease;
+  transition: transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .face {
   position: absolute;
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 47px;
+  width: 48px;
+  height: 48px;
 
-  background-color: #1a1a1a;
+  background: linear-gradient(180deg, #18181f 0%, #121217 50%, #0d0d12 100%);
   box-shadow:
-    0 -3px 1px 2px #000a,
-    0 0px 1px 3px #2e2e2e;
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.8);
 
-  font-family: "Lucida Console", Courier, monospace;
-  font-size: 1.85em;
-  font-weight: bolder;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.9);
-  color: #555;
-  transition: color 0.2s ease, text-shadow 0.2s ease;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 1.75em;
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  color: #4a4a58;
+  transition: color 0.25s ease, text-shadow 0.25s ease, transform 0.25s ease;
 }
 
 .face-active {
-  color: var(--primary) !important;
+  color: #fff !important;
   text-shadow: 
-    0px 0px 8px var(--primary),
-    0px 0px 16px rgba(168, 85, 247, 0.4) !important;
+    0 0 10px var(--primary),
+    0 0 20px rgba(168, 85, 247, 0.6),
+    0 1px 2px rgba(0, 0, 0, 0.8) !important;
 }
 
+/* Machined Grooves / Lateral Knurling on Drum Edges */
 .face::before,
 .face::after {
   content: "";
   position: absolute;
   height: 100%;
-  width: 4px;
-  border: 0.5px solid #0005;
+  width: 3px;
 }
 .face::before {
   left: 0;
-  background-color: #444;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.5));
 }
 .face::after {
   right: 0;
-  background-color: #000;
+  background: linear-gradient(270deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.8));
 }
 
 .face span {
@@ -617,40 +587,6 @@
    ========================================== */
 
 /* Highly optimized CSS keyframe animations for ambient graphic blurs */
-@keyframes ambientDriftOne {
-  0%, 100% {
-    transform: translate3d(0, 0, 0) scale(1);
-    opacity: 0.16;
-  }
-  50% {
-    transform: translate3d(5%, 3%, 0) scale(1.08);
-    opacity: 0.28;
-  }
-}
-
-@keyframes ambientDriftTwo {
-  0%, 100% {
-    transform: translate3d(0, 0, 0) scale(1);
-    opacity: 0.14;
-  }
-  50% {
-    transform: translate3d(-6%, -4%, 0) scale(1.12);
-    opacity: 0.24;
-  }
-}
-
-.ambient-blur-one {
-  animation: ambientDriftOne 14s ease-in-out infinite alternate;
-  will-change: transform;
-  transform: translateZ(0);
-}
-
-.ambient-blur-two {
-  animation: ambientDriftTwo 18s ease-in-out infinite alternate;
-  will-change: transform;
-  transform: translateZ(0);
-}
-
 /* Force hardware accelerated GPU layers for core graphic/animated objects */
 img,
 video,
@@ -696,9 +632,7 @@ canvas,
 
 /* Prevent layout thrashing on body/html */
 html, body {
-  scroll-behavior: smooth;
   overscroll-behavior-y: none;
-  -webkit-overflow-scrolling: touch;
 }
 
 /* ==========================================
@@ -800,6 +734,15 @@ html, body {
 
 .animate-fade-up {
   animation: fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+@keyframes kyvra-neon-spin {
+  0% {
+    transform: rotate(0deg) translateZ(0);
+  }
+  100% {
+    transform: rotate(360deg) translateZ(0);
+  }
 }
 
 .delay-1 { animation-delay: 0.1s; }

@@ -69,20 +69,21 @@ export function Preloader() {
       }
     });
 
-    // 1. Pré-carregar TODOS (100%) os frames da sequência de imagens da página de Álbuns na memória
-    startPreloadingAlbumsFrames((loaded, total) => {
-      if (active && loaded >= total) {
+    // 1. Pré-carregar os frames iniciais da sequência de imagens da página de Álbuns (continua em background)
+    startPreloadingAlbumsFrames((loaded) => {
+      // Assim que os primeiros 15 frames essenciais para o início suave estiverem na memória
+      if (active && loaded >= 15 && !loadedStepsRef.current.frames) {
         setLoadedSteps(prev => ({ ...prev, frames: true }));
         loadedStepsRef.current.frames = true;
       }
     }).then(() => {
-      if (active) {
+      if (active && !loadedStepsRef.current.frames) {
         setLoadedSteps(prev => ({ ...prev, frames: true }));
         loadedStepsRef.current.frames = true;
       }
     }).catch((err) => {
       console.error("[Preloader] Frames preload error:", err);
-      if (active) {
+      if (active && !loadedStepsRef.current.frames) {
         setLoadedSteps(prev => ({ ...prev, frames: true }));
         loadedStepsRef.current.frames = true;
       }
@@ -95,14 +96,24 @@ export function Preloader() {
     videoElement.playsInline = true;
     
     const handleCanPlay = () => {
-      if (active) {
+      if (active && !loadedStepsRef.current.video) {
         setLoadedSteps(prev => ({ ...prev, video: true }));
         loadedStepsRef.current.video = true;
       }
     };
     videoElement.addEventListener('canplaythrough', handleCanPlay, { once: true });
+    videoElement.addEventListener('canplay', handleCanPlay, { once: true });
+    videoElement.addEventListener('loadeddata', handleCanPlay, { once: true });
     videoElement.src = videoUrl;
     videoElement.load();
+
+    // Fallback de vídeo para conexões restritas ou dispositivos com data-saver
+    const videoTimeout = setTimeout(() => {
+      if (active && !loadedStepsRef.current.video) {
+        setLoadedSteps(prev => ({ ...prev, video: true }));
+        loadedStepsRef.current.video = true;
+      }
+    }, 2000);
 
     // 3. Check and wait for active typography readiness
     if (document.fonts) {
@@ -123,36 +134,41 @@ export function Preloader() {
         setLoadedSteps(prev => ({ ...prev, audio: true }));
         loadedStepsRef.current.audio = true;
       }
-    }, 450);
+    }, 300);
 
-    // Progressive counter that behaves like a real resource installation
+    // Progressive counter 120 FPS via requestAnimationFrame (Zero re-render spam)
     let currentProgress = 0;
-    const intervalTimer = setInterval(() => {
+    let animFrameId: number;
+    let lastTime = performance.now();
+
+    const updateProgressLoop = (now: number) => {
       if (!active) return;
+      const delta = Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
 
       const currentSteps = loadedStepsRef.current;
       const allLoaded = currentSteps.fonts && currentSteps.video && currentSteps.audio && currentSteps.frames && currentSteps.database;
       const targetMax = 
-        (currentSteps.fonts ? 10 : 5) + 
-        (currentSteps.video ? 15 : 5) + 
-        (currentSteps.audio ? 10 : 5) +
+        (currentSteps.fonts ? 15 : 5) + 
+        (currentSteps.video ? 20 : 5) + 
+        (currentSteps.audio ? 15 : 5) +
         (currentSteps.database ? 25 : 10) +
-        (currentSteps.frames ? 40 : 10);
+        (currentSteps.frames ? 25 : 5);
 
       if (allLoaded) {
-        // Boost progression rate if all hardware resources are buffered and validated
-        currentProgress += Math.random() * 8 + 8;
+        // Interpola rapidamente para 100%
+        currentProgress += (100 - currentProgress) * Math.min(1, delta * 12) + 0.8;
       } else if (currentProgress < targetMax) {
-        currentProgress += Math.random() * 2 + 1;
-      } else if (currentProgress < 99) {
-        currentProgress += 0.1; // Slower micro crawl since frames take a bit to download
+        currentProgress += (targetMax - currentProgress) * Math.min(1, delta * 8) + 0.2;
+      } else if (currentProgress < 95) {
+        currentProgress += delta * 2;
       }
 
       const finalProgress = Math.min(100, currentProgress);
-      setProgress(finalProgress);
+      setProgress(Math.floor(finalProgress));
 
-      if (finalProgress >= 100) {
-        clearInterval(intervalTimer);
+      if (finalProgress >= 99.5) {
+        setProgress(100);
         setTimeout(() => {
           if (active) {
             setIsVisible(false);
@@ -162,9 +178,14 @@ export function Preloader() {
               state.setIsLoadingFinished(true);
             }
           }
-        }, 300);
+        }, 200);
+        return;
       }
-    }, 30);
+
+      animFrameId = requestAnimationFrame(updateProgressLoop);
+    };
+
+    animFrameId = requestAnimationFrame(updateProgressLoop);
 
     const startPreload = () => {
       const keys = Object.keys(THEME_VIDEOS);
@@ -200,11 +221,10 @@ export function Preloader() {
 
     startPreload();
 
-    // Fallback Extremo: Força o encerramento após 25 segundos caso a conexão do usuário
-    // falhe em baixar todos os frames ou trave o banco de dados.
+    // Fallback de Segurança: Garante início em no máximo 5 segundos mesmo em redes 3G instáveis
     const forceReadyTimer = setTimeout(() => {
       if (active) {
-        console.warn("[Preloader] Timeout reached. Forcing app start.");
+        console.warn("[Preloader] Safety timeout reached. Forcing app start.");
         setProgress(100);
         setIsVisible(false);
         resumeSmoothScroll();
@@ -213,13 +233,16 @@ export function Preloader() {
           state.setIsLoadingFinished(true);
         }
       }
-    }, 25000);
+    }, 5000);
 
     return () => {
       active = false;
-      clearInterval(intervalTimer);
+      cancelAnimationFrame(animFrameId);
+      clearTimeout(videoTimeout);
       clearTimeout(forceReadyTimer);
       videoElement.removeEventListener('canplaythrough', handleCanPlay);
+      videoElement.removeEventListener('canplay', handleCanPlay);
+      videoElement.removeEventListener('loadeddata', handleCanPlay);
       videoElement.src = '';
       videoElement.load();
     };

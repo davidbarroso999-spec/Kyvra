@@ -4,6 +4,9 @@ import App from './App.tsx';
 import './index.css';
 import 'lenis/dist/lenis.css';
 import { registerSW } from 'virtual:pwa-register';
+import { logCrashlyticsMessage, reportHandledError } from './lib/crashlytics';
+
+logCrashlyticsMessage('Kyvra App Initialized');
 
 // Register service worker
 const updateSW = registerSW({

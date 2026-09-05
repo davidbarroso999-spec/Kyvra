@@ -1,3 +1,5 @@
+import { getOfflineUrl } from './utils';
+
 // Gerenciador de cache ultra-eficiente em memória e rede para a sequência de frames de Álbuns
 export const FRAME_COUNT = 165;
 export const FRAME_BASE_URL = '/cdn/frames/frame_';
@@ -24,7 +26,16 @@ export function getAlbumsImageElement(index: number): HTMLImageElement | null {
   if (!imageElements[index]) {
     const img = new Image();
     img.decoding = 'async';
-    img.src = frameUrl(index);
+    const targetUrl = frameUrl(index);
+    img.src = targetUrl;
+    // Se estiver offline, resolve do Cache Storage para garantir renderização local
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      getOfflineUrl(targetUrl).then((offlineUrl) => {
+        if (offlineUrl && offlineUrl !== targetUrl) {
+          img.src = offlineUrl;
+        }
+      });
+    }
     imageElements[index] = img;
   }
   return imageElements[index];

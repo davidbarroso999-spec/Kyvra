@@ -134,12 +134,13 @@ export default defineConfig(({ mode }) => {
               options: {
                 cacheName: "kyvra-audio-cache",
                 expiration: {
-                  maxEntries: 200,
-                  maxAgeSeconds: 60 * 60 * 24 * 60, // 60 days
+                  maxEntries: 400,
+                  maxAgeSeconds: 60 * 60 * 24 * 90, // 90 days
                 },
                 cacheableResponse: {
                   statuses: [0, 200],
                 },
+                rangeRequests: true,
               },
             },
             {
@@ -150,6 +151,20 @@ export default defineConfig(({ mode }) => {
                 expiration: {
                   maxEntries: 100,
                   maxAgeSeconds: 60 * 60 * 24,
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
+            {
+              urlPattern: /(?:.*\/cdn\/frames\/.*|https:\/\/raw\.githubusercontent\.com\/davidbarroso999-spec\/Aleatoriedades\/main\/.*)/i,
+              handler: "CacheFirst",
+              options: {
+                cacheName: "kyvra-frames-cache",
+                expiration: {
+                  maxEntries: 200,
+                  maxAgeSeconds: 60 * 60 * 24 * 60,
                 },
                 cacheableResponse: {
                   statuses: [0, 200],

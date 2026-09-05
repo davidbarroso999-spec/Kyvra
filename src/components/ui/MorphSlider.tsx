@@ -107,7 +107,12 @@ void main() {
   vec2 uvN = uv;
   float m = smoothstep(0.0, 1.0, p);
 
-  if (uReduce < 0.5) {
+  // Otimização Crítica GPU: Evita calcular FBM pesado quando o slide está em repouso
+  if (p <= 0.001) {
+    m = 0.0;
+  } else if (p >= 0.999) {
+    m = 1.0;
+  } else if (uReduce < 0.5) {
     if (uMode == 3) {
       vec2 c = uv - 0.5;
       float r = length(c);
@@ -215,6 +220,10 @@ class MorphEngine {
   mesh: any;
   boundContextLost: any;
   resizeObserver: any;
+  intersectionObserver: any;
+  boundVisibilityChange: any;
+  isVisible: boolean = true;
+  isTabActive: boolean = true;
   boundLoop: any;
   raf: any;
 
@@ -235,6 +244,7 @@ class MorphEngine {
     this.renderer = new Renderer({
       alpha: false,
       antialias: true,
+      powerPreference: 'high-performance',
       dpr: Math.min(window.devicePixelRatio || 1, dprCap)
     });
     this.gl = this.renderer.gl;
@@ -283,6 +293,34 @@ class MorphEngine {
     this.resize();
 
     this.loadTextures();
+
+    this.isVisible = true;
+    this.isTabActive = !document.hidden;
+
+    this.intersectionObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const prev = this.isVisible;
+          this.isVisible = entry.isIntersecting;
+          if (!prev && this.isVisible && this.isTabActive) {
+            cancelAnimationFrame(this.raf);
+            this.raf = requestAnimationFrame(this.boundLoop);
+          }
+        });
+      },
+      { threshold: 0.05 }
+    );
+    this.intersectionObserver.observe(container);
+
+    this.boundVisibilityChange = () => {
+      const prev = this.isTabActive;
+      this.isTabActive = !document.hidden;
+      if (!prev && this.isTabActive && this.isVisible) {
+        cancelAnimationFrame(this.raf);
+        this.raf = requestAnimationFrame(this.boundLoop);
+      }
+    };
+    document.addEventListener('visibilitychange', this.boundVisibilityChange, { passive: true });
 
     this.boundLoop = this.loop.bind(this);
     this.raf = requestAnimationFrame(this.boundLoop);
@@ -346,6 +384,9 @@ class MorphEngine {
   }
 
   loop(t: number) {
+    if (!this.isVisible || !this.isTabActive) {
+      return;
+    }
     this.program.uniforms.uTime.value = t * 0.001;
     if (!this.dragging && !this.animating) this.syncOptions();
     this.renderer.render({ scene: this.mesh });
@@ -490,6 +531,10 @@ class MorphEngine {
     cancelAnimationFrame(this.raf);
     if (this.tween) this.tween.kill();
     this.resizeObserver.disconnect();
+    if (this.intersectionObserver) this.intersectionObserver.disconnect();
+    if (this.boundVisibilityChange) {
+      document.removeEventListener('visibilitychange', this.boundVisibilityChange);
+    }
     this.canvas.removeEventListener('webglcontextlost', this.boundContextLost);
     this.textures.forEach(tex => {
       if (tex && tex.texture) this.gl.deleteTexture(tex.texture);
@@ -586,11 +631,14 @@ const MorphSlider = forwardRef<MorphSliderRef, MorphSliderProps>(({
     if (!containerRef.current || items.length === 0) return undefined;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const dynamicDprCap = isMobile ? 1.25 : 1.5;
+
     const engine = new MorphEngine(containerRef.current, {
       items,
       startIndex,
       reducedMotion,
-      dprCap: 2,
+      dprCap: dynamicDprCap,
       getOptions: () => optsRef.current,
       onIndexChange: (idx: number) => {
         setIndex(idx);

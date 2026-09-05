@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Play, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Play } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import MorphSlider, { MorphSliderRef } from './MorphSlider';
+import NeonButton from './NeonButton';
 
 interface FeaturedTrack {
   id: string | number;
@@ -109,33 +110,17 @@ export function FeaturedSlider({ tracks }: FeaturedSliderProps) {
             </AnimatePresence>
           </div>
 
-          {/* External Controls */}
-          <div className="w-full flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <button 
-                type="button" 
-                className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/5 hover:border-white/20 transition-all"
-                onClick={() => sliderRef.current?.prev()}
-              >
-                <ChevronLeft size={20} />
-              </button>
-              <button 
-                type="button" 
-                className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/5 hover:border-white/20 transition-all"
-                onClick={() => sliderRef.current?.next()}
-              >
-                <ChevronRight size={20} />
-              </button>
-            </div>
-
-            <button
+          {/* Action / Play Button */}
+          <div className="w-full flex justify-center items-center">
+            <NeonButton
               onClick={(e) => handlePlay(activeTrack, e)}
-              className="inline-flex items-center justify-center gap-3 px-8 h-12 rounded-full bg-primary text-void hover:bg-primary/90 hover:scale-105 transition-all duration-300 shadow-[0_0_30px_rgba(167,139,250,0.4)] hover:shadow-[0_0_40px_rgba(167,139,250,0.6)] font-sc tracking-[0.2em] text-[10px] uppercase w-full md:w-auto"
+              variant="pill"
+              className="font-sc tracking-[0.2em] text-[10px] uppercase w-full sm:w-auto h-12 px-8"
               aria-label={`Reproduzir ${activeTrack.title}`}
             >
-              <Play size={16} fill="currentColor" />
-              Reproduzir
-            </button>
+              <Play size={16} className="fill-current text-white" />
+              <span className="text-white">Reproduzir</span>
+            </NeonButton>
           </div>
         </div>
       </div>

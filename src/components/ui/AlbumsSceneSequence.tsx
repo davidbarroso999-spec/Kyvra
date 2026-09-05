@@ -21,6 +21,7 @@ export function AlbumsSceneSequence({ progress, onFrameChange }: AlbumsSceneSequ
   const [loadedCount, setLoadedCount] = useState<number>(getAlbumsFramesLoadedCount);
   const [isFullyLoaded, setIsFullyLoaded] = useState<boolean>(isAlbumsFramesComplete);
   const dimensionsRef = useRef({ w: 0, h: 0, dpr: 1, isMobile: false });
+  const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
 
   // Pré-calcula dimensões para evitar Layout Thrashing no loop do rAF
   const updateDimensions = useCallback(() => {
@@ -44,7 +45,10 @@ export function AlbumsSceneSequence({ progress, onFrameChange }: AlbumsSceneSequ
     if (!img || !img.complete || img.naturalWidth === 0) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+    if (!ctxRef.current) {
+      ctxRef.current = canvas.getContext('2d', { alpha: false, desynchronized: true });
+    }
+    const ctx = ctxRef.current;
     if (!ctx) return;
 
     // Se as dimensões ainda não foram calculadas, calcula agora
@@ -80,7 +84,7 @@ export function AlbumsSceneSequence({ progress, onFrameChange }: AlbumsSceneSequ
       offY = (h - drawH) / 2;
     }
 
-    ctx.clearRect(0, 0, w, h);
+    // drawImage cobre 100% da viewport (alpha: false) - zero overhead de clearRect
     ctx.drawImage(img, offX, offY, drawW, drawH);
   };
 

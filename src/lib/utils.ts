@@ -69,13 +69,15 @@ export function parseChapterNumber(chapter: any): number {
 }
 
 // CACHE STORAGE IMPLEMENTATION FOR PURE WEB
-const AUDIO_CACHE = 'kyvra-audio-cache';
+export const AUDIO_CACHE = 'kyvra-audio-cache';
+export const FRAMES_CACHE = 'kyvra-frames-cache';
 
-export async function saveForOffline(url: string): Promise<boolean> {
+export async function saveForOffline(url: string, targetCache = AUDIO_CACHE): Promise<boolean> {
   if (!url) return false;
+  if (typeof caches === 'undefined') return false;
   
   try {
-    const cache = await caches.open(AUDIO_CACHE);
+    const cache = await caches.open(targetCache);
     const existing = await cache.match(url);
     if (existing) return true;
 
@@ -83,7 +85,7 @@ export async function saveForOffline(url: string): Promise<boolean> {
     // enforce CORS, and bypass problematic browser-level caches.
     const response = await fetch(url, {
       method: 'GET',
-      mode: 'cors',           // Ensures we get a readable response (not opaque) for blob conversion later
+      mode: 'cors',           // Ensures we get a readable response for blob conversion later
       cache: 'no-store'       // Force a clean fetch from the remote server
     });
 
@@ -95,9 +97,8 @@ export async function saveForOffline(url: string): Promise<boolean> {
     await cache.put(url, response.clone());
     return true;
   } catch (error) {
-    console.error('Error with standard fetch, trying no-cors fallback...', error);
     try {
-      const cache = await caches.open(AUDIO_CACHE);
+      const cache = await caches.open(targetCache);
       const response = await fetch(url, {
         method: 'GET',
         mode: 'no-cors'
@@ -105,37 +106,69 @@ export async function saveForOffline(url: string): Promise<boolean> {
       await cache.put(url, response.clone());
       return true;
     } catch (fallbackError) {
-      console.error('Fatal crash on offline caching:', fallbackError);
+      console.warn(`[KYVRA OFFLINE] Falha ao salvar recurso offline (${url}):`, fallbackError);
       return false;
     }
   }
 }
 
 export async function isSavedOffline(url: string): Promise<boolean> {
-  if (!url) return false;
+  if (!url || typeof caches === 'undefined') return false;
   
   try {
-    const cache = await caches.open(AUDIO_CACHE);
-    const response = await cache.match(url);
-    return !!response;
+    const audioCache = await caches.open(AUDIO_CACHE);
+    let response = await audioCache.match(url);
+    if (response) return true;
+
+    const framesCache = await caches.open(FRAMES_CACHE);
+    response = await framesCache.match(url);
+    if (response) return true;
+
+    // Match global em todos os caches como fallback
+    const globalMatch = await caches.match(url, { ignoreSearch: true });
+    return !!globalMatch;
   } catch (error) {
     return false;
   }
 }
 
 export async function getOfflineUrl(url: string): Promise<string> {
-  if (!url) return url;
+  if (!url || typeof caches === 'undefined') return url;
   
   try {
-    // Check if we hit cache
-    const cache = await caches.open(AUDIO_CACHE);
-    const response = await cache.match(url);
-    if (response) {
-      const blob = await response.blob();
-      return URL.createObjectURL(blob);
+    const audioCache = await caches.open(AUDIO_CACHE);
+    let response = await audioCache.match(url);
+
+    if (!response) {
+      const framesCache = await caches.open(FRAMES_CACHE);
+      response = await framesCache.match(url);
     }
-    return url; // fallback to generic network request if not cached
+
+    if (!response) {
+      response = await caches.match(url, { ignoreSearch: true });
+    }
+
+    if (response) {
+      try {
+        const blob = await response.blob();
+        if (blob && blob.size > 0) {
+          return URL.createObjectURL(blob);
+        }
+      } catch (blobErr) {
+        // Resposta opaca que não permite .blob() -> fallback para url original
+        return url;
+      }
+    }
+    return url;
   } catch (e) {
     return url;
+  }
+}
+
+export function isAppSyncedOffline(): boolean {
+  try {
+    return localStorage.getItem('kyvra_offline_synced') === 'true';
+  } catch (e) {
+    return false;
   }
 }
