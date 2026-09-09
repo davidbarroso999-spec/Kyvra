@@ -1080,7 +1080,7 @@ export function Admin() {
                       className="overflow-hidden w-full"
                     >
                       <div className="mt-2.5 p-3 rounded-lg bg-white/[0.03] border border-white/5 text-[11px] font-mono text-text-low text-center leading-relaxed">
-                        Chaves canônicas gravadas no manifesto: a data sagrada da tripulação (<span className="text-primary font-bold">1117</span>) ou o ciclo de fundação (<span className="text-primary font-bold">2024</span>).
+                        <p className="italic text-white/80">"Oito corsários cruzam o horizonte eterno, guiados pela canção que sela o pacto de seu destino."</p>
                       </div>
                     </motion.div>
                   )}
