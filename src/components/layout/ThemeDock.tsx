@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useStore, Theme } from '@/store/useStore';
-import { Moon, Droplet, Leaf, Square } from 'lucide-react';
+import { Moon, Droplet, Leaf, Square, Waves } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ThemeConfig {
@@ -41,6 +41,9 @@ export function ThemeDock() {
   const currentTheme = useStore((state) => state.theme);
   const setTheme = useStore((state) => state.setTheme);
   const isMenuOpen = useStore((state) => state.isMenuOpen);
+  const scrollResonanceEnabled = useStore((state) => state.scrollResonanceEnabled);
+  const toggleScrollResonance = useStore((state) => state.toggleScrollResonance);
+  const [customLabel, setCustomLabel] = useState<string | null>(null);
 
   // Estado único para o texto ativo com timeout estrito de 1 segundo (1000ms)
   const [activeLabelTheme, setActiveLabelTheme] = useState<Theme | null>(null);
@@ -52,6 +55,17 @@ export function ThemeDock() {
       timerRef.current = null;
     }
   }, []);
+
+    const triggerCustomLabel = useCallback((text: string) => {
+    clearTimer();
+    setActiveLabelTheme(null);
+      setCustomLabel(null);
+    setCustomLabel(text);
+    timerRef.current = setTimeout(() => {
+      setCustomLabel(null);
+      timerRef.current = null;
+    }, 1200);
+  }, [clearTimer]);
 
   const triggerLabel = useCallback((themeId: Theme) => {
     clearTimer();
@@ -103,7 +117,7 @@ export function ThemeDock() {
   }, [clearTimer]);
 
   const displayedTheme = THEMES.find((t) => t.id === activeLabelTheme);
-  const isVisible = !!displayedTheme;
+  const isVisible = !!displayedTheme || !!customLabel;
 
   return (
     <aside
@@ -125,7 +139,16 @@ export function ThemeDock() {
             : 'opacity-0 translate-x-1 scale-95 pointer-events-none'
         )}
       >
-        {displayedTheme && (
+        {customLabel ? (
+          <span
+            className="text-[9px] sm:text-[10px] font-display tracking-[0.22em] font-semibold uppercase whitespace-nowrap -rotate-90 origin-center inline-block text-primary"
+            style={{
+              textShadow: "0 0 10px rgba(168,85,247,0.8), 0 1px 4px rgba(0,0,0,0.9)",
+            }}
+          >
+            {customLabel}
+          </span>
+        ) : displayedTheme && (
           <span
             className="text-[9px] sm:text-[10px] font-display tracking-[0.22em] font-semibold uppercase whitespace-nowrap -rotate-90 origin-center inline-block"
             style={{
@@ -140,6 +163,38 @@ export function ThemeDock() {
 
       {/* Coluna Vertical com os 4 Ícones */}
       <div className="flex flex-col items-center gap-3 sm:gap-4">
+        {/* Separador e Toggle de Ressonância Acústica */}
+        <div className="w-3.5 h-[1px] bg-white/10 my-0.5" />
+        
+        <div className="relative w-8 h-8 sm:w-8.5 sm:h-8.5 flex items-center justify-center">
+          <button
+            id="theme-dock-resonance-btn"
+            onClick={() => {
+              toggleScrollResonance();
+              triggerCustomLabel(!scrollResonanceEnabled ? "Ressonância: Ativa" : "Ressonância: Desligada");
+            }}
+            onMouseEnter={() => triggerCustomLabel(scrollResonanceEnabled ? "Ressonância: Ativa" : "Ressonância: Desligada")}
+            onMouseLeave={handleMouseLeave}
+            aria-label="Alternar Ressonância Acústica e Delay ao Rolar"
+            className={cn(
+              "w-full h-full flex items-center justify-center transition-all duration-300 group cursor-pointer",
+              scrollResonanceEnabled
+                ? "text-primary scale-110"
+                : "text-white/25 hover:text-white/80 hover:scale-105"
+            )}
+          >
+            <Waves
+              size={18}
+              className={cn(
+                "transition-all duration-300 group-hover:rotate-6",
+                scrollResonanceEnabled
+                  ? "drop-shadow-[0_0_10px_currentColor] stroke-[2.4]"
+                  : "stroke-[1.8]"
+              )}
+            />
+          </button>
+        </div>
+
         {THEMES.map((t) => {
           const isActive = currentTheme === t.id;
           const Icon = t.icon;

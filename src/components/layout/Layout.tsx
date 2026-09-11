@@ -1,3 +1,4 @@
+import { ScrollResonanceOverlay } from "../ui/ScrollResonanceOverlay";
 import { Outlet, useLocation } from 'react-router-dom';
 import { BackgroundEffects } from '../ui/BackgroundEffects';
 import { Header } from './Header';
@@ -20,6 +21,7 @@ export function Layout() {
   return (
     <div className="min-h-screen flex flex-col relative w-full">
       <BackgroundEffects />
+      <ScrollResonanceOverlay />
       
       <Header />
       

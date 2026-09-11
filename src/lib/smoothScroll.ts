@@ -4,6 +4,24 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 gsap.registerPlugin(ScrollTrigger);
 
+
+export type ScrollEventPayload = {
+  scroll: number;
+  velocity: number;
+  direction: number;
+  progress: number;
+};
+
+export type ScrollListener = (e: ScrollEventPayload) => void;
+const scrollSubscribers = new Set<ScrollListener>();
+
+export function subscribeToScroll(listener: ScrollListener): () => void {
+  scrollSubscribers.add(listener);
+  return () => {
+    scrollSubscribers.delete(listener);
+  };
+}
+
 let lenisInstance: Lenis | null = null;
 let wheelEventListener: ((e: WheelEvent) => void) | null = null;
 let tickerCallback: ((time: number) => void) | null = null;
@@ -63,7 +81,16 @@ export function initSmoothScroll() {
       );
     }
 
+    
+    scrollSubscribers.forEach((fn) => {
+      try {
+        fn(e);
+      } catch (err) {
+        console.error("Kyvra: Erro no subscriber de scroll:", err);
+      }
+    });
     ScrollTrigger.update();
+
   });
 
   tickerCallback = (time: number) => {

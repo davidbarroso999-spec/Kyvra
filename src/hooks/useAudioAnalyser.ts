@@ -1,3 +1,4 @@
+import { attachScrollResonanceToMedia } from "@/lib/scrollAudioResonance";
 import { useEffect, useState } from 'react';
 
 // Registro global de conexões para evitar erros de duplicidade de MediaElementAudioSourceNode
@@ -91,7 +92,7 @@ export function useAudioAnalyser(options: UseAudioAnalyserOptions = {}) {
 
           const sourceNode = context.createMediaElementSource(audioElement);
           sourceNode.connect(analyserNode);
-          analyserNode.connect(context.destination);
+          attachScrollResonanceToMedia(context, sourceNode, context.destination);
 
           connection = {
             audioContext: context,

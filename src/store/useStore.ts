@@ -49,6 +49,9 @@ interface AppState {
   clearQueue: () => void;                        // Limpa a fila (mantém a música atual)
   isPlayerHidden: boolean;
   setPlayerHidden: (hidden: boolean) => void;
+  scrollResonanceEnabled: boolean;
+  setScrollResonanceEnabled: (enabled: boolean) => void;
+  toggleScrollResonance: () => void;
   isMenuOpen: boolean;
   setMenuOpen: (isOpen: boolean) => void;
   isLoadingFinished?: boolean;
@@ -76,6 +79,9 @@ export const useStore = create<AppState>()(
 
       isPlayerHidden: false,
       setPlayerHidden: (isPlayerHidden) => set({ isPlayerHidden }),
+      scrollResonanceEnabled: true,
+      setScrollResonanceEnabled: (scrollResonanceEnabled) => set({ scrollResonanceEnabled }),
+      toggleScrollResonance: () => set((state) => ({ scrollResonanceEnabled: !state.scrollResonanceEnabled })),
 
       isMenuOpen: false,
       setMenuOpen: (isMenuOpen) => set({ isMenuOpen }),
@@ -288,6 +294,7 @@ export const useStore = create<AppState>()(
         isShuffle: state.isShuffle,
         repeatMode: state.repeatMode,
         isPlayerHidden: state.isPlayerHidden,
+        scrollResonanceEnabled: state.scrollResonanceEnabled,
       }),
     }
   )
