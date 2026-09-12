@@ -2,14 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { ArrowDownToLine, CheckCircle2, WifiOff, Wifi, X, RefreshCw } from 'lucide-react';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
-import { OfflineProgress, syncEverythingForOffline } from '@/lib/offlineManager';
+import { syncEverythingForOffline } from '@/lib/offlineManager';
 
 export const NetworkStatusBanner: React.FC = () => {
   const { isOnline, wasOffline } = useNetworkStatus();
   const [dismissed, setDismissed] = useState(false);
   const [showRestored, setShowRestored] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle');
-  const [syncProgress, setSyncProgress] = useState<OfflineProgress | null>(null);
 
   // Reseta o estado de dispensa quando a conexão muda
   useEffect(() => {
@@ -38,20 +37,15 @@ export const NetworkStatusBanner: React.FC = () => {
     if (!isOnline || syncStatus === 'syncing') return;
 
     setSyncStatus('syncing');
-    setSyncProgress(null);
-    const success = await syncEverythingForOffline((progress) => {
-      setSyncProgress(progress);
-    });
+    const success = await syncEverythingForOffline();
     setSyncStatus(success ? 'done' : 'error');
 
     window.setTimeout(() => {
       setSyncStatus('idle');
-      setSyncProgress(null);
     }, success ? 3500 : 5000);
   };
 
   const isVisible = (!isOnline || showRestored || syncStatus !== 'idle') && !dismissed;
-  const syncLabel = syncProgress?.label || 'Salvar músicas e capítulos para usar sem internet';
 
   return (
     <AnimatePresence>
@@ -67,7 +61,7 @@ export const NetworkStatusBanner: React.FC = () => {
             className={`relative flex items-center justify-between gap-3 px-4 py-3 rounded-xl border shadow-2xl backdrop-blur-md transition-colors duration-300 ${
               !isOnline
                 ? 'bg-neutral-950/90 border-amber-500/40 text-amber-200 shadow-amber-950/30'
-                : 'bg-neutral-950/90 border-emerald-500/40 text-emerald-200 shadow-emerald-950/30'
+                : 'bg-neutral-950/90 border-primary/40 text-primary shadow-[0_20px_50px_var(--glow-purple)]'
             }`}
           >
             {/* Indicador pulsante + Ícone */}
@@ -75,19 +69,19 @@ export const NetworkStatusBanner: React.FC = () => {
               <div className="relative flex items-center justify-center shrink-0">
                 <span
                   className={`absolute inline-flex h-3 w-3 rounded-full opacity-75 animate-ping ${
-                    !isOnline ? 'bg-amber-400' : 'bg-emerald-400'
+                    !isOnline ? 'bg-amber-400' : 'bg-primary'
                   }`}
                 />
                 <span
                   className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
-                    !isOnline ? 'bg-amber-500' : 'bg-emerald-500'
+                    !isOnline ? 'bg-amber-500' : 'bg-primary'
                   }`}
                 />
                 <div className="ml-2">
                   {!isOnline ? (
                     <WifiOff className="w-4 h-4 text-amber-400" />
                   ) : (
-                    <Wifi className="w-4 h-4 text-emerald-400" />
+                    <Wifi className="w-4 h-4 text-primary" />
                   )}
                 </div>
               </div>
@@ -98,15 +92,9 @@ export const NetworkStatusBanner: React.FC = () => {
                   {!isOnline ? 'Conexão Ausente' : 'Conexão Restabelecida'}
                 </p>
                 <p className="text-xs text-neutral-300 truncate mt-0.5">
-                  {syncStatus === 'syncing'
-                    ? syncLabel
-                    : syncStatus === 'done'
-                      ? 'Acervo salvo — Kyvra pronta para o próximo apagão'
-                      : syncStatus === 'error'
-                        ? 'Alguns recursos não foram salvos. Tente novamente.'
-                        : !isOnline
-                          ? 'Modo Offline ativo — reproduzindo dados em cache'
-                          : 'Conexão restabelecida — salve o acervo para ouvir depois'}
+                  {!isOnline
+                    ? 'Modo Offline ativo — reproduzindo dados em cache'
+                    : 'Conexão restabelecida'}
                 </p>
               </div>
             </div>
@@ -122,10 +110,10 @@ export const NetworkStatusBanner: React.FC = () => {
                   !isOnline
                     ? 'text-neutral-600 cursor-not-allowed'
                     : syncStatus === 'done'
-                      ? 'bg-emerald-500/10 text-emerald-300'
-                      : syncStatus === 'error'
-                        ? 'bg-red-500/10 text-red-300 hover:bg-red-500/20'
-                        : 'bg-primary/10 text-primary hover:bg-primary/20'
+                    ? 'bg-primary/10 text-primary'
+                    : syncStatus === 'error'
+                      ? 'bg-primary/10 text-primary hover:bg-primary/20'
+                      : 'bg-primary/10 text-primary hover:bg-primary/20'
                 }`}
               >
                 {syncStatus === 'syncing' ? (

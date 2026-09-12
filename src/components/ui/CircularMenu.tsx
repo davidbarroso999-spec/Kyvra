@@ -31,7 +31,7 @@ export function CircularMenu() {
     ? Math.min(100, Math.max(0, (offlineSyncProgress.current / offlineSyncProgress.total) * 100))
     : offlineSyncStatus === 'done' ? 100 : 0;
   const showDownloadProgress = offlineSyncStatus === 'syncing' || offlineSyncStatus === 'done' || offlineSyncStatus === 'error';
-  const progressColor = offlineSyncStatus === 'error' ? 'var(--color-red-400)' : offlineSyncStatus === 'done' ? 'var(--color-emerald-400)' : 'var(--primary)';
+  const progressColor = 'var(--primary)';
 
   return (
     <>
