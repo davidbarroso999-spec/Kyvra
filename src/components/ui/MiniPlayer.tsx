@@ -551,6 +551,17 @@ export function MiniPlayer() {
       return;
     }
 
+    // Online: deixa o navegador iniciar o streaming imediatamente. A consulta ao
+    // Cache Storage fica reservada para sessões offline, evitando atraso no play.
+    if (typeof navigator === 'undefined' || navigator.onLine) {
+      if (activeBlobUrlRef.current) {
+        URL.revokeObjectURL(activeBlobUrlRef.current);
+        activeBlobUrlRef.current = null;
+      }
+      setResolvedAudioUrl(targetUrl);
+      return;
+    }
+
     getOfflineUrl(targetUrl).then((url) => {
       if (isCurrent) {
         if (activeBlobUrlRef.current && activeBlobUrlRef.current.startsWith('blob:') && activeBlobUrlRef.current !== url) {
@@ -606,7 +617,7 @@ export function MiniPlayer() {
         src={isNativeAudioAvailable() ? undefined : (resolvedAudioUrl || currentTrack?.audioUrl || undefined)}
         className="hidden"
         crossOrigin="anonymous"
-        preload="auto"
+        preload="metadata"
         autoPlay={isNativeAudioAvailable() ? false : isPlaying}
         onCanPlay={() => {
           if (!isNativeAudioAvailable() && isPlaying && audioRef.current) {

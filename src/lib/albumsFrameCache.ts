@@ -2,7 +2,9 @@ import { getOfflineUrl } from './utils';
 
 // Gerenciador de cache ultra-eficiente em memória e rede para a sequência de frames de Álbuns
 export const FRAME_COUNT = 165;
-export const FRAME_BASE_URL = '/cdn/frames/frame_';
+// Os frames vivem na raiz do repositório de mídia. Usar a URL pública diretamente
+// também funciona em produção, onde o servidor Express não possui o proxy do Vite.
+export const FRAME_BASE_URL = 'https://raw.githubusercontent.com/davidbarroso999-spec/Aleatoriedades/main/frame_';
 
 export function frameUrl(index: number): string {
   const padded = String(index + 1).padStart(3, '0');

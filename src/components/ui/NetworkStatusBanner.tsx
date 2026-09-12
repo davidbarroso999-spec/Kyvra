@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { WifiOff, Wifi, X, RefreshCw } from 'lucide-react';
+import { ArrowDownToLine, CheckCircle2, WifiOff, Wifi, X, RefreshCw } from 'lucide-react';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { OfflineProgress, syncEverythingForOffline } from '@/lib/offlineManager';
 
 export const NetworkStatusBanner: React.FC = () => {
   const { isOnline, wasOffline } = useNetworkStatus();
   const [dismissed, setDismissed] = useState(false);
   const [showRestored, setShowRestored] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle');
+  const [syncProgress, setSyncProgress] = useState<OfflineProgress | null>(null);
 
   // Reseta o estado de dispensa quando a conexão muda
   useEffect(() => {
@@ -31,7 +34,24 @@ export const NetworkStatusBanner: React.FC = () => {
     }
   };
 
-  const isVisible = (!isOnline || showRestored) && !dismissed;
+  const handleOfflineSync = async () => {
+    if (!isOnline || syncStatus === 'syncing') return;
+
+    setSyncStatus('syncing');
+    setSyncProgress(null);
+    const success = await syncEverythingForOffline((progress) => {
+      setSyncProgress(progress);
+    });
+    setSyncStatus(success ? 'done' : 'error');
+
+    window.setTimeout(() => {
+      setSyncStatus('idle');
+      setSyncProgress(null);
+    }, success ? 3500 : 5000);
+  };
+
+  const isVisible = (!isOnline || showRestored || syncStatus !== 'idle') && !dismissed;
+  const syncLabel = syncProgress?.label || 'Salvar músicas e capítulos para usar sem internet';
 
   return (
     <AnimatePresence>
@@ -78,19 +98,49 @@ export const NetworkStatusBanner: React.FC = () => {
                   {!isOnline ? 'Conexão Ausente' : 'Conexão Restabelecida'}
                 </p>
                 <p className="text-xs text-neutral-300 truncate mt-0.5">
-                  {!isOnline
-                    ? 'Modo Offline ativo — Reproduzindo dados em cache'
-                    : 'Sincronizando biblioteca de Kyvra...'}
+                  {syncStatus === 'syncing'
+                    ? syncLabel
+                    : syncStatus === 'done'
+                      ? 'Acervo salvo — Kyvra pronta para o próximo apagão'
+                      : syncStatus === 'error'
+                        ? 'Alguns recursos não foram salvos. Tente novamente.'
+                        : !isOnline
+                          ? 'Modo Offline ativo — reproduzindo dados em cache'
+                          : 'Conexão restabelecida — salve o acervo para ouvir depois'}
                 </p>
               </div>
             </div>
 
             {/* Ações */}
             <div className="flex items-center gap-1.5 shrink-0 ml-2">
+              <button
+                onClick={handleOfflineSync}
+                disabled={!isOnline || syncStatus === 'syncing'}
+                title={isOnline ? 'Salvar acervo para usar offline' : 'A sincronização será liberada quando a conexão voltar'}
+                aria-label="Salvar acervo para usar offline"
+                className={`p-1.5 rounded-lg transition-colors ${
+                  !isOnline
+                    ? 'text-neutral-600 cursor-not-allowed'
+                    : syncStatus === 'done'
+                      ? 'bg-emerald-500/10 text-emerald-300'
+                      : syncStatus === 'error'
+                        ? 'bg-red-500/10 text-red-300 hover:bg-red-500/20'
+                        : 'bg-primary/10 text-primary hover:bg-primary/20'
+                }`}
+              >
+                {syncStatus === 'syncing' ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : syncStatus === 'done' ? (
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                ) : (
+                  <ArrowDownToLine className="w-3.5 h-3.5" />
+                )}
+              </button>
+
               {!isOnline && (
                 <button
                   onClick={handleRetry}
-                  title="Testar Conexão"
+                  title="Testar conexão"
                   className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 transition-colors"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
@@ -99,7 +149,7 @@ export const NetworkStatusBanner: React.FC = () => {
 
               <button
                 onClick={() => setDismissed(true)}
-                title="Fechar Notificação"
+                title="Fechar notificação"
                 className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-white/10 transition-colors"
               >
                 <X className="w-3.5 h-3.5" />

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useScroll, useSpring } from 'motion/react';
-import { DownloadCloud, RefreshCw, CheckCircle } from 'lucide-react';
+import { ArrowDownToLine, RefreshCw, CheckCircle } from 'lucide-react';
 import { cn, isAppSyncedOffline } from '@/lib/utils';
 import { syncEverythingForOffline, OfflineProgress } from '@/lib/offlineManager';
 
@@ -153,7 +153,10 @@ export function Header() {
                 ) : isSynced ? (
                   <CheckCircle size={17} className="text-primary/90" />
                 ) : (
-                  <DownloadCloud size={18} />
+                  <>
+                    <ArrowDownToLine size={18} />
+                    <span className="hidden xl:inline text-[9px] font-mono tracking-wider uppercase">Offline</span>
+                  </>
                 )}
               </button>
 

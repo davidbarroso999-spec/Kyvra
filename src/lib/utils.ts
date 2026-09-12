@@ -85,8 +85,9 @@ export async function saveForOffline(url: string, targetCache = AUDIO_CACHE): Pr
     // enforce CORS, and bypass problematic browser-level caches.
     const response = await fetch(url, {
       method: 'GET',
-      mode: 'cors',           // Ensures we get a readable response for blob conversion later
-      cache: 'no-store'       // Force a clean fetch from the remote server
+      mode: 'cors',
+      cache: 'force-cache',
+      credentials: 'omit',
     });
 
     if (!response.ok && response.type !== 'opaque') {
@@ -101,7 +102,9 @@ export async function saveForOffline(url: string, targetCache = AUDIO_CACHE): Pr
       const cache = await caches.open(targetCache);
       const response = await fetch(url, {
         method: 'GET',
-        mode: 'no-cors'
+        mode: 'no-cors',
+        cache: 'force-cache',
+        credentials: 'omit',
       });
       await cache.put(url, response.clone());
       return true;

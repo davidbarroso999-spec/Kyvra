@@ -54,6 +54,10 @@ interface AppState {
   toggleScrollResonance: () => void;
   isMenuOpen: boolean;
   setMenuOpen: (isOpen: boolean) => void;
+  offlineSyncStatus: 'idle' | 'syncing' | 'done' | 'error';
+  offlineSyncProgress: { current: number; total: number; failed?: number } | null;
+  setOfflineSyncStatus: (status: 'idle' | 'syncing' | 'done' | 'error') => void;
+  setOfflineSyncProgress: (progress: { current: number; total: number; failed?: number } | null) => void;
   isLoadingFinished?: boolean;
   setIsLoadingFinished?: (finished: boolean) => void;
   themeVideoUrls: Record<string, string>;
@@ -85,6 +89,10 @@ export const useStore = create<AppState>()(
 
       isMenuOpen: false,
       setMenuOpen: (isMenuOpen) => set({ isMenuOpen }),
+      offlineSyncStatus: 'idle',
+      offlineSyncProgress: null,
+      setOfflineSyncStatus: (offlineSyncStatus) => set({ offlineSyncStatus }),
+      setOfflineSyncProgress: (offlineSyncProgress) => set({ offlineSyncProgress }),
 
       isLoadingFinished: false,
       setIsLoadingFinished: (isLoadingFinished) => set({ isLoadingFinished }),
@@ -295,6 +303,12 @@ export const useStore = create<AppState>()(
         repeatMode: state.repeatMode,
         isPlayerHidden: state.isPlayerHidden,
         scrollResonanceEnabled: state.scrollResonanceEnabled,
+        // Mantém o contexto do player para que o acervo continue utilizável após
+        // reabrir o PWA sem conexão (o áudio em si permanece no Cache Storage).
+        currentTrack: state.currentTrack,
+        queue: state.queue,
+        shuffledQueue: state.shuffledQueue,
+        playHistory: state.playHistory,
       }),
     }
   )

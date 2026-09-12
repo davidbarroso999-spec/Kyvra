@@ -16,6 +16,8 @@ const menuItems = [
 export function CircularMenu() {
   const isMenuOpen = useStore((state) => state.isMenuOpen);
   const setMenuOpen = useStore((state) => state.setMenuOpen);
+  const offlineSyncStatus = useStore((state) => state.offlineSyncStatus);
+  const offlineSyncProgress = useStore((state) => state.offlineSyncProgress);
   const location = useLocation();
 
   const toggleMenu = () => setMenuOpen(!isMenuOpen);
@@ -24,6 +26,12 @@ export function CircularMenu() {
   useEffect(() => {
     setMenuOpen(false);
   }, [location.pathname, setMenuOpen]);
+
+  const downloadProgress = offlineSyncProgress && offlineSyncProgress.total > 0
+    ? Math.min(100, Math.max(0, (offlineSyncProgress.current / offlineSyncProgress.total) * 100))
+    : offlineSyncStatus === 'done' ? 100 : 0;
+  const showDownloadProgress = offlineSyncStatus === 'syncing' || offlineSyncStatus === 'done' || offlineSyncStatus === 'error';
+  const progressColor = offlineSyncStatus === 'error' ? 'var(--color-red-400)' : offlineSyncStatus === 'done' ? 'var(--color-emerald-400)' : 'var(--primary)';
 
   return (
     <>
@@ -125,6 +133,29 @@ export function CircularMenu() {
               })}
             </AnimatePresence>
           </div>
+
+          {/* Progresso do acervo offline, sem alterar o botão ou os recursos do menu */}
+          {showDownloadProgress && (
+            <svg
+              className="absolute w-[82px] h-[82px] sm:w-[92px] sm:h-[92px] z-[5010] -rotate-90 pointer-events-none"
+              viewBox="0 0 100 100"
+              aria-hidden="true"
+            >
+              <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="2" />
+              <circle
+                cx="50"
+                cy="50"
+                r="46"
+                fill="none"
+                stroke={progressColor}
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeDasharray="289"
+                strokeDashoffset={289 - (289 * downloadProgress) / 100}
+                style={{ transition: 'stroke-dashoffset 180ms ease-out, stroke 240ms ease' }}
+              />
+            </svg>
+          )}
 
           {/* Botão Principal Toggle */}
           <motion.button

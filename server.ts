@@ -28,9 +28,111 @@ function getGeminiClient() {
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   app.use(express.json());
+
+  // GitHub API integration: the token is always kept server-side.
+  const githubRequest = async <T>(endpoint: string): Promise<T> => {
+    const token = process.env.GITHUB_TOKEN;
+    if (!token) {
+      const error = new Error('GITHUB_TOKEN is not configured');
+      (error as Error & { status?: number }).status = 503;
+      throw error;
+    }
+
+    const response = await fetch(`https://api.github.com${endpoint}`, {
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: `Bearer ${token}`,
+        'X-GitHub-Api-Version': '2022-11-28',
+        'User-Agent': 'Kyvra-App',
+      },
+    });
+
+    if (!response.ok) {
+      const error = new Error(`GitHub API returned ${response.status}`);
+      (error as Error & { status?: number }).status = response.status;
+      throw error;
+    }
+
+    return response.json() as Promise<T>;
+  };
+
+  app.get('/api/github/status', async (_req, res) => {
+    if (!process.env.GITHUB_TOKEN) {
+      return res.json({ configured: false });
+    }
+
+    try {
+      const user = await githubRequest<{
+        login: string;
+        name: string | null;
+        avatar_url: string;
+        html_url: string;
+        public_repos: number;
+      }>('/user');
+
+      return res.json({
+        configured: true,
+        user: {
+          login: user.login,
+          name: user.name,
+          avatarUrl: user.avatar_url,
+          profileUrl: user.html_url,
+          publicRepositories: user.public_repos,
+        },
+      });
+    } catch (error) {
+      const status = (error as Error & { status?: number }).status;
+      console.error('GitHub status check failed:', error);
+      return res.status(status === 401 ? 401 : 502).json({
+        configured: true,
+        error: status === 401 ? 'GITHUB_TOKEN is invalid or expired' : 'GitHub is unavailable',
+      });
+    }
+  });
+
+  app.get('/api/github/repositories', async (req, res) => {
+    const requestedLimit = Number(req.query.limit) || 30;
+    const limit = Math.min(Math.max(requestedLimit, 1), 100);
+
+    try {
+      const repositories = await githubRequest<Array<{
+        id: number;
+        name: string;
+        full_name: string;
+        private: boolean;
+        html_url: string;
+        description: string | null;
+        default_branch: string;
+        updated_at: string;
+      }>>(`/user/repos?visibility=all&sort=updated&direction=desc&per_page=${limit}`);
+
+      return res.json({
+        repositories: repositories.map((repository) => ({
+          id: repository.id,
+          name: repository.name,
+          fullName: repository.full_name,
+          isPrivate: repository.private,
+          url: repository.html_url,
+          description: repository.description,
+          defaultBranch: repository.default_branch,
+          updatedAt: repository.updated_at,
+        })),
+      });
+    } catch (error) {
+      const status = (error as Error & { status?: number }).status;
+      console.error('GitHub repositories request failed:', error);
+      return res.status(status === 401 ? 401 : status === 403 ? 403 : 502).json({
+        error: status === 401
+          ? 'GITHUB_TOKEN is invalid or expired'
+          : status === 403
+            ? 'GITHUB_TOKEN does not have permission to list repositories'
+            : 'GitHub is unavailable',
+      });
+    }
+  });
 
   // Luxury Dark Poetic Whisper / Lore Quote Generator API
   app.post("/api/lore-quote", async (req, res) => {
@@ -168,7 +270,7 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on http://0.0.0.0:${PORT}`);
   });
 }
 
