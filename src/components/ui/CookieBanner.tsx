@@ -21,8 +21,11 @@ export function CookieBanner() {
   const handleAccept = () => {
     localStorage.setItem('kyvra_cookie_consent', 'accepted');
     setIsOpen(false);
-    
-    // Suggest PWA installation after closing the cookie banner
+
+    // Libera a fila de onboarding (prompt de instalação → download offline)
+    window.dispatchEvent(new CustomEvent('kyvraCookieConsentResolved'));
+
+    // Sugere a instalação do PWA após fechar o banner de cookies
     setTimeout(() => {
       window.dispatchEvent(new CustomEvent('showPwaPrompt'));
     }, 1200);
@@ -31,6 +34,9 @@ export function CookieBanner() {
   const handleDecline = () => {
     localStorage.setItem('kyvra_cookie_consent', 'declined');
     setIsOpen(false);
+
+    // Mesmo recusando, libera a fila de onboarding
+    window.dispatchEvent(new CustomEvent('kyvraCookieConsentResolved'));
   };
 
   return (
@@ -41,7 +47,7 @@ export function CookieBanner() {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 40, scale: 0.95 }}
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-          className="fixed bottom-6 left-6 right-6 md:left-[auto] md:right-8 md:max-w-[450px] z-50 overflow-hidden"
+          className="fixed bottom-6 left-6 right-6 md:left-[auto] md:right-8 md:max-w-[450px] z-[10000] overflow-hidden"
           id="cookie-consent-container"
         >
           {/* Main glass card */}
@@ -60,7 +66,10 @@ export function CookieBanner() {
                     CRÔNICAS DE COOKIES
                   </h4>
                   <button 
-                    onClick={() => setIsOpen(false)}
+                    onClick={() => {
+                      setIsOpen(false);
+                      window.dispatchEvent(new CustomEvent('kyvraCookieConsentResolved'));
+                    }}
                     className="text-white/40 hover:text-white transition-colors duration-200 p-1"
                     aria-label="Ignorar por enquanto"
                     id="cookie-btn-close"

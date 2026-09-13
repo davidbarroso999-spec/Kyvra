@@ -1,147 +1,174 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowDownToLine, CheckCircle2, WifiOff, Wifi, X, RefreshCw } from 'lucide-react';
-import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { ArrowDownToLine, CheckCircle2, RefreshCw } from 'lucide-react';
 import { syncEverythingForOffline } from '@/lib/offlineManager';
+import { isAppSyncedOffline } from '@/lib/utils';
 
+const STORAGE_KEY = 'kyvra_offline_download_prompt';
+const COOKIES_KEY = 'kyvra_cookie_consent';
+const INSTALL_FLAG_KEY = 'kyvra_install_prompt_open';
+const DISMISS_COOLDOWN_MS = 1000 * 60 * 60 * 24 * 3; // 3 dias
+const CHAIN_DELAY_MS = 1600; // Aguarda o prompt de instalação abrir (aceite de cookies → 1.2s → prompt)
+
+function wasRecentlyDismissed(): boolean {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const dismissedAt = Number(raw);
+    return Number.isFinite(dismissedAt) && Date.now() - dismissedAt < DISMISS_COOLDOWN_MS;
+  } catch (_e) {
+    return false;
+  }
+}
+
+function markDismissed(): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, String(Date.now()));
+  } catch (_e) {
+    // Ignorado
+  }
+}
+
+function areCookiesResolved(): boolean {
+  try {
+    return Boolean(localStorage.getItem(COOKIES_KEY));
+  } catch (_e) {
+    return true; // Sem storage disponível: não bloqueia a fila
+  }
+}
+
+function isInstallPromptOpen(): boolean {
+  try {
+    return sessionStorage.getItem(INSTALL_FLAG_KEY) === '1';
+  } catch (_e) {
+    return false;
+  }
+}
+
+/**
+ * Notificação de salvar recursos offline — terceira e última da fila de
+ * onboarding. Só surge depois que o banner de cookies e o prompt de
+ * instalação do PWA foram resolvidos (ou já estavam resolvidos de visitas
+ * anteriores), evitando sobreposição de notificações.
+ */
 export const NetworkStatusBanner: React.FC = () => {
-  const { isOnline, wasOffline } = useNetworkStatus();
-  const [dismissed, setDismissed] = useState(false);
-  const [showRestored, setShowRestored] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle');
+  const [isAppSynced, setIsAppSynced] = useState(() => isAppSyncedOffline());
+  const openTimerRef = useRef<number | null>(null);
 
-  // Reseta o estado de dispensa quando a conexão muda
   useEffect(() => {
-    if (!isOnline) {
-      setDismissed(false);
-      setShowRestored(false);
-    } else if (wasOffline) {
-      setShowRestored(true);
-      setDismissed(false);
+    if (isAppSyncedOffline() || wasRecentlyDismissed()) return;
 
-      const timer = setTimeout(() => {
-        setShowRestored(false);
-      }, 3500);
+    const tryOpen = (delayMs: number) => {
+      if (openTimerRef.current !== null) window.clearTimeout(openTimerRef.current);
+      openTimerRef.current = window.setTimeout(() => {
+        openTimerRef.current = null;
+        // Só abre se a fila inteira já foi resolvida.
+        if (!areCookiesResolved()) return;
+        if (isInstallPromptOpen()) return; // Aguarda o evento de liberação do prompt
+        setIsOpen(true);
+      }, delayMs);
+    };
 
-      return () => clearTimeout(timer);
+    const handleCookiesResolved = () => tryOpen(CHAIN_DELAY_MS);
+    const handleInstallResolved = () => tryOpen(600);
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === COOKIES_KEY) handleCookiesResolved();
+    };
+
+    window.addEventListener('kyvraCookieConsentResolved', handleCookiesResolved);
+    window.addEventListener('kyvraOfflinePromptReady', handleInstallResolved);
+    window.addEventListener('storage', handleStorage);
+
+    // Primeira checagem: se cookies e instalação já estão resolvidos, agenda a abertura.
+    if (areCookiesResolved() && !isInstallPromptOpen()) {
+      tryOpen(CHAIN_DELAY_MS);
     }
-  }, [isOnline, wasOffline]);
 
-  const handleRetry = () => {
-    if (typeof window !== 'undefined' && navigator.onLine) {
-      window.location.reload();
-    }
+    return () => {
+      if (openTimerRef.current !== null) window.clearTimeout(openTimerRef.current);
+      window.removeEventListener('kyvraCookieConsentResolved', handleCookiesResolved);
+      window.removeEventListener('kyvraOfflinePromptReady', handleInstallResolved);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, []);
+
+  const handleDismiss = () => {
+    setIsOpen(false);
+    markDismissed();
   };
 
   const handleOfflineSync = async () => {
-    if (!isOnline || syncStatus === 'syncing') return;
+    if (syncStatus === 'syncing') return;
 
     setSyncStatus('syncing');
     const success = await syncEverythingForOffline();
     setSyncStatus(success ? 'done' : 'error');
+    setIsAppSynced(success || isAppSyncedOffline());
 
     window.setTimeout(() => {
       setSyncStatus('idle');
-    }, success ? 3500 : 5000);
+      if (success) {
+        setIsOpen(false);
+        markDismissed();
+      }
+    }, success ? 2200 : 5000);
   };
 
-  const isVisible = (!isOnline || showRestored || syncStatus !== 'idle') && !dismissed;
+  const showDownloadAction = !isAppSynced || syncStatus === 'syncing';
 
   return (
     <AnimatePresence>
-      {isVisible && (
+      {isOpen && (
         <motion.div
-          initial={{ opacity: 0, y: -20, scale: 0.95 }}
+          initial={{ opacity: 0, y: -24, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -15, scale: 0.95 }}
-          transition={{ duration: 0.3, ease: 'easeOut' }}
-          className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] w-[calc(100%-2rem)] max-w-md pointer-events-auto"
+          exit={{ opacity: 0, y: -16, scale: 0.95 }}
+          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+          className="fixed top-6 left-6 right-6 md:left-auto md:right-8 md:max-w-[450px] z-[10010] overflow-hidden pointer-events-auto"
         >
-          <div
-            className={`relative flex items-center justify-between gap-3 px-4 py-3 rounded-xl border shadow-2xl backdrop-blur-md transition-colors duration-300 ${
-              !isOnline
-                ? 'bg-neutral-950/90 border-amber-500/40 text-amber-200 shadow-amber-950/30'
-                : 'bg-neutral-950/90 border-primary/40 text-primary shadow-[0_20px_50px_var(--glow-purple)]'
-            }`}
-          >
-            {/* Indicador pulsante + Ícone */}
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="relative flex items-center justify-center shrink-0">
-                <span
-                  className={`absolute inline-flex h-3 w-3 rounded-full opacity-75 animate-ping ${
-                    !isOnline ? 'bg-amber-400' : 'bg-primary'
-                  }`}
-                />
-                <span
-                  className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
-                    !isOnline ? 'bg-amber-500' : 'bg-primary'
-                  }`}
-                />
-                <div className="ml-2">
-                  {!isOnline ? (
-                    <WifiOff className="w-4 h-4 text-amber-400" />
-                  ) : (
-                    <Wifi className="w-4 h-4 text-primary" />
-                  )}
-                </div>
-              </div>
+          <div className="relative p-6 rounded-2xl border border-white/10 bg-black/80 backdrop-blur-xl shadow-[0_30px_60px_rgba(0,0,0,0.8)] overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 blur-[40px] rounded-full pointer-events-none -z-10" />
 
-              {/* Mensagem principal */}
-              <div className="min-w-0 text-left">
-                <p className="text-xs font-semibold tracking-wide uppercase opacity-90 leading-none">
-                  {!isOnline ? 'Conexão Ausente' : 'Conexão Restabelecida'}
-                </p>
-                <p className="text-xs text-neutral-300 truncate mt-0.5">
-                  {!isOnline
-                    ? 'Modo Offline ativo — reproduzindo dados em cache'
-                    : 'Conexão restabelecida'}
+            <div className="flex items-start gap-4">
+              <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-primary shrink-0 shadow-[0_0_15px_rgba(var(--primary-rgb),0.15)]">
+                {syncStatus === 'syncing' ? (
+                  <RefreshCw className="w-5 h-5 animate-spin" />
+                ) : syncStatus === 'done' ? (
+                  <CheckCircle2 className="w-5 h-5" />
+                ) : (
+                  <ArrowDownToLine className="w-5 h-5" />
+                )}
+              </div>
+              <div className="flex-1 space-y-1 min-w-0">
+                <h4 className="font-display font-medium text-sm tracking-widest text-white uppercase pr-6">
+                  ACERVO OFFLINE
+                </h4>
+                <p className="font-sans text-white/60 text-xs leading-relaxed py-1 font-light">
+                  Baixe as músicas, imagens e visuais de Kyvra para continuar navegando e ouvindo
+                  tudo mesmo sem conexão.
                 </p>
               </div>
             </div>
 
-            {/* Ações */}
-            <div className="flex items-center gap-1.5 shrink-0 ml-2">
+            <div className="mt-5 pt-4 border-t border-white/5 flex flex-col sm:flex-row items-center gap-3 justify-end">
               <button
-                onClick={handleOfflineSync}
-                disabled={!isOnline || syncStatus === 'syncing'}
-                title={isOnline ? 'Salvar acervo para usar offline' : 'A sincronização será liberada quando a conexão voltar'}
-                aria-label="Salvar acervo para usar offline"
-                className={`p-1.5 rounded-lg transition-colors ${
-                  !isOnline
-                    ? 'text-neutral-600 cursor-not-allowed'
-                    : syncStatus === 'done'
-                    ? 'bg-primary/10 text-primary'
-                    : syncStatus === 'error'
-                      ? 'bg-primary/10 text-primary hover:bg-primary/20'
-                      : 'bg-primary/10 text-primary hover:bg-primary/20'
-                }`}
+                onClick={handleDismiss}
+                className="w-full sm:w-auto px-4 py-2 text-[10px] sm:text-xs font-mono text-white/40 hover:text-white/80 transition-colors uppercase tracking-widest bg-transparent border border-white/5 hover:border-white/20 rounded-lg"
               >
-                {syncStatus === 'syncing' ? (
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                ) : syncStatus === 'done' ? (
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                ) : (
-                  <ArrowDownToLine className="w-3.5 h-3.5" />
-                )}
+                Agora não
               </button>
-
-              {!isOnline && (
+              {showDownloadAction && (
                 <button
-                  onClick={handleRetry}
-                  title="Testar conexão"
-                  className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 transition-colors"
+                  onClick={handleOfflineSync}
+                  disabled={syncStatus === 'syncing'}
+                  className="w-full sm:w-auto px-5 py-2.5 text-[10px] sm:text-xs font-mono uppercase tracking-widest text-white flex items-center justify-center gap-2 bg-primary/20 border border-primary/40 hover:bg-primary/30 transition-colors rounded-lg disabled:opacity-60"
                 >
-                  <RefreshCw className="w-3.5 h-3.5" />
+                  <ArrowDownToLine className="w-3.5 h-3.5" />
+                  <span>Baixar acervo</span>
                 </button>
               )}
-
-              <button
-                onClick={() => setDismissed(true)}
-                title="Fechar notificação"
-                className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-white/10 transition-colors"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
             </div>
           </div>
         </motion.div>

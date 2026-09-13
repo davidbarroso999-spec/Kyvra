@@ -12,6 +12,7 @@ import { CookieBanner } from './components/ui/CookieBanner';
 import { PwaInstallPrompt } from './components/ui/PwaInstallPrompt';
 import { ShareSpinner } from './components/ui/ShareSpinner';
 import { NetworkStatusBanner } from './components/ui/NetworkStatusBanner';
+import { SignalBars } from './components/ui/SignalBars';
 import { ScrollToTop } from './components/layout/ScrollToTop';
 import { initSmoothScroll, destroySmoothScroll } from '@/lib/smoothScroll';
 
@@ -113,6 +114,7 @@ export default function App() {
     <HashRouter>
       <ScrollToTop />
       <Preloader />
+      <SignalBars />
       <CookieBanner />
       <PwaInstallPrompt />
       <ShareSpinner />

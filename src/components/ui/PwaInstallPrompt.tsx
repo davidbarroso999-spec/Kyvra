@@ -8,6 +8,25 @@ export function PwaInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstructions, setShowInstructions] = useState(false);
 
+  // Sinaliza para a fila de onboarding (notificação de download offline)
+  // enquanto o prompt está aberto, evitando sobreposição de notificações.
+  useEffect(() => {
+    try {
+      if (isOpen) {
+        sessionStorage.setItem('kyvra_install_prompt_open', '1');
+      } else {
+        sessionStorage.removeItem('kyvra_install_prompt_open');
+      }
+    } catch (_e) {
+      // Ignorado
+    }
+  }, [isOpen]);
+
+  // Ao resolver o prompt de instalação, libera a próxima notificação da fila.
+  const releaseOfflinePrompt = () => {
+    window.dispatchEvent(new CustomEvent('kyvraOfflinePromptReady'));
+  };
+
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
@@ -48,6 +67,7 @@ export function PwaInstallPrompt() {
       setDeferredPrompt(null);
       (window as any).deferredPrompt = null;
       setIsOpen(false);
+      releaseOfflinePrompt();
     } else {
       // Caso não haja prompt diferido nativo (ex: iOS Safari ou Sandbox IFrame),
       // guia o usuário de forma premium sobre como adicionar manualmente.
@@ -58,6 +78,7 @@ export function PwaInstallPrompt() {
   const handleDismiss = () => {
     setIsOpen(false);
     setShowInstructions(false);
+    releaseOfflinePrompt();
   };
 
   return (
@@ -68,7 +89,7 @@ export function PwaInstallPrompt() {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 50, scale: 0.95 }}
           transition={{ type: "spring", stiffness: 300, damping: 25 }}
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[110] w-[92%] max-w-sm"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[10005] w-[92%] max-w-sm"
         >
           {/* Glass background */}
           <div className="absolute inset-0 bg-[#080814]/90 backdrop-blur-2xl rounded-2xl border border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.6)] overflow-hidden">

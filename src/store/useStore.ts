@@ -314,10 +314,10 @@ export const useStore = create<AppState>()(
     {
       name: 'kyvra-storage',
       storage: asyncIdbStorage,
-      // Persiste preferências e o contexto do player para que o acervo continue
-      // utilizável após reabrir o PWA sem conexão (o áudio em si permanece no
-      // Cache Storage). Letras são removidas do payload para não serializar
-      // centenas de KB a cada troca de faixa.
+      // Persiste preferências e a fila para que o acervo continue utilizável
+      // após reabrir o PWA sem conexão (o áudio em si permanece no Cache
+      // Storage). Letras são removidas do payload para não serializar centenas
+      // de KB a cada troca de faixa.
       partialize: (state) => ({
         theme: state.theme,
         volume: state.volume,
@@ -325,11 +325,18 @@ export const useStore = create<AppState>()(
         repeatMode: state.repeatMode,
         isPlayerHidden: state.isPlayerHidden,
         scrollResonanceEnabled: state.scrollResonanceEnabled,
-        currentTrack: state.currentTrack ? stripHeavyFields(state.currentTrack) : null,
         queue: state.queue.map(stripHeavyFields),
         shuffledQueue: state.shuffledQueue.map(stripHeavyFields),
         playHistory: state.playHistory.map(stripHeavyFields),
       }),
+      // A sessão de reprodução nunca é restaurada: ao reabrir o app o player
+      // nasce vazio (sem mini player pendente da sessão anterior).
+      merge: (persisted, current) => {
+        const restored = { ...current, ...(persisted as Partial<AppState>) };
+        restored.currentTrack = null;
+        restored.isPlaying = false;
+        return restored;
+      },
     }
   )
 );
