@@ -449,26 +449,51 @@ export function Lore() {
         {/* Persistent Bottom Row (remains stable and does not slide during transition) */}
         {currentChapter && (
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 md:gap-6 w-full pt-6 border-t border-white/10 pointer-events-auto lore-footer">
-            {/* CTA Buttons */}
-            <div className="flex items-center justify-center md:justify-start gap-3 sm:gap-4 shrink-0 w-full md:w-auto">
+            {/* Mobile: CTA em linha própria e setas ancoradas à esquerda,
+                longe do menu circular e do mini player (canto direito) */}
+            <div className="md:hidden flex flex-col gap-4 w-full">
               <NeonButton 
                 onClick={() => setReadingModalOpen(true)}
                 variant="pill"
                 size="md"
-                className="w-full md:w-auto font-medium px-8 py-3 text-white shadow-lg pointer-events-auto lore-btn"
+                className="w-full font-medium px-8 py-3 text-white shadow-lg pointer-events-auto lore-btn"
               >
                 <FileText size={18} className="fill-current text-white" />
                 <span>Explorar Capítulo</span>
               </NeonButton>
+              <div className="flex items-center gap-3 w-full pointer-events-auto">
+                <button 
+                  onClick={handlePrev}
+                  className="w-12 h-12 flex items-center justify-center rounded-full liquid-glass hover:bg-white/10 transition-colors shrink-0 lore-nav-btn"
+                  aria-label="Capítulo Anterior"
+                >
+                  <ChevronLeft size={20} className="lore-chevron-icon" />
+                </button>
+                <button 
+                  onClick={handleNext}
+                  className="w-12 h-12 flex items-center justify-center rounded-full liquid-glass hover:bg-white/10 transition-colors shrink-0 lore-nav-btn"
+                  aria-label="Próximo Capítulo"
+                >
+                  <ChevronRight size={20} className="lore-chevron-icon" />
+                </button>
+                <div className="flex-1 text-left text-[10px] sm:text-xs text-white/50 font-light px-2 leading-tight lore-footer-text-mobile">
+                  Seu portal para a história de como o universo de KYVRA nasceu.
+                </div>
+              </div>
             </div>
 
-            {/* Brief explanation occupying space between button and arrows in a single line (Desktop only) */}
-            <div className="hidden md:block flex-1 text-center text-xs sm:text-sm text-white/50 font-light px-4 truncate whitespace-nowrap overflow-hidden self-center lore-footer-text">
-              Seu portal para a história de como o universo de KYVRA nasceu.
-            </div>
-
-            {/* Right Side (Arrows with centered mobile phrase) */}
-            <div className="w-full md:w-auto flex items-center justify-between md:justify-end gap-3 md:gap-4 shrink-0 pointer-events-auto">
+            {/* Desktop: setas agrupadas ao lado do CTA, confortáveis e fora da
+                área do menu circular no canto inferior direito */}
+            <div className="hidden md:flex items-center justify-start gap-4 shrink-0 w-auto">
+              <NeonButton 
+                onClick={() => setReadingModalOpen(true)}
+                variant="pill"
+                size="md"
+                className="font-medium px-8 py-3 text-white shadow-lg pointer-events-auto lore-btn"
+              >
+                <FileText size={18} className="fill-current text-white" />
+                <span>Explorar Capítulo</span>
+              </NeonButton>
               <button 
                 onClick={handlePrev}
                 className="w-12 h-12 flex items-center justify-center rounded-full liquid-glass hover:bg-white/10 transition-colors shrink-0 lore-nav-btn"
@@ -476,12 +501,6 @@ export function Lore() {
               >
                 <ChevronLeft size={20} className="lore-chevron-icon" />
               </button>
-
-              {/* Centered mobile phrase right between arrows */}
-              <div className="md:hidden flex-1 text-center text-[10px] sm:text-xs text-white/50 font-light px-2 leading-tight lore-footer-text-mobile">
-                Seu portal para a história de como o universo de KYVRA nasceu.
-              </div>
-
               <button 
                 onClick={handleNext}
                 className="w-12 h-12 flex items-center justify-center rounded-full liquid-glass hover:bg-white/10 transition-colors shrink-0 lore-nav-btn"
@@ -489,6 +508,11 @@ export function Lore() {
               >
                 <ChevronRight size={20} className="lore-chevron-icon" />
               </button>
+            </div>
+
+            {/* Brief explanation centered in the remaining footer space (Desktop only) */}
+            <div className="hidden md:block flex-1 text-center text-xs sm:text-sm text-white/50 font-light px-4 truncate whitespace-nowrap overflow-hidden self-center lore-footer-text">
+              Seu portal para a história de como o universo de KYVRA nasceu.
             </div>
           </div>
         )}
