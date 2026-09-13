@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useId, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { getAllTracks } from '@/lib/apiCache';
 import { useStore } from '@/store/useStore';
@@ -16,6 +16,19 @@ const THEME_VIDEOS: Record<string, string> = {
 };
 
 function HeroLogo({ className = '' }: { className?: string }) {
+  const gradientId = `kyvra-hero-outline-gradient-${useId().replace(/:/g, '')}`;
+  const textProps = {
+    x: '0',
+    y: '178',
+    fill: 'none',
+    strokeLinejoin: 'round' as const,
+    paintOrder: 'stroke' as const,
+    fontFamily: 'Cinzel, serif',
+    fontSize: '180',
+    fontWeight: '800',
+    letterSpacing: '8',
+  };
+
   return (
     <svg
       aria-label="KYVRA"
@@ -25,27 +38,30 @@ function HeroLogo({ className = '' }: { className?: string }) {
       className={className}
     >
       <defs>
-        <linearGradient id="kyvra-hero-outline-gradient" x1="0" y1="0" x2="1" y2="1">
+        <linearGradient
+          id={gradientId}
+          gradientUnits="userSpaceOnUse"
+          x1="-500"
+          y1="0"
+          x2="200"
+          y2="0"
+        >
           <stop offset="0%" stopColor="var(--primary)" />
           <stop offset="50%" stopColor="var(--accent)" />
           <stop offset="100%" stopColor="var(--secondary)" />
-          <animate attributeName="x1" values="0;1;0" dur="8s" repeatCount="indefinite" />
-          <animate attributeName="x2" values="1;2;1" dur="8s" repeatCount="indefinite" />
+          <animateTransform
+            attributeName="gradientTransform"
+            type="translate"
+            values="-400 0; 900 0; -400 0"
+            dur="8s"
+            repeatCount="indefinite"
+          />
         </linearGradient>
       </defs>
-      <text
-        x="0"
-        y="178"
-        fill="none"
-        stroke="url(#kyvra-hero-outline-gradient)"
-        strokeWidth="3.5"
-        strokeLinejoin="round"
-        paintOrder="stroke"
-        fontFamily="Cinzel, serif"
-        fontSize="180"
-        fontWeight="800"
-        letterSpacing="8"
-      >
+      <text {...textProps} stroke="var(--primary)" strokeWidth="7">
+        KYVRA
+      </text>
+      <text {...textProps} stroke={`url(#${gradientId})`} strokeWidth="4">
         KYVRA
       </text>
     </svg>
