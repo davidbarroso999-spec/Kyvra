@@ -160,23 +160,24 @@ export function MiniPlayer() {
     return () => window.removeEventListener('resize', checkOrientation);
   }, []);
 
-  const {
-    currentTrack,
-    isPlaying,
-    setIsPlaying,
-    playNext,
-    playPrevious,
-    volume,
-    isShuffle,
-    repeatMode,
-    toggleShuffle,
-    toggleRepeat,
-    isPlayerHidden,
-    setPlayerHidden,
-    queue,
-    shuffledQueue,
-    setCurrentTrack,
-  } = useStore();
+  // Seletores individuais: cada campo assina apenas a própria fatia do store.
+  // Assim, atualizações de offlineSyncProgress durante downloads não re-renderizam
+  // o player inteiro (engasgos durante reprodução).
+  const currentTrack = useStore((s) => s.currentTrack);
+  const isPlaying = useStore((s) => s.isPlaying);
+  const setIsPlaying = useStore((s) => s.setIsPlaying);
+  const playNext = useStore((s) => s.playNext);
+  const playPrevious = useStore((s) => s.playPrevious);
+  const volume = useStore((s) => s.volume);
+  const isShuffle = useStore((s) => s.isShuffle);
+  const repeatMode = useStore((s) => s.repeatMode);
+  const toggleShuffle = useStore((s) => s.toggleShuffle);
+  const toggleRepeat = useStore((s) => s.toggleRepeat);
+  const isPlayerHidden = useStore((s) => s.isPlayerHidden);
+  const setPlayerHidden = useStore((s) => s.setPlayerHidden);
+  const queue = useStore((s) => s.queue);
+  const shuffledQueue = useStore((s) => s.shuffledQueue);
+  const setCurrentTrack = useStore((s) => s.setCurrentTrack);
 
   const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);

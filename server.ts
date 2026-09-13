@@ -254,6 +254,70 @@ async function startServer() {
     }
   });
 
+  // Admin AI endpoints: a GEMINI_API_KEY permanece exclusivamente no servidor.
+  app.post("/api/ai/text", async (req, res) => {
+    const { prompt, systemInstruction } = req.body || {};
+    if (!prompt || typeof prompt !== 'string') {
+      return res.status(400).json({ error: "prompt is required" });
+    }
+
+    const client = getGeminiClient();
+    if (!client) {
+      return res.status(503).json({ error: "GEMINI_API_KEY is not configured" });
+    }
+
+    try {
+      const response = await client.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+        config: systemInstruction ? { systemInstruction } : undefined,
+      });
+
+      if (response.text) {
+        return res.json({ text: response.text });
+      }
+      return res.status(502).json({ error: "Empty response from AI" });
+    } catch (err) {
+      console.error("AI text generation error:", err);
+      return res.status(502).json({ error: "AI generation failed" });
+    }
+  });
+
+  app.post("/api/ai/image", async (req, res) => {
+    const { prompt } = req.body || {};
+    if (!prompt || typeof prompt !== 'string') {
+      return res.status(400).json({ error: "prompt is required" });
+    }
+
+    const client = getGeminiClient();
+    if (!client) {
+      return res.status(503).json({ error: "GEMINI_API_KEY is not configured" });
+    }
+
+    try {
+      const response = await client.models.generateContent({
+        model: "gemini-2.5-flash-image",
+        contents: prompt,
+      });
+
+      const parts = response.candidates?.[0]?.content?.parts;
+      if (parts) {
+        for (const part of parts) {
+          if (part.inlineData?.data) {
+            return res.json({
+              imageBase64: part.inlineData.data,
+              mimeType: part.inlineData.mimeType || 'image/png',
+            });
+          }
+        }
+      }
+      return res.status(502).json({ error: "No image returned by AI" });
+    } catch (err) {
+      console.error("AI image generation error:", err);
+      return res.status(502).json({ error: "AI image generation failed" });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

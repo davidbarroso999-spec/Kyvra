@@ -175,9 +175,8 @@ export default defineConfig(({ mode }) => {
         },
       }),
     ],
-    define: {
-      "process.env.GEMINI_API_KEY": JSON.stringify(env.GEMINI_API_KEY),
-    },
+    // GEMINI_API_KEY não é mais embutida no cliente: as gerações passam pelo
+    // servidor Express (server.ts), que mantém a chave exclusivamente server-side.
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),

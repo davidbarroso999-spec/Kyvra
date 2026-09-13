@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Upload, Lock, Unlock, KeyRound, HelpCircle, ShieldAlert, X, Plus, Sparkles, CheckCircle2, Edit3, Save, Trash2, ChevronDown, ChevronUp, RefreshCw, Edit2, Book, Loader2 } from 'lucide-react';
 import { cn, parseChapterNumber } from '@/lib/utils';
-import { getAI, MODELS, generateText, generateMultimodal } from '@/lib/ai';
+import { generateText, generateImage } from '@/lib/ai';
 import { supabase } from '@/lib/supabase';
 import { getAudioMetadata } from '@/lib/audioMetadata';
 import { CombinationLock } from '@/components/ui/CombinationLock';
@@ -508,30 +508,14 @@ export function Admin() {
     setError('');
     
     try {
-      const ai = getAI();
-      
       const prompt = `Create a dark fantasy illustration for a story chapter titled "${loreTitle}". 
       Story content: "${loreContent}". 
       Aesthetic: medieval surreal and gothic painting, inspired by symphonic metal/rock album covers like Evanescence, Black Veil Brides, and Blackbriar. 
       The colors should deeply reflect the mood of the Kyvra narrative arc (Fascination, Surrender, Obsession, Ruin, or Consciousness). 
       Highly detailed, atmospheric, dark fantasy, emotional, dramatic lighting, cinematic.`;
 
-      const response = await ai.models.generateContent({
-        model: MODELS.IMAGE,
-        contents: prompt
-      });
-
-      const parts = response.candidates?.[0]?.content?.parts;
-      if (parts) {
-        for (const part of parts) {
-          if (part.inlineData) {
-            const base64EncodeString = part.inlineData.data;
-            const imageUrl = `data:image/png;base64,${base64EncodeString}`;
-            setGeneratedImage(imageUrl);
-            break;
-          }
-        }
-      }
+      const imageUrl = await generateImage(prompt);
+      setGeneratedImage(imageUrl);
     } catch (err) {
       console.error("Erro ao gerar imagem:", err);
       setError('Falha ao gerar a imagem. Tente novamente.');
@@ -878,7 +862,6 @@ export function Admin() {
       if (albumsError) throw albumsError;
 
       let generatedCount = 0;
-      const ai = getAI();
 
       for (const album of albums) {
         // Skip if it already has a description (assuming it's a synopsis)

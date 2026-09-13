@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { parseChapterNumber, getOptimizedImageUrl } from './utils';
 import { recordNetworkLatency } from './performance';
+import { idbGetString, idbSetString, idbClearByPrefix } from './idbKv';
 
 const cache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 1000 * 60 * 60; // 60 minutos em memória
@@ -15,10 +16,11 @@ export async function fetchWithCache(key: string, fetcher: () => Promise<any>, f
     }
   }
 
-  // 2. Se offline, tentar imediatamente ler do localStorage
+  // 2. Se offline, tentar imediatamente ler da persistência assíncrona (IndexedDB,
+  // com fallback legado para o localStorage).
   if (typeof navigator !== 'undefined' && !navigator.onLine && !forceRefresh) {
     try {
-      const persisted = localStorage.getItem(LOCAL_STORAGE_PREFIX + key);
+      const persisted = await idbGetString(LOCAL_STORAGE_PREFIX + key);
       if (persisted) {
         const parsed = JSON.parse(persisted);
         cache.set(key, parsed);
@@ -33,28 +35,38 @@ export async function fetchWithCache(key: string, fetcher: () => Promise<any>, f
     const response = await fetcher();
     const durationMs = Math.round(performance.now() - startTime);
     const { data, error } = response || {};
-    
+
+    // Cache persistente gravado de forma assíncrona (IndexedDB): não bloqueia a
+    // thread principal como o localStorage síncrono fazia. A serialização serve
+    // tanto para a telemetria quanto para a gravação — uma única vez.
+    let serializedPayload: string | null = null;
+    if (data !== undefined && data !== null) {
+      try {
+        serializedPayload = JSON.stringify({ data, timestamp: Date.now() });
+      } catch (_e) {
+        serializedPayload = null;
+      }
+    }
+
     recordNetworkLatency(`supabase_api://${key}`, {
       httpMethod: 'GET',
       responseCode: error ? 500 : 200,
       durationMs,
-      responsePayloadBytes: data ? JSON.stringify(data).length : 0,
+      responsePayloadBytes: serializedPayload?.length ?? 0,
     });
-    
+
     if (!error && data !== undefined && data !== null) {
       const cacheObj = { data, timestamp: Date.now() };
       cache.set(key, cacheObj);
-      try {
-        localStorage.setItem(LOCAL_STORAGE_PREFIX + key, JSON.stringify(cacheObj));
-      } catch (e) {
-        // quota excedida em modo estrito — continua silenciosamente
+      if (serializedPayload) {
+        void idbSetString(LOCAL_STORAGE_PREFIX + key, serializedPayload);
       }
       return response;
     }
 
-    // Se a query retornou erro de rede/servidor, tenta fallback do localStorage
+    // Se a query retornou erro de rede/servidor, tenta fallback da persistência
     try {
-      const persisted = localStorage.getItem(LOCAL_STORAGE_PREFIX + key);
+      const persisted = await idbGetString(LOCAL_STORAGE_PREFIX + key);
       if (persisted) {
         const parsed = JSON.parse(persisted);
         cache.set(key, parsed);
@@ -66,7 +78,7 @@ export async function fetchWithCache(key: string, fetcher: () => Promise<any>, f
   } catch (err) {
     // Falha de conexão de rede -> Recupera do storage persistido
     try {
-      const persisted = localStorage.getItem(LOCAL_STORAGE_PREFIX + key);
+      const persisted = await idbGetString(LOCAL_STORAGE_PREFIX + key);
       if (persisted) {
         const parsed = JSON.parse(persisted);
         cache.set(key, parsed);
@@ -81,20 +93,12 @@ export async function fetchWithCache(key: string, fetcher: () => Promise<any>, f
 export function clearCache(keyPrefix?: string) {
   if (!keyPrefix) {
     cache.clear();
-    try {
-      Object.keys(localStorage).forEach(k => {
-        if (k.startsWith(LOCAL_STORAGE_PREFIX)) localStorage.removeItem(k);
-      });
-    } catch (e) {}
+    void idbClearByPrefix(LOCAL_STORAGE_PREFIX);
   } else {
     for (const key of cache.keys()) {
       if (key.startsWith(keyPrefix)) cache.delete(key);
     }
-    try {
-      Object.keys(localStorage).forEach(k => {
-        if (k.startsWith(LOCAL_STORAGE_PREFIX + keyPrefix)) localStorage.removeItem(k);
-      });
-    } catch (e) {}
+    void idbClearByPrefix(LOCAL_STORAGE_PREFIX + keyPrefix);
   }
 }
 

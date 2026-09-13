@@ -4,6 +4,7 @@ import { useScroll, useSpring } from 'motion/react';
 import { ArrowDownToLine, RefreshCw, CheckCircle } from 'lucide-react';
 import { cn, isAppSyncedOffline } from '@/lib/utils';
 import { syncEverythingForOffline } from '@/lib/offlineManager';
+import { useStore } from '@/store/useStore';
 
 const navLinks = [
   { path: '/', label: 'Home' },
@@ -14,9 +15,13 @@ const navLinks = [
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle');
   const [isSynced, setIsSynced] = useState<boolean>(() => isAppSyncedOffline());
   const location = useLocation();
+
+  // Fonte única de verdade: o mesmo estado que alimenta o anel do menu circular
+  // e o banner de conexão. Nada de estado local duplicado.
+  const syncStatus = useStore((s) => s.offlineSyncStatus);
+  const setSyncStatus = useStore((s) => s.setOfflineSyncStatus);
 
   useEffect(() => {
     setIsSynced(isAppSyncedOffline());
@@ -25,15 +30,11 @@ export function Header() {
   const handleOfflineSync = async () => {
     setSyncStatus('syncing');
     const success = await syncEverythingForOffline();
-    
+
     if (success) {
-      setSyncStatus('done');
       setIsSynced(true);
-      setTimeout(() => {
-        setSyncStatus('idle');
-      }, 3500);
+      setTimeout(() => setSyncStatus('idle'), 3500);
     } else {
-      setSyncStatus('error');
       setTimeout(() => setSyncStatus('idle'), 3500);
     }
   };

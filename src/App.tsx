@@ -60,11 +60,7 @@ export default function App() {
 
   React.useEffect(() => {
     console.log("Kyvra App mounted successfully.");
-    if (process.env.GEMINI_API_KEY) {
-      console.log("GEMINI_API_KEY is detected in the environment.");
-    } else {
-      console.warn("GEMINI_API_KEY is NOT detected in the environment. AI features will not work.");
-    }
+    // A chave da IA vive exclusivamente no servidor (server.ts); nada de chaves no bundle.
 
     // Inicialização do Background Mode para reprodução contínua em segundo plano no Android/iOS
     const initBackgroundMode = () => {

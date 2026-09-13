@@ -50,6 +50,66 @@ export const subscribeAudioElement = (listener: (el: HTMLAudioElement | null) =>
   };
 };
 
+/**
+ * Garante que o elemento de áudio já esteja roteado pelo grafo Web Audio
+ * (AnalyserNode + FX de ressonância) ANTES de começar a tocar.
+ *
+ * Conectar o elemento no meio da reprodução rerroteia o som por um caminho de
+ * renderização diferente e causa a queda perceptível de volume relatada quando
+ * o player em tela cheia monta o visualizador. Aquecendo o grafo no primeiro
+ * gesto do usuário, o play nasce já pelo caminho final — sem salto de volume.
+ * Chamadas repetidas são no-op (a conexão é única por elemento).
+ */
+export function ensureAudioGraph(): void {
+  if (typeof window === 'undefined') return;
+  const element = globalAudioElement ?? document.querySelector('audio');
+  if (!element) return;
+
+  const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+  if (!AudioCtx) return;
+
+  try {
+    let connection = audioConnections.get(element);
+
+    if (!connection) {
+      const context = new AudioCtx();
+      const analyserNode = context.createAnalyser();
+      analyserNode.fftSize = 256;
+
+      const sourceNode = context.createMediaElementSource(element);
+      sourceNode.connect(analyserNode);
+      attachScrollResonanceToMedia(context, sourceNode, context.destination);
+
+      connection = {
+        audioContext: context,
+        analyser: analyserNode,
+        source: sourceNode,
+      };
+      audioConnections.set(element, connection);
+      activeAudioContexts.add(context);
+    }
+
+    if (connection.audioContext.state === 'suspended') {
+      connection.audioContext.resume().catch(() => {});
+    }
+  } catch (error) {
+    console.warn('Kyvra [useAudioAnalyser]: Falha ao preparar o grafo de áudio:', error);
+  }
+}
+
+// Aquece o grafo no primeiro gesto do usuário (clique/tecla), antes de qualquer play.
+if (typeof window !== 'undefined') {
+  const warmUpOnFirstGesture = () => {
+    const element = globalAudioElement ?? document.querySelector('audio');
+    if (!element) return; // Player ainda não montado; tenta no próximo gesto
+    ensureAudioGraph();
+    window.removeEventListener('pointerdown', warmUpOnFirstGesture);
+    window.removeEventListener('keydown', warmUpOnFirstGesture);
+  };
+  window.addEventListener('pointerdown', warmUpOnFirstGesture, { passive: true });
+  window.addEventListener('keydown', warmUpOnFirstGesture);
+}
+
 export interface UseAudioAnalyserOptions {
   fftSize?: number;
 }

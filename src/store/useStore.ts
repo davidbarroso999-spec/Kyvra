@@ -1,5 +1,23 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { idbGetString, idbSetString, idbRemoveString } from '@/lib/idbKv';
+
+// Persistência em IndexedDB: leitura/escrita fora da thread principal.
+// (O localStorage síncrono serializava centenas de KB a cada troca de faixa.)
+const asyncIdbStorage = createJSONStorage(() => ({
+  getItem: (name: string) => idbGetString(name),
+  setItem: (name: string, value: string) => idbSetString(name, value),
+  removeItem: (name: string) => idbRemoveString(name),
+}));
+
+// Remove letras (payload pesado) e blobs irrelevantes antes de persistir.
+// As letras continuam disponíveis em runtime e no acervo — apenas não são
+// serializadas no histórico/fila a cada interação.
+function stripHeavyFields<T extends { lyrics?: string }>(track: T): T {
+  if (!track || typeof track !== 'object') return track;
+  const { lyrics: _lyrics, ...rest } = track;
+  return rest as T;
+}
 
 export type Theme = 'abissal' | 'sangue-de-drago' | 'floresta-negra' | 'monolito';
 
@@ -295,7 +313,11 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'kyvra-storage',
-      // Persiste somente preferências do usuário, nunca o estado de reprodução
+      storage: asyncIdbStorage,
+      // Persiste preferências e o contexto do player para que o acervo continue
+      // utilizável após reabrir o PWA sem conexão (o áudio em si permanece no
+      // Cache Storage). Letras são removidas do payload para não serializar
+      // centenas de KB a cada troca de faixa.
       partialize: (state) => ({
         theme: state.theme,
         volume: state.volume,
@@ -303,12 +325,10 @@ export const useStore = create<AppState>()(
         repeatMode: state.repeatMode,
         isPlayerHidden: state.isPlayerHidden,
         scrollResonanceEnabled: state.scrollResonanceEnabled,
-        // Mantém o contexto do player para que o acervo continue utilizável após
-        // reabrir o PWA sem conexão (o áudio em si permanece no Cache Storage).
-        currentTrack: state.currentTrack,
-        queue: state.queue,
-        shuffledQueue: state.shuffledQueue,
-        playHistory: state.playHistory,
+        currentTrack: state.currentTrack ? stripHeavyFields(state.currentTrack) : null,
+        queue: state.queue.map(stripHeavyFields),
+        shuffledQueue: state.shuffledQueue.map(stripHeavyFields),
+        playHistory: state.playHistory.map(stripHeavyFields),
       }),
     }
   )
