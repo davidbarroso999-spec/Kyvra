@@ -46,8 +46,11 @@ function computeSignalLevel(): number {
   }
 }
 
-const BAR_HEIGHTS = ['h-[6px]', 'h-[9px]', 'h-[12px]', 'h-[15px]'];
-
+/**
+ * Faixa de status na parede superior: 4 linhas horizontais finas, lado a
+ * lado, ocupando toda a largura da tela. As linhas ativas acendem na cor do
+ * tema conforme a força do sinal; sem sinal, ficam neutras/apagadas.
+ */
 export function SignalBars() {
   const [level, setLevel] = useState(4);
 
@@ -72,28 +75,25 @@ export function SignalBars() {
 
   return (
     <div
-      className="fixed top-0 left-1/2 -translate-x-1/2 z-[100000] pointer-events-none select-none"
+      className="fixed top-0 left-0 right-0 z-[100000] flex items-stretch gap-[2px] px-[2px] pt-0 h-[3px] pointer-events-none select-none"
       aria-hidden="true"
     >
-      <div className="flex items-end gap-[3px] px-[7px] py-[5px]">
-        {BAR_HEIGHTS.map((height, index) => {
-          const active = level > index;
-          return (
-            <span
-              key={index}
-              className={cn(
-                'block w-[13px] rounded-[2px] transition-colors duration-500',
-                height,
-                isOffline
-                  ? 'bg-white/10'
-                  : active
-                    ? 'bg-primary shadow-[0_0_8px_rgba(var(--primary-rgb),0.55)]'
-                    : 'bg-white/15'
-              )}
-            />
-          );
-        })}
-      </div>
+      {[0, 1, 2, 3].map((index) => {
+        const active = level > index;
+        return (
+          <span
+            key={index}
+            className={cn(
+              'block flex-1 h-full rounded-b-[2px] transition-colors duration-500',
+              isOffline
+                ? 'bg-white/10'
+                : active
+                  ? 'bg-primary shadow-[0_0_6px_rgba(var(--primary-rgb),0.6)]'
+                  : 'bg-white/15'
+            )}
+          />
+        );
+      })}
     </div>
   );
 }
