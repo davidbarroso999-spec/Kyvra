@@ -1,4 +1,4 @@
-import { useId, useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { getAllTracks } from '@/lib/apiCache';
 import { useStore } from '@/store/useStore';
@@ -14,59 +14,6 @@ const THEME_VIDEOS: Record<string, string> = {
   'floresta-negra': "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_florestanegra.webm",
   'monolito': "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_monolito.webm"
 };
-
-function HeroLogo({ className = '' }: { className?: string }) {
-  const gradientId = `kyvra-hero-outline-gradient-${useId().replace(/:/g, '')}`;
-  const textProps = {
-    x: '0',
-    y: '178',
-    fill: 'none',
-    strokeLinejoin: 'round' as const,
-    paintOrder: 'stroke' as const,
-    fontFamily: 'Cinzel, serif',
-    fontSize: '180',
-    fontWeight: '800',
-    letterSpacing: '8',
-  };
-
-  return (
-    <svg
-      aria-label="KYVRA"
-      role="img"
-      viewBox="0 0 1000 220"
-      preserveAspectRatio="xMinYMid meet"
-      className={className}
-    >
-      <defs>
-        <linearGradient
-          id={gradientId}
-          gradientUnits="userSpaceOnUse"
-          x1="-500"
-          y1="0"
-          x2="200"
-          y2="0"
-        >
-          <stop offset="0%" stopColor="var(--primary)" />
-          <stop offset="50%" stopColor="var(--accent)" />
-          <stop offset="100%" stopColor="var(--secondary)" />
-          <animateTransform
-            attributeName="gradientTransform"
-            type="translate"
-            values="-400 0; 900 0; -400 0"
-            dur="8s"
-            repeatCount="indefinite"
-          />
-        </linearGradient>
-      </defs>
-      <text {...textProps} stroke="var(--primary)" strokeWidth="7">
-        KYVRA
-      </text>
-      <text {...textProps} stroke={`url(#${gradientId})`} strokeWidth="4">
-        KYVRA
-      </text>
-    </svg>
-  );
-}
 
 const logPerformanceMeasure = (measureName: string, startMark: string, endMark: string) => {
   try {
@@ -458,7 +405,9 @@ export function Home() {
                 transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
                 className="relative flex flex-col items-start"
               >
-                <HeroLogo className="w-[min(88vw,900px)] h-auto text-left leading-none landscape:w-[min(65vw,620px)]" />
+                <h2 className="font-display font-medium text-[4.5rem] xs:text-[5.5rem] sm:text-[7rem] md:text-[9rem] lg:text-[11rem] xl:text-[13rem] tracking-[0.05em] text-gradient m-0 p-0 text-left leading-none landscape:text-[2.5rem] landscape:sm:text-[3.5rem] landscape:md:text-[5rem] landscape:lg:text-[6.5rem]">
+                  KYVRA
+                </h2>
               </motion.div>
             </div>
 
@@ -504,7 +453,9 @@ export function Home() {
               transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
               className="w-full relative flex justify-start items-center overflow-visible"
             >
-              <HeroLogo className="w-full h-auto text-left select-none" />
+              <h1 className="font-display font-medium text-[24vw] leading-none text-gradient m-0 p-0 tracking-[0.01em] text-left select-none">
+                KYVRA
+              </h1>
             </motion.div>
 
             {/* Poetry and description (restricted to elegant max-w) */}
