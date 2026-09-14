@@ -449,9 +449,44 @@ export function Lore() {
         {/* Persistent Bottom Row (remains stable and does not slide during transition) */}
         {currentChapter && (
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 md:gap-6 w-full pt-6 border-t border-white/10 pointer-events-auto lore-footer">
-            {/* Cluster central de navegação: seta • CTA • seta.
-                Posicionado à esquerda, longe do menu circular e do mini player. */}
-            <div className="flex items-center justify-center md:justify-start gap-3 sm:gap-4 shrink-0 w-full md:w-auto">
+            {/* Mobile: seta • CTA • seta com o texto abaixo, elevados o
+                suficiente para sair do perímetro do menu circular */}
+            <div className="md:hidden flex flex-col items-center gap-3 w-full pb-24">
+              <div className="flex items-center justify-center gap-3 w-full">
+                <button 
+                  onClick={handlePrev}
+                  className="w-12 h-12 flex items-center justify-center rounded-full liquid-glass hover:bg-white/10 transition-colors shrink-0 lore-nav-btn"
+                  aria-label="Capítulo Anterior"
+                >
+                  <ChevronLeft size={20} className="lore-chevron-icon" />
+                </button>
+
+                <NeonButton 
+                  onClick={() => setReadingModalOpen(true)}
+                  variant="pill"
+                  size="md"
+                  className="w-full font-medium px-8 py-3 text-white shadow-lg pointer-events-auto lore-btn"
+                >
+                  <FileText size={18} className="fill-current text-white" />
+                  <span>Explorar Capítulo</span>
+                </NeonButton>
+
+                <button 
+                  onClick={handleNext}
+                  className="w-12 h-12 flex items-center justify-center rounded-full liquid-glass hover:bg-white/10 transition-colors shrink-0 lore-nav-btn"
+                  aria-label="Próximo Capítulo"
+                >
+                  <ChevronRight size={20} className="lore-chevron-icon" />
+                </button>
+              </div>
+
+              <p className="text-[10px] text-white/50 font-light text-center px-24 leading-tight lore-footer-text-mobile">
+                Seu portal para a história de como o universo de KYVRA nasceu.
+              </p>
+            </div>
+
+            {/* Desktop: trio à esquerda, fora da área do menu circular */}
+            <div className="hidden md:flex items-center justify-start gap-4 shrink-0 w-auto">
               <button 
                 onClick={handlePrev}
                 className="w-12 h-12 flex items-center justify-center rounded-full liquid-glass hover:bg-white/10 transition-colors shrink-0 lore-nav-btn"
@@ -464,7 +499,7 @@ export function Lore() {
                 onClick={() => setReadingModalOpen(true)}
                 variant="pill"
                 size="md"
-                className="w-full md:w-auto font-medium px-8 py-3 text-white shadow-lg pointer-events-auto lore-btn"
+                className="font-medium px-8 py-3 text-white shadow-lg pointer-events-auto lore-btn"
               >
                 <FileText size={18} className="fill-current text-white" />
                 <span>Explorar Capítulo</span>
