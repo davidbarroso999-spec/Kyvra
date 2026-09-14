@@ -451,7 +451,7 @@ export function Lore() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 md:gap-6 w-full pt-6 border-t border-white/10 pointer-events-auto lore-footer">
             {/* Mobile: teclas de setas (largura do CTA dividida ao meio) acima
                 do CTA + texto, alinhados ao eixo x do menu circular */}
-            <div className="md:hidden flex flex-col items-center gap-3 w-full pb-16">
+            <div className="md:hidden flex flex-col items-center gap-3 w-full pb-10">
               <div className="grid grid-cols-2 gap-1.5 w-full max-w-[280px]">
                 <button 
                   onClick={handlePrev}
