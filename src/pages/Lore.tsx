@@ -452,7 +452,7 @@ export function Lore() {
             {/* Mobile: teclas de setas (largura do CTA dividida ao meio) acima
                 do CTA + texto, alinhados ao eixo x do menu circular */}
             <div className="md:hidden flex flex-col items-center gap-3 w-full pb-2">
-              <div className="grid grid-cols-2 gap-1.5 w-full max-w-[280px]">
+              <div className="grid grid-cols-2 gap-1.5 w-full">
                 <button 
                   onClick={handlePrev}
                   className="h-10 flex items-center justify-center rounded-full liquid-glass hover:bg-white/10 active:bg-white/15 transition-colors lore-nav-btn"
@@ -473,7 +473,7 @@ export function Lore() {
                 onClick={() => setReadingModalOpen(true)}
                 variant="pill"
                 size="md"
-                className="w-full max-w-[280px] font-medium px-8 py-3 text-white shadow-lg pointer-events-auto lore-btn"
+                className="w-full font-medium px-8 py-3 text-white shadow-lg pointer-events-auto lore-btn"
               >
                 <FileText size={18} className="fill-current text-white" />
                 <span>Explorar Capítulo</span>
