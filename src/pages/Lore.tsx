@@ -451,7 +451,7 @@ export function Lore() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 md:gap-6 w-full pt-6 border-t border-white/10 pointer-events-auto lore-footer">
             {/* Mobile: seta • CTA • seta com o texto abaixo, elevados o
                 suficiente para sair do perímetro do menu circular */}
-            <div className="md:hidden flex flex-col items-center gap-3 w-full pb-24">
+            <div className="md:hidden flex flex-col items-center gap-3 w-full pb-20">
               <div className="flex items-center justify-center gap-3 w-full">
                 <button 
                   onClick={handlePrev}
@@ -480,7 +480,7 @@ export function Lore() {
                 </button>
               </div>
 
-              <p className="text-[10px] text-white/50 font-light text-center px-24 leading-tight lore-footer-text-mobile">
+              <p className="text-[11px] text-white/50 font-light text-center px-6 leading-relaxed lore-footer-text-mobile">
                 Seu portal para a história de como o universo de KYVRA nasceu.
               </p>
             </div>
