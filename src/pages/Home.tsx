@@ -49,24 +49,28 @@ const PORTAL_PATHS = [
   {
     path: '/cosmogonia',
     label: 'Lore',
-    phrase: 'Toda queda tem uma origem.',
-    description: 'Atravesse os capítulos e descubra como Kyvra nasceu.',
+    description: 'Atravesse os capítulos.',
     icon: BookOpen,
   },
   {
     path: '/arquivo',
     label: 'Músicas',
-    phrase: 'Dê forma ao silêncio.',
-    description: 'Entre nos fragmentos e deixe o universo tocar primeiro.',
+    description: 'Entre nos fragmentos.',
     icon: Music2,
   },
   {
     path: '/reliquias',
     label: 'Álbuns',
-    phrase: 'Relíquias que sobreviveram ao tempo.',
-    description: 'Conheça as obras que guardam cada estágio da queda.',
+    description: 'Descubra as relíquias.',
     icon: Disc3,
   },
+];
+
+const PORTAL_PHRASES = [
+  'Toda queda tem origem.',
+  'Dê forma ao silêncio.',
+  'Relíquias além do tempo.',
+  'O menu guarda o restante.',
 ];
 
 
@@ -632,9 +636,9 @@ export function Home() {
             </h2>
           </motion.div>
 
-          <div className="relative mt-16 sm:mt-24">
-            <div className="pointer-events-none absolute left-[16.666%] right-[16.666%] top-10 hidden h-px bg-gradient-to-r from-transparent via-primary/45 to-transparent md:block" />
-            <div className="grid gap-10 md:grid-cols-3 md:gap-8">
+          <div className="relative mt-12 sm:mt-24">
+            <div className="pointer-events-none absolute left-[16.666%] right-[16.666%] top-6 h-px bg-gradient-to-r from-transparent via-primary/45 to-transparent sm:top-10" />
+            <div className="grid grid-cols-3 gap-2 sm:gap-5 md:gap-8">
               {PORTAL_PATHS.map((portal, index) => {
                 const Icon = portal.icon;
                 return (
@@ -648,25 +652,15 @@ export function Home() {
                   >
                     <Link
                       to={portal.path}
-                      className="group flex flex-col items-center text-center"
+                      className="group flex min-w-0 flex-col items-center text-center"
                     >
-                      <span className="relative flex h-20 w-20 items-center justify-center rounded-full border border-white/15 bg-[#030307]/90 text-text-mid backdrop-blur-sm transition-all duration-500 group-hover:border-primary/60 group-hover:bg-primary/[0.08] group-hover:text-primary group-hover:shadow-[0_0_28px_var(--glow-purple)]">
-                        <Icon className="h-7 w-7 stroke-[1.2]" aria-hidden="true" />
+                      <span className="relative flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-[#030307]/90 text-text-mid backdrop-blur-sm transition-all duration-500 group-hover:border-primary/60 group-hover:bg-primary/[0.08] group-hover:text-primary group-hover:shadow-[0_0_22px_var(--glow-purple)] sm:h-20 sm:w-20 sm:shadow-[0_0_28px_var(--glow-purple)]">
+                        <Icon className="h-5 w-5 stroke-[1.2] sm:h-7 sm:w-7" aria-hidden="true" />
                       </span>
-                      <span className="mt-7 font-mono text-[10px] uppercase tracking-[0.35em] text-text-low transition-colors duration-300 group-hover:text-primary">
+                      <span className="mt-4 font-mono text-[8px] uppercase tracking-[0.16em] text-text-low transition-colors duration-300 group-hover:text-primary sm:mt-7 sm:text-[10px] sm:tracking-[0.35em]">
                         {portal.label}
                       </span>
-                      <TextBlockAnimation
-                        blockColor="rgba(255,255,255,0.055)"
-                        delay={index * 0.1 + 0.1}
-                        stagger={0.04}
-                        duration={0.5}
-                      >
-                        <p className="mt-3 font-cormorant text-2xl leading-tight text-text-high transition-colors duration-300 group-hover:text-primary sm:text-3xl">
-                          {portal.phrase}
-                        </p>
-                      </TextBlockAnimation>
-                      <p className="mt-3 max-w-[250px] font-sans text-xs leading-relaxed text-text-low transition-colors duration-300 group-hover:text-text-mid">
+                      <p className="mt-2 max-w-[110px] font-sans text-[10px] leading-snug text-text-low transition-colors duration-300 group-hover:text-text-mid sm:mt-3 sm:max-w-[250px] sm:text-xs sm:leading-relaxed">
                         {portal.description}
                       </p>
                     </Link>
@@ -676,16 +670,20 @@ export function Home() {
             </div>
           </div>
 
-          <TextBlockAnimation
-            blockColor="rgba(255,255,255,0.055)"
-            delay={0.45}
-            stagger={0.04}
-            duration={0.55}
-          >
-            <p className="mx-auto mt-20 max-w-md text-center font-cormorant text-xl italic leading-relaxed text-text-mid sm:mt-24 sm:text-2xl">
-              O menu guarda o restante desta história.
-            </p>
-          </TextBlockAnimation>
+          <div className="mt-14 grid grid-cols-2 gap-x-4 gap-y-5 border-y border-white/[0.08] py-8 sm:mt-24 sm:grid-cols-4 sm:gap-6 sm:py-10">
+            {PORTAL_PHRASES.map((phrase, index) => (
+              <motion.p
+                key={phrase}
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.5, delay: index * 0.08 }}
+                className="text-center font-cormorant text-[15px] leading-tight text-text-mid transition-colors duration-300 hover:text-primary sm:text-xl"
+              >
+                {phrase}
+              </motion.p>
+            ))}
+          </div>
         </div>
       </section>
 
