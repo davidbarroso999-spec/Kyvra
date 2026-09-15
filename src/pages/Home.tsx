@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
+import { Link } from 'react-router-dom';
+import { BookOpen, Music2, Disc3 } from 'lucide-react';
 import { getAllTracks } from '@/lib/apiCache';
 import { useStore } from '@/store/useStore';
 import { FeaturedSlider } from '@/components/ui/FeaturedSlider';
+import TextBlockAnimation from '@/components/ui/text-block-animation';
 import { LampContainer } from '@/components/ui/lamp';
 import { cn, getOptimizedImageUrl, getOfflineUrl } from '@/lib/utils';
 import { useIdleCallback, useGPUAcceleration } from '@/modules/performance-optimization';
@@ -14,6 +17,58 @@ const THEME_VIDEOS: Record<string, string> = {
   'floresta-negra': "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_florestanegra.webm",
   'monolito': "https://hntllxzoyfzsucpqcbdk.supabase.co/storage/v1/object/public/kyvra_images/HEROVIDEO/YouCut_monolito.webm"
 };
+const PSYCHOLOGICAL_ARC = [
+  {
+    title: 'Fascínio',
+    text: 'O amor aparece como uma promessa sobrenatural, ainda distante o bastante para ser idealizada.',
+    accent: 'var(--primary)',
+  },
+  {
+    title: 'Entrega',
+    text: 'A fronteira se desfaz. O eu lírico mergulha por inteiro e começa a perder o próprio contorno.',
+    accent: 'var(--accent)',
+  },
+  {
+    title: 'Obsessão',
+    text: 'O vínculo vira necessidade: desejo, ciúme e dependência passam a respirar no mesmo ritmo.',
+    accent: 'var(--secondary)',
+  },
+  {
+    title: 'Ruína',
+    text: 'A destruição deixa de ser acidente. O abismo é reconhecido e escolhido no lugar do vazio.',
+    accent: 'var(--primary)',
+  },
+  {
+    title: 'Consciência',
+    text: 'A dor é compreendida sem arrependimento. O fim deixa de ser queda e se torna linguagem.',
+    accent: 'var(--accent)',
+  },
+];
+
+const PORTAL_PATHS = [
+  {
+    path: '/cosmogonia',
+    label: 'Lore',
+    phrase: 'Toda queda tem uma origem.',
+    description: 'Atravesse os capítulos e descubra como Kyvra nasceu.',
+    icon: BookOpen,
+  },
+  {
+    path: '/arquivo',
+    label: 'Músicas',
+    phrase: 'Dê forma ao silêncio.',
+    description: 'Entre nos fragmentos e deixe o universo tocar primeiro.',
+    icon: Music2,
+  },
+  {
+    path: '/reliquias',
+    label: 'Álbuns',
+    phrase: 'Relíquias que sobreviveram ao tempo.',
+    description: 'Conheça as obras que guardam cada estágio da queda.',
+    icon: Disc3,
+  },
+];
+
 
 const logPerformanceMeasure = (measureName: string, startMark: string, endMark: string) => {
   try {
@@ -32,6 +87,76 @@ const logPerformanceMeasure = (measureName: string, startMark: string, endMark: 
     // Ignore error
   }
 };
+
+function PsychologicalArc() {
+  return (
+    <section className="relative overflow-hidden border-y border-white/[0.06] bg-[#05050b] py-16 sm:py-24 lg:py-28">
+      <div className="pointer-events-none absolute inset-0 opacity-40" style={{ background: 'radial-gradient(circle at 50% 0%, var(--glow-purple), transparent 42%)' }} />
+      <div className="relative z-10 mx-auto w-full max-w-6xl px-6 md:px-12 xl:px-16">
+        <div className="mx-auto max-w-2xl text-center">
+          <span className="font-mono text-[10px] uppercase tracking-[0.38em] text-primary/80">
+            A arquitetura da queda
+          </span>
+          <h2 className="mt-4 font-display text-3xl font-normal leading-tight text-text-high sm:text-5xl">
+            O arco psicológico
+          </h2>
+        </div>
+
+        <div className="relative mt-12 grid gap-8 sm:mt-16 md:grid-cols-5 md:gap-0">
+          <div className="absolute left-[8%] right-[8%] top-5 hidden h-px bg-gradient-to-r from-transparent via-primary/35 to-transparent md:block" />
+          {PSYCHOLOGICAL_ARC.map((stage, index) => (
+            <motion.article
+              key={stage.title}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-80px' }}
+              transition={{ duration: 0.45, delay: index * 0.07, ease: [0.16, 1, 0.3, 1] }}
+              className="group relative flex flex-col items-center border-l border-white/10 pl-5 text-center md:block md:border-l-0 md:px-4"
+            >
+              <div className="relative z-10 mx-auto h-px w-10 bg-white/20 transition-colors duration-300 group-hover:bg-primary" />
+              <div className="pt-5">
+                <TextBlockAnimation
+                  blockColor="rgba(255,255,255,0.07)"
+                  delay={index * 0.06}
+                  stagger={0.05}
+                  duration={0.52}
+                >
+                  <h3 className="font-display text-lg text-text-high transition-colors duration-300 group-hover:text-primary sm:text-xl">
+                    {stage.title}
+                  </h3>
+                </TextBlockAnimation>
+                <TextBlockAnimation
+                  blockColor="rgba(255,255,255,0.045)"
+                  delay={index * 0.06 + 0.08}
+                  stagger={0.035}
+                  duration={0.48}
+                >
+                  <p className="mx-auto mt-2 max-w-[220px] font-sans text-xs leading-relaxed text-text-low transition-colors duration-300 group-hover:text-text-mid">
+                    {stage.text}
+                  </p>
+                </TextBlockAnimation>
+              </div>
+            </motion.article>
+          ))}
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true, margin: '-50px' }}
+          transition={{ duration: 0.7, delay: 0.35 }}
+          className="mt-12 flex items-center gap-4 sm:mt-16"
+        >
+          <span className="h-px flex-1 bg-gradient-to-r from-transparent to-white/10" />
+          <span className="font-mono text-[9px] uppercase tracking-[0.3em] text-text-low">
+            nenhuma queda acontece de uma vez
+          </span>
+          <span className="h-px flex-1 bg-gradient-to-l from-transparent to-white/10" />
+        </motion.div>
+      </div>
+    </section>
+  );
+}
 
 export function Home() {
   const theme = useStore((state) => state.theme);
@@ -477,13 +602,92 @@ export function Home() {
 
       {/* Featured Musics section */}
       {featuredTracks.length > 0 && (
-        <section id="musicas" className="py-20 relative scroll-mt-20">
+        <section id="musicas" className="relative scroll-mt-20 py-20">
           <div className="absolute inset-0 bg-[#080814]" />
           <div className="relative z-10">
             <FeaturedSlider tracks={featuredTracks} />
           </div>
         </section>
       )}
+
+      {/* Psychological arc section */}
+      <PsychologicalArc />
+
+      {/* Three portal paths section */}
+      <section className="relative overflow-hidden border-b border-white/[0.06] bg-[#030307] py-24 sm:py-32 lg:py-40">
+        <div className="pointer-events-none absolute inset-0 opacity-30" style={{ background: 'radial-gradient(circle at 50% 100%, var(--glow-blue), transparent 38%)' }} />
+        <div className="relative z-10 mx-auto w-full max-w-6xl px-6 md:px-12 xl:px-16">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-100px' }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="mx-auto max-w-2xl text-center"
+          >
+            <span className="font-mono text-[10px] uppercase tracking-[0.38em] text-primary/80">
+              Portais de entrada
+            </span>
+            <h2 className="mt-4 font-display text-3xl font-normal leading-tight text-text-high sm:text-5xl">
+              O universo se divide em três caminhos
+            </h2>
+          </motion.div>
+
+          <div className="relative mt-16 sm:mt-24">
+            <div className="pointer-events-none absolute left-[16.666%] right-[16.666%] top-10 hidden h-px bg-gradient-to-r from-transparent via-primary/45 to-transparent md:block" />
+            <div className="grid gap-10 md:grid-cols-3 md:gap-8">
+              {PORTAL_PATHS.map((portal, index) => {
+                const Icon = portal.icon;
+                return (
+                  <motion.div
+                    key={portal.path}
+                    initial={{ opacity: 0, y: 18 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: '-60px' }}
+                    transition={{ duration: 0.65, delay: index * 0.1, ease: [0.16, 1, 0.3, 1] }}
+                    className="relative z-10"
+                  >
+                    <Link
+                      to={portal.path}
+                      className="group flex flex-col items-center text-center"
+                    >
+                      <span className="relative flex h-20 w-20 items-center justify-center rounded-full border border-white/15 bg-[#030307]/90 text-text-mid backdrop-blur-sm transition-all duration-500 group-hover:border-primary/60 group-hover:bg-primary/[0.08] group-hover:text-primary group-hover:shadow-[0_0_28px_var(--glow-purple)]">
+                        <Icon className="h-7 w-7 stroke-[1.2]" aria-hidden="true" />
+                      </span>
+                      <span className="mt-7 font-mono text-[10px] uppercase tracking-[0.35em] text-text-low transition-colors duration-300 group-hover:text-primary">
+                        {portal.label}
+                      </span>
+                      <TextBlockAnimation
+                        blockColor="rgba(255,255,255,0.055)"
+                        delay={index * 0.1 + 0.1}
+                        stagger={0.04}
+                        duration={0.5}
+                      >
+                        <p className="mt-3 font-cormorant text-2xl leading-tight text-text-high transition-colors duration-300 group-hover:text-primary sm:text-3xl">
+                          {portal.phrase}
+                        </p>
+                      </TextBlockAnimation>
+                      <p className="mt-3 max-w-[250px] font-sans text-xs leading-relaxed text-text-low transition-colors duration-300 group-hover:text-text-mid">
+                        {portal.description}
+                      </p>
+                    </Link>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+
+          <TextBlockAnimation
+            blockColor="rgba(255,255,255,0.055)"
+            delay={0.45}
+            stagger={0.04}
+            duration={0.55}
+          >
+            <p className="mx-auto mt-20 max-w-md text-center font-cormorant text-xl italic leading-relaxed text-text-mid sm:mt-24 sm:text-2xl">
+              O menu guarda o restante desta história.
+            </p>
+          </TextBlockAnimation>
+        </div>
+      </section>
 
     </div>
   );
