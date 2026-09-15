@@ -427,7 +427,7 @@ export function Home() {
   }, [featuredTracks]);
 
   return (
-    <div className="w-full bg-[#030303]">
+    <div className="flex w-full flex-col bg-[#030303]">
       {/* Immersive Responsive Hero Section */}
       <section className="relative min-h-[100dvh] lg:h-[100dvh] w-full bg-[#030303] text-white overflow-hidden pb-10 lg:pb-0">
         
@@ -606,7 +606,7 @@ export function Home() {
 
       {/* Featured Musics section */}
       {featuredTracks.length > 0 && (
-        <section id="musicas" className="relative scroll-mt-20 py-20">
+        <section id="musicas" className="relative order-2 scroll-mt-20 py-20">
           <div className="absolute inset-0 bg-[#080814]" />
           <div className="relative z-10">
             <FeaturedSlider tracks={featuredTracks} />
@@ -615,10 +615,12 @@ export function Home() {
       )}
 
       {/* Psychological arc section */}
-      <PsychologicalArc />
+      <div className="order-3">
+        <PsychologicalArc />
+      </div>
 
       {/* Three portal paths section */}
-      <section className="relative overflow-hidden border-b border-white/[0.06] bg-[#030307] py-24 sm:py-32 lg:py-40">
+      <section className="relative order-1 overflow-hidden border-b border-white/[0.06] bg-[#030307] py-24 sm:py-32 lg:py-40">
         <div className="pointer-events-none absolute inset-0 opacity-30" style={{ background: 'radial-gradient(circle at 50% 100%, var(--glow-blue), transparent 38%)' }} />
         <div className="relative z-10 mx-auto w-full max-w-6xl px-6 md:px-12 xl:px-16">
           <motion.div

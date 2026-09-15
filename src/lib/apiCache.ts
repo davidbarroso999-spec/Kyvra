@@ -4,7 +4,8 @@ import { recordNetworkLatency } from './performance';
 import { idbGetString, idbSetString, idbClearByPrefix } from './idbKv';
 
 const cache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_TTL = 1000 * 60 * 60; // 60 minutos em memória
+const CACHE_TTL = 1000 * 60 * 30; // 30 minutos em memória
+const MAX_PERSISTED_PAYLOAD_BYTES = 256 * 1024;
 const LOCAL_STORAGE_PREFIX = 'kyvra_api_cache_';
 
 export async function fetchWithCache(key: string, fetcher: () => Promise<any>, forceRefresh = false) {
@@ -58,7 +59,7 @@ export async function fetchWithCache(key: string, fetcher: () => Promise<any>, f
     if (!error && data !== undefined && data !== null) {
       const cacheObj = { data, timestamp: Date.now() };
       cache.set(key, cacheObj);
-      if (serializedPayload) {
+      if (serializedPayload && serializedPayload.length <= MAX_PERSISTED_PAYLOAD_BYTES) {
         void idbSetString(LOCAL_STORAGE_PREFIX + key, serializedPayload);
       }
       return response;

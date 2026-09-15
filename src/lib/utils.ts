@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { hasCookieConsent } from './idbKv';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -69,11 +70,13 @@ export function parseChapterNumber(chapter: any): number {
 }
 
 // CACHE STORAGE IMPLEMENTATION FOR PURE WEB
-export const AUDIO_CACHE = 'kyvra-audio-cache';
-export const FRAMES_CACHE = 'kyvra-frames-cache';
+export const AUDIO_CACHE = 'kyvra-offline-audio-cache';
+export const FRAMES_CACHE = 'kyvra-offline-frames-cache';
 
 export async function saveForOffline(url: string, targetCache = AUDIO_CACHE): Promise<boolean> {
-  if (!url) return false;
+  // O download offline é uma gravação persistente e só pode ocorrer após
+  // consentimento explícito; a reprodução normal continua usando a rede.
+  if (!url || !hasCookieConsent()) return false;
   if (typeof caches === 'undefined') return false;
   
   try {
@@ -116,7 +119,7 @@ export async function saveForOffline(url: string, targetCache = AUDIO_CACHE): Pr
 }
 
 export async function isSavedOffline(url: string): Promise<boolean> {
-  if (!url || typeof caches === 'undefined') return false;
+  if (!url || !hasCookieConsent() || typeof caches === 'undefined') return false;
   
   try {
     const audioCache = await caches.open(AUDIO_CACHE);
@@ -136,7 +139,7 @@ export async function isSavedOffline(url: string): Promise<boolean> {
 }
 
 export async function getOfflineUrl(url: string): Promise<string> {
-  if (!url || typeof caches === 'undefined') return url;
+  if (!url || !hasCookieConsent() || typeof caches === 'undefined') return url;
   
   try {
     const audioCache = await caches.open(AUDIO_CACHE);

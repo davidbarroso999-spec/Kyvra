@@ -2,11 +2,17 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Shield, Cookie, X } from 'lucide-react';
 import NeonButton from '@/components/ui/NeonButton';
+import { clearLegacyMediaCaches, clearUnconsentedStorage } from '@/lib/idbKv';
 
 export function CookieBanner() {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
+    // Remove caches de mídia criados pela versão antiga, que podiam crescer sem limite.
+    void clearLegacyMediaCaches();
+    // Sem consentimento, nenhum cache persistente de catálogo ou mídia permanece.
+    void clearUnconsentedStorage();
+
     // Check if user has already accepted cookies
     const cookieConsent = localStorage.getItem('kyvra_cookie_consent');
     if (!cookieConsent) {
@@ -33,6 +39,7 @@ export function CookieBanner() {
 
   const handleDecline = () => {
     localStorage.setItem('kyvra_cookie_consent', 'declined');
+    void clearUnconsentedStorage();
     setIsOpen(false);
 
     // Mesmo recusando, libera a fila de onboarding
@@ -68,6 +75,7 @@ export function CookieBanner() {
                   <button 
                     onClick={() => {
                       setIsOpen(false);
+                      void clearUnconsentedStorage();
                       window.dispatchEvent(new CustomEvent('kyvraCookieConsentResolved'));
                     }}
                     className="text-white/40 hover:text-white transition-colors duration-200 p-1"

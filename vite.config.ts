@@ -128,22 +128,6 @@ export default defineConfig(({ mode }) => {
               },
             },
             {
-              urlPattern:
-                /^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/public\/.*/i,
-              handler: "CacheFirst",
-              options: {
-                cacheName: "kyvra-audio-cache",
-                expiration: {
-                  maxEntries: 400,
-                  maxAgeSeconds: 60 * 60 * 24 * 90, // 90 days
-                },
-                cacheableResponse: {
-                  statuses: [0, 200],
-                },
-                rangeRequests: true,
-              },
-            },
-            {
               urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i,
               handler: "NetworkFirst",
               options: {
@@ -151,20 +135,6 @@ export default defineConfig(({ mode }) => {
                 expiration: {
                   maxEntries: 100,
                   maxAgeSeconds: 60 * 60 * 24,
-                },
-                cacheableResponse: {
-                  statuses: [0, 200],
-                },
-              },
-            },
-            {
-              urlPattern: /(?:.*\/cdn\/frames\/.*|https:\/\/raw\.githubusercontent\.com\/davidbarroso999-spec\/Aleatoriedades\/main\/.*)/i,
-              handler: "CacheFirst",
-              options: {
-                cacheName: "kyvra-frames-cache",
-                expiration: {
-                  maxEntries: 200,
-                  maxAgeSeconds: 60 * 60 * 24 * 60,
                 },
                 cacheableResponse: {
                   statuses: [0, 200],
