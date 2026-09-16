@@ -66,14 +66,6 @@ const PORTAL_PATHS = [
   },
 ];
 
-const PORTAL_PHRASES = [
-  'Toda queda tem origem.',
-  'Dê forma ao silêncio.',
-  'Relíquias além do tempo.',
-  'O menu guarda o restante.',
-];
-
-
 const logPerformanceMeasure = (measureName: string, startMark: string, endMark: string) => {
   try {
     performance.measure(measureName, startMark, endMark);
@@ -672,20 +664,15 @@ export function Home() {
             </div>
           </div>
 
-          <div className="mt-14 grid grid-cols-2 gap-x-4 gap-y-5 border-y border-white/[0.08] py-8 sm:mt-24 sm:grid-cols-4 sm:gap-6 sm:py-10">
-            {PORTAL_PHRASES.map((phrase, index) => (
-              <motion.p
-                key={phrase}
-                initial={{ opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-40px' }}
-                transition={{ duration: 0.5, delay: index * 0.08 }}
-                className="text-center font-cormorant text-[15px] leading-tight text-text-mid transition-colors duration-300 hover:text-primary sm:text-xl"
-              >
-                {phrase}
-              </motion.p>
-            ))}
-          </div>
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.6 }}
+            className="mt-14 border-y border-white/[0.08] py-8 text-center font-cormorant text-base italic leading-tight text-text-mid sm:mt-24 sm:py-10 sm:text-xl"
+          >
+            desça até às profundezas no menu circular
+          </motion.p>
         </div>
       </section>
 
