@@ -4,6 +4,7 @@ import { Upload, Lock, Unlock, KeyRound, HelpCircle, ShieldAlert, X, Plus, Spark
 import { cn, parseChapterNumber } from '@/lib/utils';
 import { generateText, generateImage } from '@/lib/ai';
 import { supabase } from '@/lib/supabase';
+import { clearCache } from '@/lib/apiCache';
 import { getAudioMetadata } from '@/lib/audioMetadata';
 import { CombinationLock } from '@/components/ui/CombinationLock';
 import NeonButton from '@/components/ui/NeonButton';
@@ -155,6 +156,7 @@ export function Admin() {
 
       setAcervoSuccess('Álbum, músicas e arquivos excluídos com sucesso.');
       setAllAlbums(allAlbums.filter(a => a.id !== albumId));
+      clearCache();
       setTimeout(() => setAcervoSuccess(''), 3000);
     } catch (err: any) {
       console.error('Erro ao excluir álbum:', err);
@@ -192,6 +194,7 @@ export function Admin() {
         }
         return a;
       }));
+      clearCache();
       setTimeout(() => setAcervoSuccess(''), 3000);
     } catch (err: any) {
       console.error('Erro ao excluir música:', err);
@@ -451,6 +454,8 @@ export function Admin() {
         }
       }
 
+      clearCache('featured_settings');
+      clearCache('all_tracks');
       setFeaturedSuccess('Destaques atualizados com sucesso!');
       setTimeout(() => setFeaturedSuccess(''), 3000);
     } catch (err: any) {
@@ -771,12 +776,76 @@ export function Admin() {
         artist: track.artist
       }));
 
-      const { error: tracksDbError } = await supabase.from('tracks').insert(tracksToInsert);
+      const { data: insertedTracks, error: tracksDbError } = await supabase
+        .from('tracks')
+        .insert(tracksToInsert)
+        .select();
+
       if (tracksDbError) {
         // Se falhar a inserção das faixas, deleta o álbum (que vai deletar as faixas em cascata no BD)
         await supabase.from('albums').delete().eq('id', albumData.id);
         throw tracksDbError;
       }
+
+      // Inclusão automática das novas músicas e álbum nos Fragmentos em Destaque
+      try {
+        const { data: settingsList } = await supabase
+          .from('lore_chapters')
+          .select('id, content')
+          .eq('title', '__FEATURED_TRACKS_JSON__')
+          .order('id', { ascending: false })
+          .limit(1);
+
+        let existingFeaturedIds: string[] = [];
+        if (settingsList?.[0]?.content) {
+          try {
+            existingFeaturedIds = JSON.parse(settingsList[0].content);
+            if (!Array.isArray(existingFeaturedIds)) existingFeaturedIds = [];
+          } catch (e) {}
+        }
+
+        const newTrackIds = (insertedTracks || []).map((t: any) => String(t.id));
+        const updatedFeaturedIds = Array.from(new Set([...newTrackIds, ...existingFeaturedIds]));
+        const jsonContent = JSON.stringify(updatedFeaturedIds);
+
+        if (settingsList?.[0]) {
+          await supabase
+            .from('lore_chapters')
+            .update({ content: jsonContent })
+            .eq('id', settingsList[0].id);
+        } else {
+          await supabase
+            .from('lore_chapters')
+            .insert({
+              title: '__FEATURED_TRACKS_JSON__',
+              content: jsonContent,
+              chapter_number: -10
+            });
+        }
+
+        if (newTrackIds.length > 0) {
+          const { data: oldSetting } = await supabase
+            .from('lore_chapters')
+            .select('id')
+            .eq('title', '__FEATURED_TRACK__')
+            .order('id', { ascending: false })
+            .limit(1);
+          if (oldSetting?.[0]) {
+            await supabase.from('lore_chapters').update({ content: newTrackIds[0] }).eq('id', oldSetting[0].id);
+          } else {
+            await supabase.from('lore_chapters').insert({
+              title: '__FEATURED_TRACK__',
+              content: newTrackIds[0],
+              chapter_number: -1
+            });
+          }
+        }
+      } catch (featErr) {
+        console.warn('Inclusão automática nos destaques:', featErr);
+      }
+
+      // Limpa os caches para que todo o app (Home, Acervo, etc.) mostre o novo conteúdo imediatamente
+      clearCache();
 
       // 4. Generate Album Synopsis
       const allLyrics = uploadedTracks
@@ -820,12 +889,16 @@ export function Admin() {
         }
       }
 
-        setAlbumSuccess('Álbum publicado com sucesso!');
+        setAlbumSuccess('Álbum e músicas publicados com sucesso! Incluídos automaticamente nos fragmentos em destaque.');
         setAlbumTitle('');
         setAlbumYear('');
         setAlbumDesc('');
         setAlbumCover(null);
         setAlbumTracks([{ id: Date.now(), title: '', file: null }]);
+        
+        fetchExistingTracks();
+        fetchFeaturedTracks();
+        fetchAllAlbums();
         
         setTimeout(() => setAlbumSuccess(''), 5000);
       } catch (err: any) {

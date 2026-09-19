@@ -101,7 +101,7 @@ export const useStore = create<AppState>()(
 
       isPlayerHidden: false,
       setPlayerHidden: (isPlayerHidden) => set({ isPlayerHidden }),
-      scrollResonanceEnabled: true,
+      scrollResonanceEnabled: false,
       setScrollResonanceEnabled: (scrollResonanceEnabled) => set({ scrollResonanceEnabled }),
       toggleScrollResonance: () => set((state) => ({ scrollResonanceEnabled: !state.scrollResonanceEnabled })),
 
