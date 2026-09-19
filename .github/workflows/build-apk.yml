@@ -40,7 +40,7 @@ jobs:
           cd android/gradle/wrapper
           if [ ! -s gradle-wrapper.jar ]; then
             echo "Baixando gradle-wrapper.jar oficial..."
-            curl -sSL -o gradle-wrapper.jar https://github.com/gradle/gradle/raw/v8.14.3/gradle/wrapper/gradle-wrapper.jar
+            curl -sSL -o gradle-wrapper.jar https://github.com/gradle/gradle/raw/v8.11.1/gradle/wrapper/gradle-wrapper.jar
           fi
 
       - name: Grant execute permission for gradlew
