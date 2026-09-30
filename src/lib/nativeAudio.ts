@@ -3,6 +3,7 @@ import type { Track } from '@/store/useStore';
 
 export interface KyvraAudioPlugin {
   setQueue(options: { tracks: Track[]; startIndex: number }): Promise<void>;
+  cacheAudioTrack(options: { audioUrl: string }): Promise<{ cached: boolean }>;
   play(): Promise<void>;
   pause(): Promise<void>;
   skipToNext(): Promise<void>;
