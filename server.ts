@@ -37,7 +37,7 @@ async function startServer() {
   app.use((req, res, next) => {
     const origin = req.headers.origin;
     const isLocalDevelopmentOrigin = origin
-      ? /^https?:\\/\\/(localhost|127\\.0\\.0\\.1)(:\\d+)?$/.test(origin)
+      ? /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
       : false;
     const isKyvraNativeOrigin = origin === 'https://localhost'
       || origin === 'capacitor://localhost'
