@@ -5,8 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Kyvra',
   webDir: 'dist',
   server: {
-    androidScheme: 'https',
-    allowNavigation: ['*']
+    androidScheme: 'https'
   }
 };
 
