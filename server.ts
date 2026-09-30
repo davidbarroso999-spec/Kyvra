@@ -280,6 +280,11 @@ async function startServer() {
     }
   });
 
+  // Configuration status used by web and Android clients without exposing secrets.
+  app.get("/api/ai/status", (_req, res) => {
+    return res.json({ configured: Boolean(process.env.GEMINI_API_KEY) });
+  });
+
   // Admin AI endpoints: a GEMINI_API_KEY permanece exclusivamente no servidor.
   app.post("/api/ai/text", async (req, res) => {
     const { prompt, systemInstruction } = req.body || {};
