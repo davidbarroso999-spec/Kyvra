@@ -13,10 +13,13 @@ let serverConfigured: boolean | null = null;
 async function isServerConfigured(): Promise<boolean> {
   if (serverConfigured !== null) return serverConfigured;
   try {
-    const response = await fetch(apiUrl('/api/github/status'));
-    // A existência da rota indica que estamos no servidor integrado; a chave
-    // da IA é verificada por cada endpoint individualmente.
-    serverConfigured = response.ok || response.status === 503;
+    const response = await fetch(apiUrl('/api/ai/status'));
+    if (!response.ok) {
+      serverConfigured = false;
+      return false;
+    }
+    const status = await response.json();
+    serverConfigured = status?.configured === true;
   } catch {
     serverConfigured = false;
   }
