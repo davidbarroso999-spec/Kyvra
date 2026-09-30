@@ -32,6 +32,32 @@ async function startServer() {
 
   app.use(express.json());
 
+  // Permit the Capacitor WebView origin to call this server without opening
+  // the AI endpoints to arbitrary browser origins.
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    const isLocalDevelopmentOrigin = origin
+      ? /^https?:\\/\\/(localhost|127\\.0\\.0\\.1)(:\\d+)?$/.test(origin)
+      : false;
+    const isKyvraNativeOrigin = origin === 'https://localhost'
+      || origin === 'capacitor://localhost'
+      || origin === 'null'
+      || isLocalDevelopmentOrigin;
+
+    if (origin && isKyvraNativeOrigin) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      res.setHeader('Access-Control-Max-Age', '86400');
+    }
+
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(origin && !isKyvraNativeOrigin ? 403 : 204);
+    }
+    next();
+  });
+
   // GitHub API integration: the token is always kept server-side.
   const githubRequest = async <T>(endpoint: string): Promise<T> => {
     const token = process.env.GITHUB_TOKEN;
