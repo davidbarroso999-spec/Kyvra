@@ -10,6 +10,7 @@ import {
 } from './apiCache';
 import { FRAME_COUNT, frameUrl } from './albumsFrameCache';
 import { useStore } from '@/store/useStore';
+import { KyvraAudio, isNativeAudioAvailable } from '@/lib/nativeAudio';
 
 export interface OfflineProgress {
   total: number;
@@ -182,8 +183,14 @@ async function syncEverythingForOfflineInternal(
 
     THEME_VIDEOS.forEach((url) => mediaUrls.add(url));
 
+    const nativeAudio = isNativeAudioAvailable();
+    const nativeAudioUrls = new Set<string>();
+
     tracks.forEach((track) => {
-      if (track.audio_url) mediaUrls.add(track.audio_url);
+      if (track.audio_url) {
+        if (nativeAudio) nativeAudioUrls.add(track.audio_url);
+        else mediaUrls.add(track.audio_url);
+      }
       if (track.albums?.cover_url) mediaUrls.add(track.albums.cover_url);
     });
 
@@ -197,7 +204,7 @@ async function syncEverythingForOfflineInternal(
 
     const frameUrls = Array.from({ length: FRAME_COUNT }, (_, index) => frameUrl(index));
     const mediaArray = Array.from(mediaUrls);
-    const totalItems = mediaArray.length + frameUrls.length;
+    const totalItems = mediaArray.length + frameUrls.length + nativeAudioUrls.size;
     let processedCount = 0;
     let failedCount = detailsFailed;
 
@@ -209,6 +216,26 @@ async function syncEverythingForOfflineInternal(
         label,
       });
     };
+
+    const nativeAudioResult = nativeAudio
+      ? await runWithConcurrency(
+          Array.from(nativeAudioUrls),
+          2,
+          async (audioUrl) => {
+            try {
+              await KyvraAudio.cacheAudioTrack({ audioUrl });
+              return true;
+            } catch (_error) {
+              return false;
+            }
+          },
+          (success) => {
+            processedCount++;
+            if (!success) failedCount++;
+            notifyProgress(`Salvando músicas para reprodução nativa offline (${processedCount}/${totalItems})...`);
+          },
+        )
+      : { completed: 0, failed: 0 };
 
     const mediaResult = await runWithConcurrency(
       mediaArray,
@@ -234,6 +261,7 @@ async function syncEverythingForOfflineInternal(
 
     // As falhas já foram contabilizadas durante cada callback de progresso.
     // Mantemos os resultados nomeados para preservar a telemetria da etapa sem duplicar a contagem.
+    void nativeAudioResult;
     void mediaResult;
     void framesResult;
 
