@@ -1,3 +1,5 @@
+import { apiUrl } from './apiBase';
+
 /**
  * Cliente de IA do Kyvra.
  *
@@ -11,7 +13,7 @@ let serverConfigured: boolean | null = null;
 async function isServerConfigured(): Promise<boolean> {
   if (serverConfigured !== null) return serverConfigured;
   try {
-    const response = await fetch('/api/github/status');
+    const response = await fetch(apiUrl('/api/github/status'));
     // A existência da rota indica que estamos no servidor integrado; a chave
     // da IA é verificada por cada endpoint individualmente.
     serverConfigured = response.ok || response.status === 503;
@@ -28,7 +30,7 @@ export const MODELS = {
 };
 
 export async function generateText(prompt: string, systemInstruction?: string): Promise<string> {
-  const response = await fetch('/api/ai/text', {
+  const response = await fetch(apiUrl('/api/ai/text'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ prompt, systemInstruction }),
@@ -70,7 +72,7 @@ export async function generateMultimodal(
 }
 
 export async function generateImage(prompt: string): Promise<string> {
-  const response = await fetch('/api/ai/image', {
+  const response = await fetch(apiUrl('/api/ai/image'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ prompt }),
