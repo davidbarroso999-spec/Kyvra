@@ -181,6 +181,30 @@ class KyvraAudioPlugin : Plugin() {
     }
 
     @PluginMethod
+    fun setVolume(call: PluginCall) {
+        val requestedVolume = call.getFloat("volume") ?: 1.0f
+        val volume = requestedVolume.coerceIn(0.0f, 1.0f)
+        withController { ctrl ->
+            ctrl.volume = volume
+            call.resolve()
+        }
+    }
+
+    @PluginMethod
+    fun setRepeatMode(call: PluginCall) {
+        val mode = call.getString("mode") ?: "off"
+        val repeatMode = when (mode) {
+            "one" -> Player.REPEAT_MODE_ONE
+            "all" -> Player.REPEAT_MODE_ALL
+            else -> Player.REPEAT_MODE_OFF
+        }
+        withController { ctrl ->
+            ctrl.repeatMode = repeatMode
+            call.resolve()
+        }
+    }
+
+    @PluginMethod
     fun getPosition(call: PluginCall) {
         withController { ctrl ->
             val ret = JSObject()
