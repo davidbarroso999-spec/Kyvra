@@ -8,6 +8,8 @@ export interface KyvraAudioPlugin {
   skipToNext(): Promise<void>;
   skipToPrevious(): Promise<void>;
   seekTo(options: { positionMs: number }): Promise<void>;
+  setVolume(options: { volume: number }): Promise<void>;
+  setRepeatMode(options: { mode: 'off' | 'all' | 'one' }): Promise<void>;
   getPosition(): Promise<{ positionMs: number; durationMs: number; isPlaying: boolean }>;
   addListener(
     eventName: 'playbackStateChanged' | 'trackChanged' | 'playbackError',
