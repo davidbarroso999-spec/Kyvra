@@ -3,10 +3,17 @@ package com.kyvra.app
 import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
+import androidx.annotation.OptIn
 import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DataSpec
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.cache.CacheDataSource
+import androidx.media3.datasource.cache.CacheWriter
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.getcapacitor.JSArray
@@ -17,9 +24,55 @@ import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
 import com.google.common.util.concurrent.MoreExecutors
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.Executors
 
+@OptIn(UnstableApi::class)
 @CapacitorPlugin(name = "KyvraAudio")
 class KyvraAudioPlugin : Plugin() {
+
+    private val cacheExecutor = Executors.newFixedThreadPool(2)
+
+    @PluginMethod
+    fun cacheAudioTrack(call: PluginCall) {
+        val audioUrl = call.getString("audioUrl")
+        if (audioUrl.isNullOrBlank()) {
+            call.reject("audioUrl é obrigatório")
+            return
+        }
+
+        val uri = Uri.parse(audioUrl)
+        if (uri.scheme != "https" || uri.host.isNullOrBlank()) {
+            call.reject("A URL do áudio precisa usar HTTPS")
+            return
+        }
+
+        cacheExecutor.execute {
+            try {
+                val httpFactory = DefaultHttpDataSource.Factory()
+                    .setAllowCrossProtocolRedirects(true)
+                    .setConnectTimeoutMs(15000)
+                    .setReadTimeoutMs(15000)
+                val upstreamFactory = DefaultDataSource.Factory(context, httpFactory)
+                val cacheFactory = CacheDataSource.Factory()
+                    .setCache(KyvraPlaybackService.getCache(context))
+                    .setUpstreamDataSourceFactory(upstreamFactory)
+                    .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+
+                CacheWriter(
+                    cacheFactory.createDataSource(),
+                    DataSpec(uri),
+                    null,
+                    null
+                ).cache()
+
+                val result = JSObject()
+                result.put("cached", true)
+                call.resolve(result)
+            } catch (e: Exception) {
+                call.reject("Falha ao salvar o áudio para reprodução offline: ${e.message}")
+            }
+        }
+    }
 
     private var controller: MediaController? = null
     private val pendingActions = ConcurrentLinkedQueue<(MediaController) -> Unit>()
