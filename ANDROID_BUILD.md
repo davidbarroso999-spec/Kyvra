@@ -14,9 +14,9 @@ Antes de gerar um APK que use esses recursos:
 
 1. Implante o servidor deste repositório com `npm install --legacy-peer-deps`, `npm run build` e `npm start`.
 2. Configure `GEMINI_API_KEY` no ambiente do servidor. Configure `GITHUB_TOKEN` somente se os recursos de GitHub forem usados.
-3. Defina `VITE_NATIVE_API_URL` com a origem HTTPS desse servidor antes de executar `npm run build` e `npx cap sync android`.
+3. Defina `VITE_NATIVE_API_URL` com a origem HTTPS desse servidor antes de executar `npm run build` e `npx cap sync android`. Isso pode ser feito em um arquivo `.env` local ou na configuração protegida do ambiente de build, usando apenas a origem que você escolheu e validou.
 
-A chave Gemini permanece no servidor e não deve ser adicionada a variáveis com prefixo `VITE_`, ao APK ou ao repositório. A Action gera o APK sem fixar um servidor remoto. Para configurar a Action, use uma variável de repositório chamada `KYVRA_API_BASE_URL` somente depois de escolher e validar a origem do servidor; configure o build para passá-la como `VITE_NATIVE_API_URL`.
+A chave Gemini permanece no servidor e não deve ser adicionada a variáveis com prefixo `VITE_`, ao APK ou ao repositório. A Action gera o APK de depuração sem fixar um servidor remoto; por isso, para incluir IA nesse artefato, configure a variável no ambiente de build antes da compilação.
 
 Sem `VITE_NATIVE_API_URL`, a interface e a reprodução de áudio continuam disponíveis, mas os recursos do painel administrativo que chamam a API exibem uma mensagem de configuração.
 
