@@ -264,7 +264,7 @@ export function MiniPlayer() {
     });
 
     const subTrack = KyvraAudio.addListener('trackChanged', ({ mediaId }) => {
-      if (!active || !mediaId) return;
+      if (!active || !mediaId || mediaId === lastNativeTrackIdRef.current) return;
       lastNativeTrackIdRef.current = mediaId;
 
       const activeQueue = isShuffle ? shuffledQueue : queue;
@@ -534,10 +534,24 @@ export function MiniPlayer() {
   };
 
   useEffect(() => {
+    if (isNativeAudioAvailable()) {
+      KyvraAudio.setVolume({ volume }).catch((err) => {
+        console.warn("Kyvra: native volume update failed", err);
+      });
+      return;
+    }
+
     if (audioRef.current) {
       audioRef.current.volume = volume;
     }
   }, [volume]);
+
+  useEffect(() => {
+    if (!isNativeAudioAvailable()) return;
+    KyvraAudio.setRepeatMode({ mode: repeatMode }).catch((err) => {
+      console.warn("Kyvra: native repeat mode update failed", err);
+    });
+  }, [repeatMode]);
 
   const [resolvedAudioUrl, setResolvedAudioUrl] = useState<string | undefined>(currentTrack?.audioUrl);
   const activeBlobUrlRef = useRef<string | null>(null);
