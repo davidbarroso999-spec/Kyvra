@@ -50,18 +50,31 @@ jobs:
         run: android/gradlew assembleDebug --stacktrace
 
       - name: Prepare release signing key
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         shell: bash
         run: |
+          if [[ -z "$ANDROID_KEYSTORE_BASE64" || -z "$ANDROID_KEYSTORE_PASSWORD" || -z "$ANDROID_KEY_ALIAS" || -z "$ANDROID_KEY_PASSWORD" ]]; then
+            echo "KYVRA_RELEASE_SIGNING_CONFIGURED=false" >> "$GITHUB_ENV"
+            echo "Release APK skipped: signing secrets are not configured."
+            exit 0
+          fi
+
           keystore_path="$RUNNER_TEMP/kyvra-release.jks"
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$keystore_path"
           echo "KYVRA_KEYSTORE_FILE=$keystore_path" >> "$GITHUB_ENV"
           echo "KYVRA_VERSION_CODE=$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
+          echo "KYVRA_RELEASE_SIGNING_CONFIGURED=true" >> "$GITHUB_ENV"
 
       - name: Build signed release APK
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
+        if: env.KYVRA_RELEASE_SIGNING_CONFIGURED == 'true'
+        env:
+          KYVRA_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KYVRA_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KYVRA_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         env:
           KYVRA_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KYVRA_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -77,7 +90,7 @@ jobs:
           retention-days: 14
 
       - name: Upload signed release APK
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
+        if: env.KYVRA_RELEASE_SIGNING_CONFIGURED == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: kyvra-android-release
