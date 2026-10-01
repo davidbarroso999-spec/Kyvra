@@ -865,15 +865,24 @@ export function MiniPlayer() {
               {!isMobileLandscape ? (
                 <>
                   {/* Main Content */}
-                  <div className="flex-1 flex flex-col md:flex-row items-center justify-center p-6 md:px-12 md:py-4 gap-8 md:gap-12 lg:gap-16 xl:gap-20 md:overflow-hidden">
+                  <div className="flex-1 flex flex-col md:flex-row items-center justify-center p-4 md:px-8 lg:px-12 md:py-2 gap-6 md:gap-10 lg:gap-14 xl:gap-16 min-h-0">
                     {/* Cover Art */}
                     <motion.div 
                       layoutId={`cover-${currentTrack.id}`}
+                      style={{
+                        width: showLyrics 
+                          ? 'min(75vw, 340px, 36vh)' 
+                          : 'min(85vw, 460px, 48vh)',
+                        height: showLyrics 
+                          ? 'min(75vw, 340px, 36vh)' 
+                          : 'min(85vw, 460px, 48vh)',
+                        aspectRatio: '1 / 1',
+                      }}
                       className={cn(
-                        "w-full aspect-square rounded-xl overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,0.5)] shrink-0 transition-all duration-500",
+                        "aspect-square rounded-2xl overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.6)] shrink-0 transition-all duration-500 bg-black/40 border border-white/10 flex items-center justify-center",
                         showLyrics 
-                          ? "max-w-[240px] sm:max-w-[260px] md:max-w-[280px] lg:max-w-[320px] xl:max-w-[380px] md:h-[28vh] lg:h-[34vh] xl:h-[40vh] opacity-40 md:opacity-100" 
-                          : "max-w-[280px] sm:max-w-[300px] md:max-w-[360px] lg:max-w-[420px] xl:max-w-[480px] md:h-[38vh] lg:h-[44vh] xl:h-[50vh]"
+                          ? "opacity-40 md:opacity-100" 
+                          : ""
                       )}
                     >
                       <img
@@ -881,7 +890,7 @@ export function MiniPlayer() {
                         alt={currentTrack.title}
                         loading="lazy"
                         decoding="async"
-                        className="w-full h-full object-cover bg-black/20"
+                        className="w-full h-full object-contain rounded-2xl"
                         referrerPolicy="no-referrer"
                       />
                     </motion.div>
@@ -1042,14 +1051,19 @@ export function MiniPlayer() {
                   <div className="w-[40%] flex items-center justify-center p-2 shrink-0">
                     <motion.div 
                       layoutId={`cover-${currentTrack.id}`}
-                      className="w-[170px] sm:w-[200px] aspect-square rounded-xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.5)] shrink-0 transition-all duration-300"
+                      style={{
+                        width: 'min(100%, 200px, 65vh)',
+                        height: 'min(100%, 200px, 65vh)',
+                        aspectRatio: '1 / 1'
+                      }}
+                      className="aspect-square rounded-xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.5)] shrink-0 transition-all duration-300 bg-black/40 border border-white/10 flex items-center justify-center"
                     >
                       <img
                         src={currentTrack.coverUrl || undefined}
                         alt={currentTrack.title}
                         loading="lazy"
                         decoding="async"
-                        className="w-full h-full object-cover bg-black/20"
+                        className="w-full h-full object-contain rounded-xl"
                         referrerPolicy="no-referrer"
                       />
                     </motion.div>

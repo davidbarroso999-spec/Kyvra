@@ -228,7 +228,7 @@ export function AlbumDetail() {
             alt={album.title} 
             fetchPriority="high"
             decoding="async"
-            className="w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 object-cover r-md shadow-[0_30px_60px_rgba(0,0,0,0.8)]"
+            className="w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 object-contain bg-black/40 border border-white/10 r-md shadow-[0_30px_60px_rgba(0,0,0,0.8)]"
             referrerPolicy="no-referrer"
           />
           <motion.div 
