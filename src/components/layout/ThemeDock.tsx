@@ -108,8 +108,10 @@ export function ThemeDock() {
     <aside
       aria-label="Seleção de Tema Visual"
       className={cn(
-        "fixed right-3.5 sm:right-6 top-1/2 -translate-y-1/2 z-[6000] flex items-center select-none transition-all duration-500 ease-out",
-        isMenuOpen ? "opacity-100 translate-x-0 pointer-events-auto" : "opacity-0 translate-x-8 pointer-events-none"
+        "fixed right-3.5 sm:right-6 top-1/2 -translate-y-1/2 z-[4500] flex items-center select-none transition-all duration-500 ease-out",
+        isMenuOpen 
+          ? "opacity-100 translate-x-0 pointer-events-auto" 
+          : "opacity-0 translate-x-8 pointer-events-none md:opacity-100 md:translate-x-0 md:pointer-events-auto"
       )}
     >
       {/* 
@@ -137,8 +139,8 @@ export function ThemeDock() {
         )}
       </div>
 
-      {/* Coluna Vertical com os 4 Ícones */}
-      <div className="flex flex-col items-center gap-3 sm:gap-4">
+      {/* Coluna Vertical com os 4 Ícones no Dock */}
+      <div className="flex flex-col items-center gap-2 sm:gap-2.5 p-1.5 sm:p-2 rounded-full glass-premium border border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.5)] bg-void/50 backdrop-blur-md">
         {THEMES.map((t) => {
           const isActive = currentTheme === t.id;
           const Icon = t.icon;
@@ -155,12 +157,13 @@ export function ThemeDock() {
                 onMouseEnter={() => handleMouseEnter(t.id)}
                 onMouseLeave={handleMouseLeave}
                 aria-label={`Mudar para o tema ${t.label}`}
+                title={t.label}
                 aria-pressed={isActive}
                 className={cn(
-                  "w-full h-full flex items-center justify-center transition-all duration-300 group cursor-pointer",
+                  "w-full h-full rounded-full flex items-center justify-center transition-all duration-300 group cursor-pointer relative",
                   isActive
-                    ? "scale-110"
-                    : "text-white/25 hover:text-white/80 hover:scale-105"
+                    ? "scale-110 bg-white/5"
+                    : "text-white/35 hover:text-white/90 hover:scale-105 hover:bg-white/5"
                 )}
                 style={{
                   color: isActive ? t.color : undefined,
@@ -175,6 +178,12 @@ export function ThemeDock() {
                       : "stroke-[1.8]"
                   )}
                 />
+                {isActive && (
+                  <span 
+                    className="absolute -right-0.5 top-1/2 -translate-y-1/2 w-1 h-1 rounded-full shadow-[0_0_6px_currentColor]"
+                    style={{ backgroundColor: t.color, color: t.color }}
+                  />
+                )}
               </button>
             </div>
           );

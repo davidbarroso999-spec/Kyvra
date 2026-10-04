@@ -13,12 +13,76 @@ import {
   ChevronRight,
   AlignLeft
 } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, type Variants } from "motion/react";
 import { cn, getOfflineUrl } from "@/lib/utils";
 import { useStore } from "@/store/useStore";
 import { registerAudioElement, useAudioAnalyser } from "@/hooks/useAudioAnalyser";
 import { FrequencyVisualizer } from "@/components/ui/FrequencyVisualizer";
 import { KyvraAudio, isNativeAudioAvailable } from "@/lib/nativeAudio";
+import { getSmoothScrollInstance } from "@/lib/smoothScroll";
+
+const coverVariants: Variants = {
+  enter: (direction: 'next' | 'prev') => ({
+    x: direction === 'next' ? 70 : -70,
+    opacity: 0,
+    scale: 0.94,
+    filter: 'blur(6px)',
+  }),
+  center: {
+    x: 0,
+    opacity: 1,
+    scale: 1,
+    filter: 'blur(0px)',
+    transition: {
+      x: { type: "spring" as const, stiffness: 320, damping: 32, mass: 0.8 },
+      opacity: { duration: 0.28, ease: "easeOut" },
+      scale: { type: "spring" as const, stiffness: 320, damping: 32 },
+      filter: { duration: 0.24 },
+    }
+  },
+  exit: (direction: 'next' | 'prev') => ({
+    x: direction === 'next' ? -70 : 70,
+    opacity: 0,
+    scale: 0.94,
+    filter: 'blur(6px)',
+    position: 'absolute' as const,
+    transition: {
+      x: { type: "spring" as const, stiffness: 320, damping: 32, mass: 0.8 },
+      opacity: { duration: 0.2, ease: "easeIn" },
+      scale: { duration: 0.2 },
+      filter: { duration: 0.18 },
+    }
+  })
+};
+
+const textVariants: Variants = {
+  enter: (direction: 'next' | 'prev') => ({
+    y: direction === 'next' ? 14 : -14,
+    opacity: 0,
+    filter: 'blur(3px)',
+  }),
+  center: {
+    y: 0,
+    opacity: 1,
+    filter: 'blur(0px)',
+    transition: {
+      y: { type: "spring" as const, stiffness: 350, damping: 30 },
+      opacity: { duration: 0.24, ease: "easeOut" },
+      filter: { duration: 0.2 },
+    }
+  },
+  exit: (direction: 'next' | 'prev') => ({
+    y: direction === 'next' ? -14 : 14,
+    opacity: 0,
+    filter: 'blur(3px)',
+    position: 'absolute' as const,
+    transition: {
+      y: { type: "spring" as const, stiffness: 350, damping: 30 },
+      opacity: { duration: 0.18, ease: "easeIn" },
+      filter: { duration: 0.15 },
+    }
+  })
+};
 
 const formatTime = (seconds: number = 0) => {
   const minutes = Math.floor(seconds / 60);
@@ -139,9 +203,70 @@ export async function showMediaNotification(track: any, isPlaying: boolean) {
 
 export function MiniPlayer() {
   const audioRef = useRef<HTMLAudioElement>(null);
+  const lyricsContainerRef = useRef<HTMLDivElement>(null);
+  const landscapeLyricsRef = useRef<HTMLDivElement>(null);
   const [isFullPlayerOpen, setIsFullPlayerOpen] = useState(false);
   const [showLyrics, setShowLyrics] = useState(false);
   const [isMobileLandscape, setIsMobileLandscape] = useState(false);
+
+  // Pausa o smooth scroll da página de fundo (Lenis) enquanto o player estiver expandido
+  useEffect(() => {
+    if (isFullPlayerOpen) {
+      const lenis = getSmoothScrollInstance();
+      lenis?.stop();
+      return () => {
+        lenis?.start();
+      };
+    }
+  }, [isFullPlayerOpen]);
+
+  // Garante que o scroll do mouse (wheel) nas letras seja processado com 100% de prioridade no desktop
+  useEffect(() => {
+    if (!showLyrics) return;
+    const el = lyricsContainerRef.current;
+    if (!el) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.stopPropagation();
+      const { scrollTop, scrollHeight, clientHeight } = el;
+      const canScrollDown = e.deltaY > 0 && scrollTop + clientHeight < scrollHeight;
+      const canScrollUp = e.deltaY < 0 && scrollTop > 0;
+
+      if (canScrollDown || canScrollUp) {
+        el.scrollTop += e.deltaY;
+        e.preventDefault();
+      }
+    };
+
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      el.removeEventListener('wheel', handleWheel);
+    };
+  }, [showLyrics, isFullPlayerOpen]);
+
+  // Listener análogo para o painel de letras no modo paisagem móvel/desktop estreito
+  useEffect(() => {
+    if (!showLyrics || !isMobileLandscape) return;
+    const el = landscapeLyricsRef.current;
+    if (!el) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.stopPropagation();
+      const { scrollTop, scrollHeight, clientHeight } = el;
+      const canScrollDown = e.deltaY > 0 && scrollTop + clientHeight < scrollHeight;
+      const canScrollUp = e.deltaY < 0 && scrollTop > 0;
+
+      if (canScrollDown || canScrollUp) {
+        el.scrollTop += e.deltaY;
+        e.preventDefault();
+      }
+    };
+
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      el.removeEventListener('wheel', handleWheel);
+    };
+  }, [showLyrics, isMobileLandscape, isFullPlayerOpen]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -182,6 +307,15 @@ export function MiniPlayer() {
   const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [slideDirection, setSlideDirection] = useState<'next' | 'prev'>('next');
+  const prevTrackIdRef = useRef<string | null>(currentTrack?.id || null);
+
+  // Monitora trocas de faixa disparadas externamente (fila, catálogo, etc.)
+  useEffect(() => {
+    if (currentTrack && currentTrack.id !== prevTrackIdRef.current) {
+      prevTrackIdRef.current = currentTrack.id;
+    }
+  }, [currentTrack?.id]);
 
   // Native Audio synchronization and control refs
   const lastNativeTrackIdRef = useRef<string | null>(null);
@@ -189,6 +323,7 @@ export function MiniPlayer() {
 
   // Native Audio control wrappers
   const handlePlayNext = () => {
+    setSlideDirection('next');
     hapticFeedback(10);
     if (isNativeAudioAvailable()) {
       KyvraAudio.skipToNext().catch((err) => {
@@ -201,6 +336,7 @@ export function MiniPlayer() {
   };
 
   const handlePlayPrevious = () => {
+    setSlideDirection('prev');
     hapticFeedback(10);
     if (isNativeAudioAvailable()) {
       KyvraAudio.skipToPrevious().catch((err) => {
@@ -813,20 +949,28 @@ export function MiniPlayer() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            data-lenis-prevent="true"
             className="fixed inset-0 z-[6000] flex flex-col bg-void"
           >
-            {/* Background Blur optimized for performance */}
-            <div 
-              className="absolute inset-0 z-0 opacity-20 pointer-events-none"
-              style={{
-                backgroundImage: `url(${currentTrack.coverUrl})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                filter: 'blur(20px)',
-                transform: 'scale(1.4)',
-                willChange: 'transform'
-              }}
-            />
+            {/* Background Blur optimized for performance with smooth crossfade */}
+            <AnimatePresence initial={false}>
+              <motion.div 
+                key={currentTrack.coverUrl || currentTrack.id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.2 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+                className="absolute inset-0 z-0 pointer-events-none"
+                style={{
+                  backgroundImage: `url(${currentTrack.coverUrl})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  filter: 'blur(24px)',
+                  transform: 'scale(1.4)',
+                  willChange: 'opacity'
+                }}
+              />
+            </AnimatePresence>
             {/* Additional overlay to smooth out the grain from smaller blur */}
             <div className="absolute inset-0 z-[1] bg-void/60 pointer-events-none" />
 
@@ -845,30 +989,42 @@ export function MiniPlayer() {
               >
                 <ChevronDown className="h-6 w-6" />
               </Button>
-              <div className="flex flex-col items-center">
+              <div className="flex flex-col items-center overflow-hidden">
                 <span className="text-[10px] tracking-[0.2em] font-sc text-primary uppercase leading-none mb-1">
                   TOCANDO AGORA
                 </span>
-                <span className="text-white/80 text-sm font-medium leading-none">
-                  {currentTrack.albumTitle || currentTrack.artist}
-                </span>
+                <AnimatePresence mode="popLayout" custom={slideDirection} initial={false}>
+                  <motion.span 
+                    key={currentTrack.id}
+                    custom={slideDirection}
+                    initial={{ opacity: 0, y: slideDirection === 'next' ? 6 : -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: slideDirection === 'next' ? -6 : 6, position: 'absolute' }}
+                    transition={{ duration: 0.22 }}
+                    className="text-white/80 text-sm font-medium leading-none truncate max-w-[200px] sm:max-w-[320px]"
+                  >
+                    {currentTrack.albumTitle || currentTrack.artist}
+                  </motion.span>
+                </AnimatePresence>
               </div>
               <div className="w-10"> {/* Balance header */} </div>
             </div>
 
             {/* Main Content Wrapper */}
-            <div className={cn(
-              "relative z-10 flex-1 flex",
-              isMobileLandscape ? "flex-row p-4 gap-6 items-center justify-center overflow-hidden h-[calc(100vh-60px)]" : "flex-col overflow-y-auto"
-            )}>
+            <div 
+              data-lenis-prevent="true"
+              className={cn(
+                "relative z-10 flex-1 flex",
+                isMobileLandscape ? "flex-row p-4 gap-6 items-center justify-center overflow-hidden h-[calc(100vh-60px)]" : "flex-col overflow-y-auto"
+              )}
+            >
               {/* RETRATO / DESKTOP (Padrão) */}
               {!isMobileLandscape ? (
                 <>
                   {/* Main Content */}
                   <div className="flex-1 flex flex-col md:flex-row items-center justify-center p-4 md:px-8 lg:px-12 md:py-2 gap-6 md:gap-10 lg:gap-14 xl:gap-16 min-h-0">
-                    {/* Cover Art */}
-                    <motion.div 
-                      layoutId={`cover-${currentTrack.id}`}
+                    {/* Cover Art com transição direcional suave e suporte a swipe */}
+                    <div 
                       style={{
                         width: showLyrics 
                           ? 'min(75vw, 340px, 36vh)' 
@@ -879,32 +1035,60 @@ export function MiniPlayer() {
                         aspectRatio: '1 / 1',
                       }}
                       className={cn(
-                        "aspect-square rounded-2xl overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.6)] shrink-0 transition-all duration-500 bg-black/40 border border-white/10 flex items-center justify-center",
+                        "aspect-square rounded-2xl overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.6)] shrink-0 transition-all duration-500 bg-black/40 border border-white/10 relative flex items-center justify-center cursor-grab active:cursor-grabbing",
                         showLyrics 
                           ? "opacity-40 md:opacity-100" 
                           : ""
                       )}
                     >
-                      <img
-                        src={currentTrack.coverUrl || undefined}
-                        alt={currentTrack.title}
-                        loading="lazy"
-                        decoding="async"
-                        className="w-full h-full object-contain rounded-2xl"
-                        referrerPolicy="no-referrer"
-                      />
-                    </motion.div>
+                      <AnimatePresence mode="popLayout" custom={slideDirection} initial={false}>
+                        <motion.div 
+                          key={currentTrack.id}
+                          custom={slideDirection}
+                          variants={coverVariants}
+                          initial="enter"
+                          animate="center"
+                          exit="exit"
+                          drag="x"
+                          dragConstraints={{ left: 0, right: 0 }}
+                          dragElastic={0.2}
+                          onDragEnd={(_e, { offset, velocity }) => {
+                            if (offset.x < -50 || velocity.x < -300) {
+                              handlePlayNext();
+                            } else if (offset.x > 50 || velocity.x > 300) {
+                              handlePlayPrevious();
+                            }
+                          }}
+                          className="w-full h-full flex items-center justify-center"
+                        >
+                          <img
+                            src={currentTrack.coverUrl || undefined}
+                            alt={currentTrack.title}
+                            decoding="async"
+                            className="w-full h-full object-contain rounded-2xl select-none pointer-events-none"
+                            referrerPolicy="no-referrer"
+                            draggable={false}
+                          />
+                        </motion.div>
+                      </AnimatePresence>
+                    </div>
 
                     {/* Lyrics Panel */}
                     <AnimatePresence>
                       {showLyrics && (
                         <motion.div 
+                          ref={lyricsContainerRef}
+                          tabIndex={0}
+                          data-lenis-prevent="true"
+                          data-lenis-prevent-wheel="true"
+                          data-lenis-prevent-touch="true"
                           initial={{ opacity: 0, x: 20 }}
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: 20, position: "absolute" }}
+                          onWheel={(e) => e.stopPropagation()}
                           className={cn(
-                            "w-full md:w-[450px] lg:w-[500px] xl:w-[600px] h-[45dvh] md:h-[35vh] lg:h-[42vh] xl:h-[50vh] md:max-h-[50vh] lg:max-h-[55vh] xl:max-h-[60vh] overflow-y-auto py-4 px-3 custom-scrollbar",
-                            "absolute md:relative inset-x-6 md:inset-auto z-20 md:z-auto bg-void/80 md:bg-transparent backdrop-blur-xl md:backdrop-blur-none p-6 md:p-0 rounded-2xl md:rounded-none"
+                            "w-full md:w-[450px] lg:w-[500px] xl:w-[600px] h-[45dvh] md:h-[36vh] lg:h-[42vh] xl:h-[48vh] max-h-[55vh] min-h-0 overflow-y-auto overscroll-contain touch-pan-y py-4 px-4 sm:px-6 custom-scrollbar select-text focus:outline-none pointer-events-auto",
+                            "absolute md:relative inset-x-6 md:inset-auto z-30 md:z-auto bg-void/90 md:bg-white/[0.03] backdrop-blur-xl md:backdrop-blur-sm rounded-2xl md:border md:border-white/10 shadow-2xl"
                           )}
                         >
                           <AnimatePresence mode="popLayout">
@@ -939,9 +1123,25 @@ export function MiniPlayer() {
                   {/* Controls */}
                   <div className="w-full max-w-3xl mx-auto p-6 md:py-4 md:px-12 pb-8 shrink-0 flex flex-col gap-4">
                     <div className="flex items-center justify-between w-full">
-                      <div className="flex flex-col">
-                        <h2 className="text-2xl md:text-3xl font-display text-white">{currentTrack.title}</h2>
-                        <p className="text-white/60 text-sm md:text-base">{currentTrack.artist}</p>
+                      <div className="flex flex-col overflow-hidden min-w-0 pr-4">
+                        <AnimatePresence mode="popLayout" custom={slideDirection} initial={false}>
+                          <motion.div
+                            key={currentTrack.id}
+                            custom={slideDirection}
+                            variants={textVariants}
+                            initial="enter"
+                            animate="center"
+                            exit="exit"
+                            className="flex flex-col"
+                          >
+                            <h2 className="text-2xl md:text-3xl font-display text-white truncate">
+                              {currentTrack.title}
+                            </h2>
+                            <p className="text-white/60 text-sm md:text-base truncate mt-0.5">
+                              {currentTrack.artist}
+                            </p>
+                          </motion.div>
+                        </AnimatePresence>
                       </div>
                       <Button
                         variant="ghost"
@@ -1047,26 +1247,47 @@ export function MiniPlayer() {
               ) : (
                 /* PAISAGEM MÓVEL (Duas Colunas) */
                 <>
-                  {/* Coluna da Esquerda: Sempre a Capa */}
+                  {/* Coluna da Esquerda: Sempre a Capa com animação direcional e swipe */}
                   <div className="w-[40%] flex items-center justify-center p-2 shrink-0">
-                    <motion.div 
-                      layoutId={`cover-${currentTrack.id}`}
+                    <div 
                       style={{
                         width: 'min(100%, 200px, 65vh)',
                         height: 'min(100%, 200px, 65vh)',
                         aspectRatio: '1 / 1'
                       }}
-                      className="aspect-square rounded-xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.5)] shrink-0 transition-all duration-300 bg-black/40 border border-white/10 flex items-center justify-center"
+                      className="aspect-square rounded-xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.5)] shrink-0 transition-all duration-300 bg-black/40 border border-white/10 flex items-center justify-center relative cursor-grab active:cursor-grabbing"
                     >
-                      <img
-                        src={currentTrack.coverUrl || undefined}
-                        alt={currentTrack.title}
-                        loading="lazy"
-                        decoding="async"
-                        className="w-full h-full object-contain rounded-xl"
-                        referrerPolicy="no-referrer"
-                      />
-                    </motion.div>
+                      <AnimatePresence mode="popLayout" custom={slideDirection} initial={false}>
+                        <motion.div
+                          key={currentTrack.id}
+                          custom={slideDirection}
+                          variants={coverVariants}
+                          initial="enter"
+                          animate="center"
+                          exit="exit"
+                          drag="x"
+                          dragConstraints={{ left: 0, right: 0 }}
+                          dragElastic={0.2}
+                          onDragEnd={(_e, { offset, velocity }) => {
+                            if (offset.x < -50 || velocity.x < -300) {
+                              handlePlayNext();
+                            } else if (offset.x > 50 || velocity.x > 300) {
+                              handlePlayPrevious();
+                            }
+                          }}
+                          className="w-full h-full flex items-center justify-center"
+                        >
+                          <img
+                            src={currentTrack.coverUrl || undefined}
+                            alt={currentTrack.title}
+                            decoding="async"
+                            className="w-full h-full object-contain rounded-xl select-none pointer-events-none"
+                            referrerPolicy="no-referrer"
+                            draggable={false}
+                          />
+                        </motion.div>
+                      </AnimatePresence>
+                    </div>
                   </div>
 
                   {/* Coluna da Direita: Controles OU Letras */}
@@ -1086,7 +1307,13 @@ export function MiniPlayer() {
                           </Button>
                         </div>
                         <div 
-                          className="flex-1 overflow-y-auto py-2 px-3 bg-void/30 backdrop-blur-md rounded-xl custom-scrollbar border border-white/5 text-left text-xs sm:text-sm"
+                          ref={landscapeLyricsRef}
+                          tabIndex={0}
+                          data-lenis-prevent="true"
+                          data-lenis-prevent-wheel="true"
+                          data-lenis-prevent-touch="true"
+                          onWheel={(e) => e.stopPropagation()}
+                          className="flex-1 overflow-y-auto overscroll-contain touch-pan-y py-2 px-3 bg-void/30 backdrop-blur-md rounded-xl custom-scrollbar border border-white/5 text-left text-xs sm:text-sm select-text focus:outline-none"
                         >
                           {currentTrack.lyrics ? (
                             <div className="text-white/90 font-medium leading-relaxed" style={{ whiteSpace: "pre-wrap" }}>
@@ -1132,9 +1359,21 @@ export function MiniPlayer() {
                       /* Painel de Controles Padrão em Landscape */
                       <div className="flex flex-col gap-3 py-2 justify-center h-full">
                         <div className="flex items-center justify-between w-full text-left">
-                          <div className="flex flex-col max-w-[75%]">
-                            <h2 className="text-lg md:text-xl font-display text-white truncate">{currentTrack.title}</h2>
-                            <p className="text-white/60 text-xs truncate">{currentTrack.artist}</p>
+                          <div className="flex flex-col max-w-[75%] overflow-hidden">
+                            <AnimatePresence mode="popLayout" custom={slideDirection} initial={false}>
+                              <motion.div
+                                key={currentTrack.id}
+                                custom={slideDirection}
+                                variants={textVariants}
+                                initial="enter"
+                                animate="center"
+                                exit="exit"
+                                className="flex flex-col"
+                              >
+                                <h2 className="text-lg md:text-xl font-display text-white truncate">{currentTrack.title}</h2>
+                                <p className="text-white/60 text-xs truncate mt-0.5">{currentTrack.artist}</p>
+                              </motion.div>
+                            </AnimatePresence>
                           </div>
                           <Button
                             variant="ghost"

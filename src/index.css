@@ -376,15 +376,20 @@
   height: 0;
 }
 
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(167, 139, 250, 0.4) rgba(2, 2, 5, 0.4);
+}
 .custom-scrollbar::-webkit-scrollbar {
   display: block;
   width: 6px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
   background: rgba(2, 2, 5, 0.4);
+  border-radius: 4px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: rgba(167, 139, 250, 0.35);
   border-radius: 4px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
