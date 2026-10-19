@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Upload, Lock, Unlock, KeyRound, HelpCircle, ShieldAlert, X, Plus, Sparkles, CheckCircle2, Edit3, Save, Trash2, ChevronDown, ChevronUp, RefreshCw, Edit2, Book, Loader2 } from 'lucide-react';
+import { Upload, Lock, Unlock, KeyRound, HelpCircle, ShieldAlert, X, Plus, Sparkles, CheckCircle2, Edit3, Save, Trash2, ChevronDown, ChevronUp, RefreshCw, Edit2, Book, Loader2, BarChart3, Users, Eye, Music, Globe, Calendar, TrendingUp, Activity, Award, RotateCcw, AlertTriangle, Check, Search } from 'lucide-react';
 import { cn, parseChapterNumber } from '@/lib/utils';
+import { getAnalyticsData, fetchRealAnalyticsData, resetRealAnalytics } from '@/lib/analytics';
 import { generateText, generateImage } from '@/lib/ai';
 import { supabase } from '@/lib/supabase';
 import { clearCache } from '@/lib/apiCache';
@@ -10,7 +11,12 @@ import { CombinationLock } from '@/components/ui/CombinationLock';
 import NeonButton from '@/components/ui/NeonButton';
 export function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [activeTab, setActiveTab] = useState<'musicas' | 'lore' | 'editar_letras' | 'destaque' | 'acervo'>('musicas');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'musicas' | 'lore' | 'editar_letras' | 'destaque' | 'acervo'>('dashboard');
+  const [analyticsData, setAnalyticsData] = useState(() => getAnalyticsData());
+  const [isSyncingAnalytics, setIsSyncingAnalytics] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [analyticsFeedback, setAnalyticsFeedback] = useState<string | null>(null);
+  const [trackSearchFilter, setTrackSearchFilter] = useState('');
   const [password, setPassword] = useState('0000');
   const [error, setError] = useState('');
   const [shake, setShake] = useState(false);
@@ -72,6 +78,16 @@ export function Admin() {
   const [acervoSuccess, setAcervoSuccess] = useState('');
 
   useEffect(() => {
+    if (isAuthenticated && activeTab === 'dashboard') {
+      setIsSyncingAnalytics(true);
+      fetchRealAnalyticsData().then(data => {
+        setAnalyticsData(data);
+      }).catch(err => {
+        console.error("Falha ao buscar telemetria real:", err);
+      }).finally(() => {
+        setIsSyncingAnalytics(false);
+      });
+    }
     if (isAuthenticated && (activeTab === 'editar_letras' || activeTab === 'destaque' || activeTab === 'acervo')) {
       if (existingTracks.length === 0) {
         fetchExistingTracks();
@@ -87,6 +103,38 @@ export function Admin() {
       fetchLoreChapters();
     }
   }, [isAuthenticated, activeTab]);
+
+  const handleSyncAnalytics = async () => {
+    setIsSyncingAnalytics(true);
+    try {
+      const fresh = await fetchRealAnalyticsData();
+      setAnalyticsData(fresh);
+      setAnalyticsFeedback('Telemetria real sincronizada com o banco central.');
+      setTimeout(() => setAnalyticsFeedback(null), 3000);
+    } catch (e) {
+      setAnalyticsFeedback('Erro ao sincronizar telemetria.');
+      setTimeout(() => setAnalyticsFeedback(null), 3000);
+    } finally {
+      setIsSyncingAnalytics(false);
+    }
+  };
+
+  const handleResetAnalytics = async () => {
+    setIsSyncingAnalytics(true);
+    try {
+      await resetRealAnalytics();
+      const fresh = await fetchRealAnalyticsData();
+      setAnalyticsData(fresh);
+      setShowResetConfirm(false);
+      setAnalyticsFeedback('Métricas zeradas. Novo ciclo de rastreamento real iniciado.');
+      setTimeout(() => setAnalyticsFeedback(null), 4000);
+    } catch (e) {
+      setAnalyticsFeedback('Erro ao reiniciar métricas.');
+      setTimeout(() => setAnalyticsFeedback(null), 3000);
+    } finally {
+      setIsSyncingAnalytics(false);
+    }
+  };
 
   const fetchLoreChapters = async () => {
     const { data, error } = await supabase
@@ -1166,6 +1214,12 @@ export function Admin() {
       {/* Tabs */}
       <div className="flex gap-4 sm:gap-8 border-b border-border mb-8 sm:mb-12 relative overflow-x-auto scrollbar-hide">
         <button 
+          onClick={() => setActiveTab('dashboard')}
+          className={cn("pb-4 font-medium transition-colors whitespace-nowrap text-sm sm:text-base", activeTab === 'dashboard' ? "text-primary" : "text-text-mid")}
+        >
+          Dashboard & Estatísticas
+        </button>
+        <button 
           onClick={() => setActiveTab('musicas')}
           className={cn("pb-4 font-medium transition-colors whitespace-nowrap text-sm sm:text-base", activeTab === 'musicas' ? "text-primary" : "text-text-mid")}
         >
@@ -1201,14 +1255,334 @@ export function Admin() {
           className="absolute bottom-0 h-[2px] bg-primary"
           initial={false}
           animate={{ 
-            left: activeTab === 'musicas' ? 0 : activeTab === 'acervo' ? '155px' : activeTab === 'lore' ? '315px' : activeTab === 'editar_letras' ? '475px' : '595px',
-            width: activeTab === 'musicas' ? '135px' : activeTab === 'acervo' ? '140px' : activeTab === 'lore' ? '145px' : activeTab === 'editar_letras' ? '100px' : '130px'
+            left: activeTab === 'dashboard' ? 0 : activeTab === 'musicas' ? '155px' : activeTab === 'acervo' ? '300px' : activeTab === 'lore' ? '450px' : activeTab === 'editar_letras' ? '605px' : '715px',
+            width: activeTab === 'dashboard' ? '145px' : activeTab === 'musicas' ? '135px' : activeTab === 'acervo' ? '140px' : activeTab === 'lore' ? '145px' : activeTab === 'editar_letras' ? '100px' : '130px'
           }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
         />
       </div>
 
       {/* Content */}
+      {activeTab === 'dashboard' && (
+        <div className="space-y-8">
+          {/* Toast de feedback de telemetria */}
+          <AnimatePresence>
+            {analyticsFeedback && (
+              <motion.div
+                initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                className="fixed top-20 right-6 z-[999] glass px-5 py-3 rounded-xl border border-primary/40 text-sm text-text-high font-sans shadow-2xl flex items-center gap-3 backdrop-blur-xl"
+              >
+                <div className="w-2 h-2 rounded-full bg-primary animate-ping" />
+                <span>{analyticsFeedback}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Modal de confirmação para zerar métricas */}
+          <AnimatePresence>
+            {showResetConfirm && (
+              <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-void/80 backdrop-blur-md">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="glass p-6 sm:p-8 rounded-2xl max-w-md w-full border border-red-500/30 shadow-2xl"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center mb-4">
+                    <AlertTriangle size={24} />
+                  </div>
+                  <h3 className="text-xl font-display text-white mb-2">Zerar métricas de telemetria?</h3>
+                  <p className="text-sm text-text-mid mb-6 leading-relaxed">
+                    Esta ação reiniciará todas as contagens reais de visitas, acessos por aba e reproduções de faixas tanto no banco central do Supabase quanto no dispositivo.
+                  </p>
+                  <div className="flex items-center justify-end gap-3">
+                    <button
+                      onClick={() => setShowResetConfirm(false)}
+                      className="px-4 py-2.5 rounded-xl border border-white/10 hover:bg-white/5 text-sm text-text-mid transition-colors cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleResetAnalytics}
+                      disabled={isSyncingAnalytics}
+                      className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-medium transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      {isSyncingAnalytics ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                      Confirmar e Zerar
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
+          {/* Header banner */}
+          <div className="glass p-6 sm:p-8 rounded-2xl relative overflow-hidden border border-primary/20">
+            <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="font-mono text-xs text-primary tracking-widest uppercase">REGISTRO DO ARQUIVISTA // TELEMETRIA REAL</span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-[10px]">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Nuvem Ativa
+                  </span>
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-display text-white mb-2">Painel Analítico do Acervo</h2>
+                <p className="text-sm text-text-mid max-w-2xl leading-relaxed">
+                  Rastreamento 100% autêntico de visitas, abas acessadas e execuções fonográficas individuais sincronizadas com a nuvem central (Supabase).
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={() => setShowResetConfirm(true)}
+                  className="px-4 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-sm font-medium flex items-center gap-2 transition-all cursor-pointer"
+                  title="Zerar e calibrar contadores"
+                >
+                  <RotateCcw size={15} /> Zerar Métricas
+                </button>
+                <button
+                  onClick={handleSyncAnalytics}
+                  disabled={isSyncingAnalytics}
+                  className="px-4 py-2 rounded-xl bg-primary/20 hover:bg-primary/30 border border-primary/40 text-primary text-sm font-medium flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw size={15} className={cn(isSyncingAnalytics && "animate-spin")} />
+                  {isSyncingAnalytics ? "Sincronizando..." : "Sincronizar Nuvem"}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Metric Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="glass p-6 rounded-xl border border-white/5 relative overflow-hidden group">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs font-mono text-text-low tracking-wider">VISITAS REAIS TOTAIS</span>
+                <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                  <Eye size={18} />
+                </div>
+              </div>
+              <div className="text-3xl font-bold font-display text-white mb-1">
+                {analyticsData.totalVisits.toLocaleString('pt-BR')}
+              </div>
+              <div className="text-xs text-text-low flex items-center gap-1 font-mono">
+                <Activity size={12} className="text-primary" /> Acessos reais registrados
+              </div>
+            </div>
+
+            <div className="glass p-6 rounded-xl border border-white/5 relative overflow-hidden group">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs font-mono text-text-low tracking-wider">DISPOSITIVOS ÚNICOS</span>
+                <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                  <Users size={18} />
+                </div>
+              </div>
+              <div className="text-3xl font-bold font-display text-white mb-1">
+                {analyticsData.uniqueVisitors.toLocaleString('pt-BR')}
+              </div>
+              <div className="text-xs text-blue-400 flex items-center gap-1 font-mono">
+                <Check size={12} /> Visitantes distintos verificados
+              </div>
+            </div>
+
+            <div className="glass p-6 rounded-xl border border-white/5 relative overflow-hidden group">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs font-mono text-text-low tracking-wider">PLAYS DE MÚSICA (REAIS)</span>
+                <div className="w-9 h-9 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                  <Music size={18} />
+                </div>
+              </div>
+              <div className="text-3xl font-bold font-display text-white mb-1">
+                {analyticsData.totalTrackPlays.toLocaleString('pt-BR')}
+              </div>
+              <div className="text-xs text-purple-400 flex items-center gap-1 font-mono">
+                <Award size={12} /> Execuções autênticas no player
+              </div>
+            </div>
+
+            <div className="glass p-6 rounded-xl border border-white/5 relative overflow-hidden group">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs font-mono text-text-low tracking-wider">DATA DO LANÇAMENTO</span>
+                <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                  <Calendar size={18} />
+                </div>
+              </div>
+              <div className="text-2xl font-bold font-display text-white mb-1">
+                01/11/2024
+              </div>
+              <div className="text-xs text-amber-400 flex items-center gap-1 font-mono">
+                <Globe size={12} /> Marco temporal do acervo
+              </div>
+            </div>
+          </div>
+
+          {/* Two Column Section: Most Visited Pages & Top Tracks */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Most Visited Pages */}
+            <div className="glass p-6 rounded-2xl border border-white/5 flex flex-col">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="font-display text-lg text-white flex items-center gap-2">
+                    <Globe size={18} className="text-primary" /> Abas Mais Visitadas
+                  </h3>
+                  <p className="text-xs text-text-low mt-0.5">Tráfego real por rota do ecossistema</p>
+                </div>
+                <span className="text-xs font-mono text-text-low">TOP ROTAS</span>
+              </div>
+              
+              <div className="space-y-4 flex-1">
+                {analyticsData.pages.map((page, idx) => {
+                  const maxVisits = Math.max(...analyticsData.pages.map(p => p.visits), 1);
+                  const pct = Math.round((page.visits / maxVisits) * 100);
+                  return (
+                    <div key={page.path} className="space-y-1.5 p-2 rounded-lg hover:bg-white/[0.02] transition-colors">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium text-white/90 flex items-center gap-2 truncate">
+                          <span className="font-mono text-xs text-text-low">#{idx + 1}</span>
+                          <span className="truncate">{page.name}</span>
+                        </span>
+                        <span className="font-mono text-xs text-primary shrink-0 ml-2">
+                          {page.visits.toLocaleString('pt-BR')} {page.visits === 1 ? 'visita' : 'visitas'}
+                        </span>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-void/80 overflow-hidden border border-white/5">
+                        <div 
+                          className="h-full bg-gradient-to-r from-primary to-purple-400 rounded-full transition-all duration-500"
+                          style={{ width: `${page.visits > 0 ? Math.max(pct, 6) : 0}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Top Tracks Played */}
+            <div className="lg:col-span-2 glass p-6 rounded-2xl border border-white/5 flex flex-col">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div>
+                  <h3 className="font-display text-lg text-white flex items-center gap-2">
+                    <Music size={18} className="text-primary" /> Músicas Mais Ouvidas
+                  </h3>
+                  <p className="text-xs text-text-low mt-0.5">
+                    Ranking fonográfico com todas as faixas cadastradas no acervo ({analyticsData.tracks.length} faixas)
+                  </p>
+                </div>
+                {/* Search filter for tracks */}
+                <div className="relative w-full sm:w-64">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-low" />
+                  <input
+                    type="text"
+                    placeholder="Filtrar faixa..."
+                    value={trackSearchFilter}
+                    onChange={(e) => setTrackSearchFilter(e.target.value)}
+                    className="w-full bg-void/60 border border-white/10 rounded-lg pl-9 pr-3 py-1.5 text-xs text-white placeholder:text-text-low focus:outline-none focus:border-primary transition-all font-sans"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2.5 max-h-[460px] overflow-y-auto pr-2 custom-scrollbar">
+                {analyticsData.tracks
+                  .filter(t => !trackSearchFilter || t.title.toLowerCase().includes(trackSearchFilter.toLowerCase()))
+                  .map((track, idx) => {
+                    const topPlays = analyticsData.tracks[0]?.plays || 0;
+                    const maxPlays = topPlays > 0 ? topPlays : 1;
+                    const pct = topPlays > 0 ? Math.round((track.plays / maxPlays) * 100) : 0;
+                    const isTopThree = idx < 3 && !trackSearchFilter;
+                    
+                    return (
+                      <div 
+                        key={track.id || track.title} 
+                        className={cn(
+                          "p-3 rounded-xl bg-void/40 border border-white/5 hover:border-primary/30 transition-all flex items-center gap-4",
+                          isTopThree && "bg-primary/[0.04] border-primary/20"
+                        )}
+                      >
+                        <div className={cn(
+                          "w-8 h-8 rounded-lg flex items-center justify-center font-mono text-xs font-bold shrink-0",
+                          idx === 0 && !trackSearchFilter ? "bg-amber-500/20 border border-amber-500/40 text-amber-400" :
+                          idx === 1 && !trackSearchFilter ? "bg-slate-300/20 border border-slate-300/40 text-slate-200" :
+                          idx === 2 && !trackSearchFilter ? "bg-amber-700/20 border border-amber-700/40 text-amber-600" :
+                          "bg-primary/10 border border-primary/20 text-primary"
+                        )}>
+                          {idx + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <h4 className="font-medium text-sm text-white truncate">{track.title}</h4>
+                            <span className={cn(
+                              "font-mono text-xs font-semibold shrink-0 ml-2",
+                              track.plays > 0 ? "text-primary" : "text-text-low"
+                            )}>
+                              {track.plays.toLocaleString('pt-BR')} {track.plays === 1 ? 'play' : 'plays'}
+                            </span>
+                          </div>
+                          <div className="w-full h-1.5 rounded-full bg-void overflow-hidden border border-white/5">
+                            <div 
+                              className="h-full bg-gradient-to-r from-primary/60 to-primary rounded-full transition-all duration-500"
+                              style={{ width: `${track.plays > 0 ? Math.max(pct, 6) : 0}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                {analyticsData.tracks.length === 0 && (
+                  <div className="py-12 text-center text-text-low text-sm font-sans">
+                    Nenhuma faixa cadastrada ou detectada no banco de dados.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Daily Visits Trend */}
+          <div className="glass p-6 sm:p-8 rounded-2xl border border-white/5">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="font-display text-lg text-white flex items-center gap-2">
+                  <BarChart3 size={18} className="text-primary" /> Tendência de Visitas Diárias
+                </h3>
+                <p className="text-xs text-text-low mt-0.5">Histórico real gravado por data de acesso</p>
+              </div>
+              <span className="text-xs font-mono px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                Monitoramento Ativo
+              </span>
+            </div>
+
+            {analyticsData.dailyVisits.length > 0 ? (
+              <div className="grid grid-cols-4 sm:grid-cols-7 lg:grid-cols-14 gap-2 pt-4">
+                {analyticsData.dailyVisits.slice(-14).map((day) => {
+                  const maxDayVisits = Math.max(...analyticsData.dailyVisits.map(d => d.visits), 1);
+                  const heightPct = Math.round((day.visits / maxDayVisits) * 100);
+                  const dateFormatted = day.date.split('-').slice(1).reverse().join('/');
+                  return (
+                    <div key={day.date} className="flex flex-col items-center gap-2 group">
+                      <div className="w-full h-36 bg-void/60 rounded-xl p-1 flex flex-col justify-end relative border border-white/5 group-hover:border-primary/40 transition-colors">
+                        <div 
+                          className="w-full bg-gradient-to-t from-primary/40 to-primary rounded-lg transition-all duration-500 group-hover:brightness-125"
+                          style={{ height: `${day.visits > 0 ? Math.max(heightPct, 15) : 8}%` }}
+                          title={`${day.date}: ${day.visits} visitas (${day.uniqueVisitors} únicos)`}
+                        />
+                      </div>
+                      <span className="font-mono text-[10px] text-text-low group-hover:text-white transition-colors">{dateFormatted}</span>
+                      <span className="font-mono text-[9px] text-primary">{day.visits}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="py-12 text-center text-text-low text-sm font-sans border border-dashed border-white/10 rounded-xl">
+                As visitas reais dos usuários começarão a formar as barras diárias a partir de hoje.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {activeTab === 'musicas' ? (
         <div className="flex flex-col lg:grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8 order-2 lg:order-1">

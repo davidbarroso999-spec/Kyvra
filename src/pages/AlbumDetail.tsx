@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Play, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
 import { useStore } from '@/store/useStore';
@@ -13,6 +13,9 @@ import { generateTrackShareText } from '@/lib/share';
 export function AlbumDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const currentTrack = useStore((state) => state.currentTrack);
+  const isPlaying = useStore((state) => state.isPlaying);
   const setCurrentTrack = useStore((state) => state.setCurrentTrack);
   const setIsPlaying = useStore((state) => state.setIsPlaying);
   const setQueue = useStore((state) => state.setQueue);
@@ -21,6 +24,7 @@ export function AlbumDetail() {
   const [album, setAlbum] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [highlightedTrackId, setHighlightedTrackId] = useState<string | null>(null);
   const [queueFeedback, setQueueFeedback] = useState<string | null>(null);
 
   const showFeedback = (msg: string) => {
@@ -76,6 +80,40 @@ export function AlbumDetail() {
     fetchAlbum();
   }, [id]);
 
+  useEffect(() => {
+    if (loading || !album || !album.tracks || album.tracks.length === 0) return;
+    const rawSearch = window.location.search || '';
+    const hash = window.location.hash || '';
+    const hashSearch = hash.includes('?') ? hash.substring(hash.indexOf('?')) : '';
+    const searchParams = new URLSearchParams(rawSearch || hashSearch || location.search);
+    const trackParam = searchParams.get('track');
+
+    if (trackParam) {
+      const decodedParam = decodeURIComponent(trackParam).toLowerCase().trim();
+      const matched = album.tracks.find((t: any) =>
+        t.id === trackParam ||
+        t.id?.toLowerCase() === decodedParam ||
+        t.title?.toLowerCase().trim() === decodedParam
+      );
+
+      if (matched) {
+        handlePlayTrack(matched);
+        setHighlightedTrackId(matched.id);
+        setTimeout(() => {
+          const el = document.getElementById(`track-${matched.id}`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 300);
+
+        const timer = setTimeout(() => {
+          setHighlightedTrackId(null);
+        }, 6000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [loading, album, location.search]);
+
   const handlePlayAlbum = () => {
     if (!album) return;
     const tracksToPlay = album.tracks.map((t: any) => ({
@@ -91,6 +129,7 @@ export function AlbumDetail() {
 
   const handlePlayTrack = (track: any) => {
     if (!album) return;
+    setHighlightedTrackId(track.id);
     const trackToPlay = {
       ...track,
       artist: track.artist || album.artist,
@@ -116,11 +155,12 @@ export function AlbumDetail() {
     try {
       const trackWithArtist = { ...track, artist: track.artist || album?.artist };
       const shareText = await generateTrackShareText(trackWithArtist);
-      const shareUrl = `https://descubrakyvra.vercel.app/#/arquivo?track=${track.id}`;
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://descubrakyvra.vercel.app';
+      const shareUrl = `${origin}/#/reliquias/${album?.id}?track=${encodeURIComponent(track.id)}`;
       const fullText = `${shareText}\n\n${shareUrl}`;
       const success = await copyToClipboard(fullText);
       if (success) {
-        showFeedback('Link e texto decodificado copiados!');
+        showFeedback('Link da música copiado! Ao abrir, vai direto para ela.');
       } else {
         showFeedback('Erro ao copiar para a área de transferência.');
       }
@@ -268,22 +308,49 @@ export function AlbumDetail() {
 
         {/* Tracklist */}
         <div className="flex flex-col gap-2">
-          {album.tracks.map((track, index) => (
-            <div
-              key={track.id}
-              onClick={() => handlePlayTrack(track)}
-              className={cn("track-row-hover flex items-center gap-4 py-3 px-4 cursor-pointer border-b border-border/50 last:border-0 group first:rounded-t-lg last:rounded-b-lg", openMenuId === track.id && "relative z-[5000]")}
-            >
-              <div className="w-8 flex justify-center items-center text-text-low font-mono text-sm shrink-0">
-                <span className="font-mono">{String(index + 1).padStart(2, '0')}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-medium text-text-high group-hover:text-primary transition-colors truncate text-sm md:text-base">{track.title}</h3>
-                <p className="text-xs text-text-low truncate">{track.artist || 'Kyvra'}</p>
-              </div>
-              <div className="font-mono text-xs md:text-sm text-text-low w-12 text-right shrink-0">
-                <TrackDuration audioUrl={track.audioUrl} defaultDuration={track.duration} />
-              </div>
+          {album.tracks.map((track, index) => {
+            const isCurrentTrack = currentTrack?.id === track.id;
+            const isHighlighted = highlightedTrackId === track.id;
+            return (
+              <div
+                key={track.id}
+                id={`track-${track.id}`}
+                onClick={() => handlePlayTrack(track)}
+                className={cn(
+                  "track-row-hover flex items-center gap-4 py-3 px-4 cursor-pointer border-b border-border/50 last:border-0 group first:rounded-t-lg last:rounded-b-lg transition-all duration-300 relative",
+                  isCurrentTrack && "bg-primary/10 border-l-4 border-l-primary shadow-sm",
+                  isHighlighted && "bg-primary/25 ring-2 ring-primary ring-offset-2 ring-offset-void shadow-[0_0_25px_rgba(var(--primary-rgb),0.5)] z-20",
+                  openMenuId === track.id && "relative z-[5000]"
+                )}
+              >
+                <div className="w-8 flex justify-center items-center text-text-low font-mono text-sm shrink-0">
+                  {isCurrentTrack && isPlaying ? (
+                    <div className="flex items-end gap-[2px] h-4 cursor-pointer">
+                      <div className="w-[3px] bg-primary rounded-sm" style={{ height: '100%', animation: 'queueBar 0.8s ease-in-out 0s infinite alternate' }} />
+                      <div className="w-[3px] bg-primary rounded-sm" style={{ height: '60%', animation: 'queueBar 0.8s ease-in-out 0.2s infinite alternate' }} />
+                      <div className="w-[3px] bg-primary rounded-sm" style={{ height: '80%', animation: 'queueBar 0.8s ease-in-out 0.1s infinite alternate' }} />
+                    </div>
+                  ) : (
+                    <span className="font-mono">{String(index + 1).padStart(2, '0')}</span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className={cn("font-medium transition-colors truncate text-sm md:text-base", isCurrentTrack ? "text-primary font-bold" : "text-text-high group-hover:text-primary")}>
+                      {track.title}
+                    </h3>
+                    {isCurrentTrack && (
+                      <span className="font-mono text-[9px] uppercase tracking-wider text-primary px-1.5 py-0.5 rounded bg-primary/20 border border-primary/30 shrink-0 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                        {isPlaying ? "Tocando" : "Pausada"}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-text-low truncate">{track.artist || 'Kyvra'}</p>
+                </div>
+                <div className="font-mono text-xs md:text-sm text-text-low w-12 text-right shrink-0">
+                  <TrackDuration audioUrl={track.audioUrl} defaultDuration={track.duration} />
+                </div>
 
               {/* Botão de menu */}
               <div className="relative shrink-0">
@@ -373,7 +440,8 @@ export function AlbumDetail() {
                 )}
               </div>
             </div>
-          ))}
+          );
+        })}
         </div>
       </div>
     </div>

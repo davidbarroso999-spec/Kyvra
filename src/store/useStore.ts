@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { idbGetString, idbSetString, idbRemoveString } from '@/lib/idbKv';
+import { recordTrackPlay } from '@/lib/analytics';
 
 // Persistência em IndexedDB: leitura/escrita fora da thread principal.
 // (O localStorage síncrono serializava centenas de KB a cada troca de faixa.)
@@ -131,6 +132,9 @@ export const useStore = create<AppState>()(
 
       setCurrentTrack: (track) => {
         const { playHistory, currentTrack } = get();
+        if (track) {
+          recordTrackPlay(track.title, track.artist || 'Kyvra', track.id);
+        }
         // Salva a música atual no histórico antes de trocar
         if (currentTrack) {
           const newHistory = [currentTrack, ...playHistory].slice(0, 50);

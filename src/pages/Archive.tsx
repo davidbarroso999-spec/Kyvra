@@ -66,6 +66,7 @@ interface TrackRowProps {
   style?: React.CSSProperties;
   isCurrentTrack: boolean;
   isPlaying: boolean;
+  isHighlighted?: boolean;
   setIsPlaying: (p: boolean) => void;
   handlePlay: (t: any) => void;
   openMenuId: string | null;
@@ -83,6 +84,7 @@ const TrackRow = React.memo(({
   style,
   isCurrentTrack,
   isPlaying,
+  isHighlighted,
   setIsPlaying,
   handlePlay,
   openMenuId,
@@ -100,7 +102,12 @@ const TrackRow = React.memo(({
       style={style}
       id={`track-${track.id}`}
       onClick={() => handlePlay(track)}
-      className={cn("track-row-hover flex items-center gap-4 py-3 px-4 cursor-pointer border-b border-border/50 group first:rounded-t-lg last:rounded-b-lg", openMenuId === track.id && "relative z-[5000]")}
+      className={cn(
+        "track-row-hover flex items-center gap-4 py-3 px-4 cursor-pointer border-b border-border/50 group first:rounded-t-lg last:rounded-b-lg transition-all duration-300 relative",
+        isCurrentTrack && "bg-primary/10 border-l-4 border-l-primary shadow-sm",
+        isHighlighted && "bg-primary/25 ring-2 ring-primary ring-offset-2 ring-offset-void shadow-[0_0_25px_rgba(var(--primary-rgb),0.5)] z-20",
+        openMenuId === track.id && "relative z-[5000]"
+      )}
     >
       <div className="w-8 flex justify-center items-center text-text-low font-mono text-sm shrink-0">
         {isCurrentTrack && isPlaying ? (
@@ -152,9 +159,17 @@ const TrackRow = React.memo(({
       </div>
 
       <div className="flex-1 min-w-0">
-        <h3 className={cn("font-medium truncate text-sm md:text-base", isCurrentTrack ? "text-primary" : "text-text-high")}>
-          {track.title}
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3 className={cn("font-medium truncate text-sm md:text-base transition-colors", isCurrentTrack ? "text-primary font-bold" : "text-text-high group-hover:text-primary")}>
+            {track.title}
+          </h3>
+          {isCurrentTrack && (
+            <span className="font-mono text-[9px] uppercase tracking-wider text-primary px-1.5 py-0.5 rounded bg-primary/20 border border-primary/30 shrink-0 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              {isPlaying ? "Tocando" : "Pausada"}
+            </span>
+          )}
+        </div>
         <p className="text-xs md:text-sm text-text-low truncate">{track.artist}</p>
       </div>
 
@@ -275,6 +290,51 @@ export function Archive() {
   const [tracks, setTracks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const location = useLocation();
+  const [highlightedTrackId, setHighlightedTrackId] = useState<string | null>(null);
+  const [queueFeedback, setQueueFeedback] = useState<string | null>(null);
+
+  const handleSearchChange = (val: string) => {
+    setSearchInput(val);
+    updateWithConcurrency(() => {
+      setSearchQuery(val);
+    });
+  };
+
+  const filteredTracks = React.useMemo(() => {
+    const q = searchQuery.toLowerCase();
+    return tracks.filter(track => {
+      return !q ||
+        track.title.toLowerCase().includes(q) ||
+        track.artist.toLowerCase().includes(q) ||
+        track.vibe.toLowerCase().includes(q);
+    });
+  }, [tracks, searchQuery]);
+
+  const sortedTracks = React.useMemo(() => {
+    const list = [...filteredTracks];
+    list.sort((a, b) => {
+      const titleA = a.title?.toLowerCase().trim() || "";
+      const titleB = b.title?.toLowerCase().trim() || "";
+      
+      const idxA = TRACK_ORDER.findIndex(t => titleA.includes(t) || t.includes(titleA));
+      const idxB = TRACK_ORDER.findIndex(t => titleB.includes(t) || t.includes(titleB));
+      
+      const valA = idxA === -1 ? 999 : idxA;
+      const valB = idxB === -1 ? 999 : idxB;
+      
+      if (valA === valB) {
+        return titleA.localeCompare(titleB);
+      }
+      return valA - valB;
+    });
+    return list;
+  }, [filteredTracks]);
+
+  const { containerRef, slicedItems, paddingTop, paddingBottom, startIndex } = useVirtualization(
+    sortedTracks,
+    72
+  );
 
   useEffect(() => {
     let rafId: number;
@@ -289,29 +349,57 @@ export function Archive() {
     };
   }, []);
 
-  const location = useLocation();
-  
   useEffect(() => {
-    if (loading || tracks.length === 0) return;
+    if (loading || tracks.length === 0 || sortedTracks.length === 0) return;
     
-    // Check if we have a track to scroll to
-    const searchParams = new URLSearchParams(location.search);
-    const trackId = searchParams.get('track');
+    // Captura o parâmetro track da URL (query string padrão ou hash query)
+    const rawSearch = window.location.search || '';
+    const hash = window.location.hash || '';
+    const hashSearch = hash.includes('?') ? hash.substring(hash.indexOf('?')) : '';
+    const searchParams = new URLSearchParams(rawSearch || hashSearch || location.search);
+    const trackParam = searchParams.get('track');
     
-    if (trackId) {
-      setTimeout(() => {
-        const element = document.getElementById(`track-${trackId}`);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          element.classList.add('bg-primary/20');
-          setTimeout(() => {
-            element.classList.remove('bg-primary/20');
-            element.classList.add('transition-colors', 'duration-1000');
-          }, 2000);
-        }
-      }, 500);
+    if (trackParam) {
+      const decodedParam = decodeURIComponent(trackParam).toLowerCase().trim();
+      const targetIdx = sortedTracks.findIndex(t => 
+        t.id === trackParam || 
+        t.id?.toLowerCase() === decodedParam || 
+        t.title?.toLowerCase().trim() === decodedParam
+      );
+      
+      if (targetIdx !== -1) {
+        const matched = sortedTracks[targetIdx];
+
+        // 1. Vai diretamente para a música (inicia reprodução e define a fila)
+        setCurrentTrack(matched);
+        setIsPlaying(true);
+        setQueue(sortedTracks);
+        setHighlightedTrackId(matched.id);
+
+        // 2. Calcula rolagem suave para a posição estimada no catálogo
+        const containerTop = containerRef.current
+          ? (containerRef.current.getBoundingClientRect().top + window.scrollY)
+          : 360;
+        const targetScrollY = containerTop + (targetIdx * 72) - (window.innerHeight / 2) + 36;
+        window.scrollTo({ top: Math.max(0, targetScrollY), behavior: 'smooth' });
+
+        // 3. Centraliza exatamente o elemento no menu após o DOM renderizar o slice
+        setTimeout(() => {
+          const element = document.getElementById(`track-${matched.id}`);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 300);
+
+        // Remove o efeito de pulso intenso após 6s, mantendo o estilo de faixa ativa/selecionada
+        const timer = setTimeout(() => {
+          setHighlightedTrackId(null);
+        }, 6000);
+
+        return () => clearTimeout(timer);
+      }
     }
-  }, [loading, tracks, location.search]);
+  }, [loading, tracks, sortedTracks, location.search, containerRef, setCurrentTrack, setIsPlaying, setQueue]);
 
   useEffect(() => {
     async function fetchTracks() {
@@ -352,46 +440,13 @@ export function Archive() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const handleSearchChange = (val: string) => {
-    setSearchInput(val);
-    updateWithConcurrency(() => {
-      setSearchQuery(val);
-    });
-  };
-
-  const filteredTracks = tracks.filter(track => {
-    const q = searchQuery.toLowerCase();
-    return !q ||
-      track.title.toLowerCase().includes(q) ||
-      track.artist.toLowerCase().includes(q) ||
-      track.vibe.toLowerCase().includes(q);
-  });
-
-  let sortedTracks = [...filteredTracks];
-  sortedTracks.sort((a, b) => {
-    const titleA = a.title?.toLowerCase().trim() || "";
-    const titleB = b.title?.toLowerCase().trim() || "";
-    
-    const idxA = TRACK_ORDER.findIndex(t => titleA.includes(t) || t.includes(titleA));
-    const idxB = TRACK_ORDER.findIndex(t => titleB.includes(t) || t.includes(titleB));
-    
-    const valA = idxA === -1 ? 999 : idxA;
-    const valB = idxB === -1 ? 999 : idxB;
-    
-    if (valA === valB) {
-      return titleA.localeCompare(titleB);
-    }
-    return valA - valB;
-  });
-
-  const [queueFeedback, setQueueFeedback] = useState<string | null>(null);
-
   const showFeedback = (msg: string) => {
     setQueueFeedback(msg);
     setTimeout(() => setQueueFeedback(null), 2000);
   };
 
   const handlePlay = (track: any) => {
+    setHighlightedTrackId(track.id);
     if (currentTrack?.id === track.id) {
       setIsPlaying(!isPlaying);
     } else {
@@ -405,11 +460,12 @@ export function Archive() {
     setGeneratingShare(true);
     try {
       const shareText = await generateTrackShareText(track);
-      const shareUrl = `https://descubrakyvra.vercel.app/#/arquivo?track=${track.id}`;
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://descubrakyvra.vercel.app';
+      const shareUrl = `${origin}/#/arquivo?track=${encodeURIComponent(track.id)}`;
       const fullText = `${shareText}\n\n${shareUrl}`;
       const success = await copyToClipboard(fullText);
       if (success) {
-        showFeedback('Link e texto decodificado copiados!');
+        showFeedback('Link da música copiado! Ao abrir, vai direto para ela.');
       } else {
         showFeedback('Erro ao copiar para a área de transferência.');
       }
@@ -430,11 +486,6 @@ export function Archive() {
     a.click();
     document.body.removeChild(a);
   };
-
-  const { containerRef, slicedItems, paddingTop, paddingBottom, startIndex } = useVirtualization(
-    sortedTracks,
-    72
-  );
 
   return (
     <div className="w-full pt-32 px-6 md:px-12 xl:px-16 pb-32 max-w-5xl mx-auto">
@@ -542,6 +593,7 @@ export function Archive() {
                   index={startIndex + idx}
                   isCurrentTrack={currentTrack?.id === track.id}
                   isPlaying={isPlaying}
+                  isHighlighted={highlightedTrackId === track.id}
                   setIsPlaying={setIsPlaying}
                   handlePlay={handlePlay}
                   openMenuId={openMenuId}
