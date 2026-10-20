@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { BookOpen, Music2, Disc3 } from 'lucide-react';
-import { getAllTracks } from '@/lib/apiCache';
+import { getAllTracks, getFeaturedTracksSettings } from '@/lib/apiCache';
 import { useStore } from '@/store/useStore';
 import { FeaturedSlider } from '@/components/ui/FeaturedSlider';
 import TextBlockAnimation from '@/components/ui/text-block-animation';
@@ -370,7 +370,7 @@ export function Home() {
           selectedTracks.push(tracksInAlbum[randomIndex]);
         }
 
-        // Shuffle the album order so the presentation is dynamic
+        // Shuffle the album order so the presentation is dynamic and transitions between distinct covers
         const shuffledUniqueAlbumTracks = selectedTracks.sort(() => 0.5 - Math.random());
 
         const finalTracks = shuffledUniqueAlbumTracks.map((track: any) => {

@@ -66,7 +66,6 @@ interface TrackRowProps {
   style?: React.CSSProperties;
   isCurrentTrack: boolean;
   isPlaying: boolean;
-  isHighlighted?: boolean;
   setIsPlaying: (p: boolean) => void;
   handlePlay: (t: any) => void;
   openMenuId: string | null;
@@ -84,7 +83,6 @@ const TrackRow = React.memo(({
   style,
   isCurrentTrack,
   isPlaying,
-  isHighlighted,
   setIsPlaying,
   handlePlay,
   openMenuId,
@@ -103,9 +101,8 @@ const TrackRow = React.memo(({
       id={`track-${track.id}`}
       onClick={() => handlePlay(track)}
       className={cn(
-        "track-row-hover flex items-center gap-4 py-3 px-4 cursor-pointer border-b border-border/50 group first:rounded-t-lg last:rounded-b-lg transition-all duration-300 relative",
+        "track-row-hover flex items-center gap-4 py-3 px-4 cursor-pointer border-b border-border/50 group first:rounded-t-lg last:rounded-b-lg transition-colors relative",
         isCurrentTrack && "bg-primary/10 border-l-4 border-l-primary shadow-sm",
-        isHighlighted && "bg-primary/25 ring-2 ring-primary ring-offset-2 ring-offset-void shadow-[0_0_25px_rgba(var(--primary-rgb),0.5)] z-20",
         openMenuId === track.id && "relative z-[5000]"
       )}
     >
@@ -291,7 +288,6 @@ export function Archive() {
   const [loading, setLoading] = useState(true);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const location = useLocation();
-  const [highlightedTrackId, setHighlightedTrackId] = useState<string | null>(null);
   const [queueFeedback, setQueueFeedback] = useState<string | null>(null);
 
   const handleSearchChange = (val: string) => {
@@ -374,7 +370,6 @@ export function Archive() {
         setCurrentTrack(matched);
         setIsPlaying(true);
         setQueue(sortedTracks);
-        setHighlightedTrackId(matched.id);
 
         // 2. Calcula rolagem suave para a posição estimada no catálogo
         const containerTop = containerRef.current
@@ -390,13 +385,6 @@ export function Archive() {
             element.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }
         }, 300);
-
-        // Remove o efeito de pulso intenso após 6s, mantendo o estilo de faixa ativa/selecionada
-        const timer = setTimeout(() => {
-          setHighlightedTrackId(null);
-        }, 6000);
-
-        return () => clearTimeout(timer);
       }
     }
   }, [loading, tracks, sortedTracks, location.search, containerRef, setCurrentTrack, setIsPlaying, setQueue]);
@@ -446,7 +434,6 @@ export function Archive() {
   };
 
   const handlePlay = (track: any) => {
-    setHighlightedTrackId(track.id);
     if (currentTrack?.id === track.id) {
       setIsPlaying(!isPlaying);
     } else {
@@ -593,7 +580,6 @@ export function Archive() {
                   index={startIndex + idx}
                   isCurrentTrack={currentTrack?.id === track.id}
                   isPlaying={isPlaying}
-                  isHighlighted={highlightedTrackId === track.id}
                   setIsPlaying={setIsPlaying}
                   handlePlay={handlePlay}
                   openMenuId={openMenuId}

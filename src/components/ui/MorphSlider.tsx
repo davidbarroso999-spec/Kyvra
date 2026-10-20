@@ -35,6 +35,7 @@ uniform float uTime;
 uniform float uReduce;
 uniform vec2 uPointer;
 uniform vec3 uOverlay;
+uniform float uSameCover;
 
 varying vec2 vUv;
 
@@ -149,23 +150,45 @@ void main() {
     }
   }
 
-  vec2 sC = coverUV(uvC, uResolution, uCurrentSize);
-  vec2 sN = coverUV(uvN, uResolution, uNextSize);
+  vec3 col;
+  if (uSameCover > 0.5 && env > 0.0005) {
+    // Efeito de transição morph melt espetacular para faixas do mesmo álbum / mesma capa
+    float nn = fbm(uv * uScale + uTime * 0.03);
+    float warp = fbm(uv * uScale * 1.7 - uTime * 0.02);
+    vec2 g = vec2(nn, warp) - 0.5;
 
-  float ca = uReduce < 0.5 ? uAberration * env * 0.03 : 0.0;
+    float meltWave = env * (uIntensity * 1.5);
+    vec2 liquidWarp = vec2(g.x * 1.1, (g.y * 1.4 + 0.35) * uDir) * meltWave;
+    vec2 sDistorted = coverUV(uv + liquidWarp, uResolution, uCurrentSize);
 
-  vec3 colC = vec3(
-    texture2D(tCurrent, sC + vec2(ca, 0.0)).r,
-    texture2D(tCurrent, sC).g,
-    texture2D(tCurrent, sC - vec2(ca, 0.0)).b
-  );
-  vec3 colN = vec3(
-    texture2D(tNext, sN + vec2(ca, 0.0)).r,
-    texture2D(tNext, sN).g,
-    texture2D(tNext, sN - vec2(ca, 0.0)).b
-  );
+    float caSame = uReduce < 0.5 ? uAberration * env * 0.07 : 0.0;
+    vec3 colMelt = vec3(
+      texture2D(tCurrent, sDistorted + vec2(caSame, 0.0)).r,
+      texture2D(tCurrent, sDistorted).g,
+      texture2D(tCurrent, sDistorted - vec2(caSame, 0.0)).b
+    );
+    // Variação de densidade líquida e pulso atmosférico
+    colMelt = mix(colMelt, colMelt * (0.65 + 0.7 * nn), env * 0.45);
+    col = colMelt;
+  } else {
+    vec2 sC = coverUV(uvC, uResolution, uCurrentSize);
+    vec2 sN = coverUV(uvN, uResolution, uNextSize);
 
-  vec3 col = mix(colC, colN, m);
+    float ca = uReduce < 0.5 ? uAberration * env * 0.03 : 0.0;
+
+    vec3 colC = vec3(
+      texture2D(tCurrent, sC + vec2(ca, 0.0)).r,
+      texture2D(tCurrent, sC).g,
+      texture2D(tCurrent, sC - vec2(ca, 0.0)).b
+    );
+    vec3 colN = vec3(
+      texture2D(tNext, sN + vec2(ca, 0.0)).r,
+      texture2D(tNext, sN).g,
+      texture2D(tNext, sN - vec2(ca, 0.0)).b
+    );
+
+    col = mix(colC, colN, m);
+  }
 
   float vig = smoothstep(1.25, 0.25, length(uv - 0.5));
   col = mix(col, uOverlay, (1.0 - vig) * 0.28);
@@ -279,7 +302,8 @@ class MorphEngine {
         uTime: { value: 0 },
         uReduce: { value: reducedMotion ? 1 : 0 },
         uPointer: { value: [0.5, 0.5] },
-        uOverlay: { value: hexToRgb(opts.overlayColor) }
+        uOverlay: { value: hexToRgb(opts.overlayColor) },
+        uSameCover: { value: 0 }
       }
     });
 
@@ -331,37 +355,33 @@ class MorphEngine {
       if (!item.image) return;
       const img = new Image();
       img.crossOrigin = 'anonymous';
-      img.src = item.image;
-      img.onload = () => {
+      const applyTexture = (loadedImg: HTMLImageElement) => {
         if (!this.gl || this.gl.isContextLost()) return;
         try {
           const texture = new Texture(this.gl, { generateMipmaps: false });
-          texture.image = img;
+          texture.image = loadedImg;
           this.textures[index] = texture;
-          this.sizes[index] = [img.naturalWidth || 1, img.naturalHeight || 1];
+          this.sizes[index] = [loadedImg.naturalWidth || 1, loadedImg.naturalHeight || 1];
           if (index === this.current) {
             this.program.uniforms.tCurrent.value = texture;
             this.program.uniforms.uCurrentSize.value = this.sizes[index];
           }
         } catch {}
       };
+
+      img.onload = () => applyTexture(img);
       img.onerror = () => {
         const fallbackImg = new Image();
+        fallbackImg.onload = () => applyTexture(fallbackImg);
         fallbackImg.src = item.image;
-        fallbackImg.onload = () => {
-          if (!this.gl || this.gl.isContextLost()) return;
-          try {
-            const texture = new Texture(this.gl, { generateMipmaps: false });
-            texture.image = fallbackImg;
-            this.textures[index] = texture;
-            this.sizes[index] = [fallbackImg.naturalWidth || 1, fallbackImg.naturalHeight || 1];
-            if (index === this.current) {
-              this.program.uniforms.tCurrent.value = texture;
-              this.program.uniforms.uCurrentSize.value = this.sizes[index];
-            }
-          } catch {}
-        };
+        if (fallbackImg.complete && fallbackImg.naturalWidth > 0) {
+          applyTexture(fallbackImg);
+        }
       };
+      img.src = item.image;
+      if (img.complete && img.naturalWidth > 0) {
+        applyTexture(img);
+      }
     });
   }
 
@@ -659,11 +679,21 @@ const MorphSlider = forwardRef<MorphSliderRef, MorphSliderProps>(({
   const handleNext = useCallback(() => engineRef.current?.next(), []);
   const handlePrev = useCallback(() => engineRef.current?.prev(), []);
 
+  // Autoplay contínuo e sincronizado que começa no mount e não trava
   useEffect(() => {
-    if (!autoplay || hovering) return undefined;
-    const id = setTimeout(() => engineRef.current?.next(), Math.max(autoplayDelay, 1) * 1000);
-    return () => clearTimeout(id);
-  }, [autoplay, autoplayDelay, hovering, index]);
+    if (!autoplay) return undefined;
+    if (items.length <= 1) return undefined;
+
+    const interval = setInterval(() => {
+      if (hovering) return;
+      const engine = engineRef.current;
+      if (engine && !engine.animating && !engine.dragging) {
+        engine.next();
+      }
+    }, Math.max(autoplayDelay, 2) * 1000);
+
+    return () => clearInterval(interval);
+  }, [autoplay, autoplayDelay, hovering, items.length]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -733,7 +763,11 @@ const MorphSlider = forwardRef<MorphSliderRef, MorphSliderProps>(({
         '--ms-swap': `${(duration * 0.66).toFixed(3)}s`,
         '--ms-dot': `${(duration * 0.45).toFixed(3)}s`
       } as any}
-      onMouseEnter={() => setHovering(true)}
+      onMouseEnter={() => {
+        if (typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches) {
+          setHovering(true);
+        }
+      }}
       onMouseLeave={() => setHovering(false)}
       {...props}
     >
@@ -815,4 +849,325 @@ const MorphSlider = forwardRef<MorphSliderRef, MorphSliderProps>(({
   );
 });
 
+export interface MorphCoverTransitionProps {
+  coverUrl?: string;
+  trackId?: string | number;
+  title?: string;
+  className?: string;
+  style?: React.CSSProperties;
+  intensity?: number;
+  scale?: number;
+  aberration?: number;
+  drift?: number;
+  duration?: number;
+  radius?: number;
+  direction?: 'next' | 'prev';
+}
+
+/**
+ * Transição de capas do Player e Destaques com shaders WebGL do MorphSlider (React Bits):
+ * Transiciona com deslocamento "melt", aberração cromática e respiração viva (drift),
+ * ocorrendo em QUALQUER troca de música (seja do mesmo álbum ou de álbuns diferentes).
+ */
+export const MorphCoverTransition = React.memo(({
+  coverUrl,
+  trackId,
+  title,
+  className = '',
+  style,
+  intensity = 0.55,
+  scale = 2.4,
+  aberration = 0.35,
+  drift = 0.4,
+  duration = 1.1,
+  radius = 16,
+  direction = 'next',
+}: MorphCoverTransitionProps) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const glRef = useRef<any>(null);
+  const rendererRef = useRef<Renderer | null>(null);
+  const programRef = useRef<Program | null>(null);
+  const meshRef = useRef<Mesh | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const tweenRef = useRef<gsap.core.Tween | null>(null);
+  const currentTextureRef = useRef<Texture | null>(null);
+  const currentSizeRef = useRef<[number, number]>([1, 1]);
+  const activeTrackKeyRef = useRef<string | undefined>(
+    trackId !== undefined ? String(trackId) : coverUrl
+  );
+  const activeCoverUrlRef = useRef<string | undefined>(coverUrl);
+  const transitionDirRef = useRef<number>(1);
+  const [hasWebGlError, setHasWebGlError] = useState(false);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    let destroyed = false;
+    let renderer: Renderer;
+    let gl: any;
+
+    try {
+      renderer = new Renderer({
+        alpha: false,
+        antialias: true,
+        dpr: Math.min(window.devicePixelRatio || 1, 1.5)
+      });
+      gl = renderer.gl;
+      gl.clearColor(0.04, 0.04, 0.05, 1);
+      rendererRef.current = renderer;
+      glRef.current = gl;
+
+      const canvas = gl.canvas;
+      canvas.className = 'morph-slider-canvas w-full h-full block';
+      canvas.style.borderRadius = `${radius}px`;
+      container.innerHTML = '';
+      container.appendChild(canvas);
+
+      const geometry = new Triangle(gl);
+      const initialTexture = makeFallbackTexture(gl);
+      currentTextureRef.current = initialTexture;
+
+      const program = new Program(gl, {
+        vertex: vertexShader,
+        fragment: fragmentShader,
+        uniforms: {
+          tCurrent: { value: initialTexture },
+          tNext: { value: initialTexture },
+          uResolution: { value: [1, 1] },
+          uCurrentSize: { value: [1, 1] },
+          uNextSize: { value: [1, 1] },
+          uProgress: { value: 0 },
+          uDir: { value: 1 },
+          uMode: { value: TRANSITIONS.melt },
+          uIntensity: { value: intensity },
+          uScale: { value: scale },
+          uAberration: { value: aberration },
+          uDrift: { value: drift },
+          uTime: { value: 0 },
+          uReduce: { value: 0 },
+          uPointer: { value: [0.5, 0.5] },
+          uOverlay: { value: hexToRgb('#000000') },
+          uSameCover: { value: 0 }
+        }
+      });
+      programRef.current = program;
+
+      const mesh = new Mesh(gl, { geometry, program });
+      meshRef.current = mesh;
+
+      const resize = () => {
+        if (!container || destroyed) return;
+        const rect = container.getBoundingClientRect();
+        const w = Math.max(rect.width, 1);
+        const h = Math.max(rect.height, 1);
+        renderer.setSize(w, h);
+        program.uniforms.uResolution.value = [gl.canvas.width, gl.canvas.height];
+      };
+
+      const ro = new ResizeObserver(resize);
+      ro.observe(container);
+      resize();
+
+      const loadInitial = (url?: string) => {
+        if (!url) return;
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        const applyInit = (imgElement: HTMLImageElement) => {
+          if (destroyed || !gl || gl.isContextLost()) return;
+          try {
+            const tex = new Texture(gl, { generateMipmaps: false });
+            tex.image = imgElement;
+            currentTextureRef.current = tex;
+            currentSizeRef.current = [imgElement.naturalWidth || 1, imgElement.naturalHeight || 1];
+            program.uniforms.tCurrent.value = tex;
+            program.uniforms.tNext.value = tex;
+            program.uniforms.uCurrentSize.value = currentSizeRef.current;
+            program.uniforms.uNextSize.value = currentSizeRef.current;
+          } catch {}
+        };
+        img.onload = () => applyInit(img);
+        img.onerror = () => {
+          const fallback = new Image();
+          fallback.onload = () => applyInit(fallback);
+          fallback.src = url;
+          if (fallback.complete && fallback.naturalWidth > 0) applyInit(fallback);
+        };
+        img.src = url;
+        if (img.complete && img.naturalWidth > 0) applyInit(img);
+      };
+
+      loadInitial(coverUrl);
+
+      const loop = (t: number) => {
+        if (destroyed) return;
+        program.uniforms.uTime.value = t * 0.001;
+        program.uniforms.uIntensity.value = intensity;
+        program.uniforms.uScale.value = scale;
+        program.uniforms.uAberration.value = aberration;
+        program.uniforms.uDrift.value = drift;
+        renderer.render({ scene: mesh });
+        rafRef.current = requestAnimationFrame(loop);
+      };
+
+      rafRef.current = requestAnimationFrame(loop);
+
+      return () => {
+        destroyed = true;
+        ro.disconnect();
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        if (tweenRef.current) tweenRef.current.kill();
+        if (currentTextureRef.current?.texture) {
+          try { gl.deleteTexture(currentTextureRef.current.texture); } catch {}
+        }
+        if (program?.program) {
+          try { gl.deleteProgram(program.program); } catch {}
+        }
+        const ext = gl.getExtension('WEBGL_lose_context');
+        if (ext) ext.loseContext();
+        if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
+      };
+    } catch (e) {
+      console.warn("Kyvra: WebGL MorphCoverTransition initialization fallback", e);
+      setHasWebGlError(true);
+    }
+  }, [radius]);
+
+  // Transição reativa quando a música ou capa muda
+  useEffect(() => {
+    if (!coverUrl) return;
+    const currentKey = trackId !== undefined ? String(trackId) : coverUrl;
+    if (currentKey === activeTrackKeyRef.current) return;
+    
+    const prevCoverUrl = activeCoverUrlRef.current;
+    const isSameCover = Boolean(prevCoverUrl && prevCoverUrl === coverUrl);
+
+    activeTrackKeyRef.current = currentKey;
+    activeCoverUrlRef.current = coverUrl;
+
+    const gl = glRef.current;
+    const program = programRef.current;
+    if (!gl || !program || gl.isContextLost()) return;
+
+    const dirVal = direction === 'prev' ? -1 : 1;
+    transitionDirRef.current = dirVal;
+    program.uniforms.uDir.value = dirVal;
+    program.uniforms.uMode.value = TRANSITIONS.melt;
+
+    // Caso 1: Troca de música dentro do mesmo álbum (mesma capa)
+    // Dispara liquefação melt no GPU instantaneamente usando a textura já em memória
+    if (isSameCover && currentTextureRef.current) {
+      if (tweenRef.current) tweenRef.current.kill();
+
+      program.uniforms.uSameCover.value = 1.0;
+      program.uniforms.tCurrent.value = currentTextureRef.current;
+      program.uniforms.tNext.value = currentTextureRef.current;
+      program.uniforms.uCurrentSize.value = currentSizeRef.current;
+      program.uniforms.uNextSize.value = currentSizeRef.current;
+
+      tweenRef.current = gsap.fromTo(
+        program.uniforms.uProgress,
+        { value: 0 },
+        {
+          value: 1,
+          duration: Math.max(duration, 0.45),
+          ease: "power2.inOut",
+          onComplete: () => {
+            program.uniforms.uSameCover.value = 0.0;
+            program.uniforms.uProgress.value = 0;
+            tweenRef.current = null;
+          }
+        }
+      );
+      return;
+    }
+
+    // Caso 2: Capa diferente (álbum diferente ou primeira troca de capa)
+    let hasStarted = false;
+    const nextImg = new Image();
+    nextImg.crossOrigin = 'anonymous';
+
+    const startTransition = (loadedImg: HTMLImageElement) => {
+      if (hasStarted || !gl || gl.isContextLost()) return;
+      hasStarted = true;
+      try {
+        const nextTex = new Texture(gl, { generateMipmaps: false });
+        nextTex.image = loadedImg;
+        const nextSize: [number, number] = [loadedImg.naturalWidth || 1, loadedImg.naturalHeight || 1];
+
+        if (currentTextureRef.current) {
+          program.uniforms.tCurrent.value = currentTextureRef.current;
+          program.uniforms.uCurrentSize.value = currentSizeRef.current;
+        }
+        program.uniforms.tNext.value = nextTex;
+        program.uniforms.uNextSize.value = nextSize;
+        program.uniforms.uSameCover.value = 0.0;
+
+        if (tweenRef.current) tweenRef.current.kill();
+
+        tweenRef.current = gsap.fromTo(
+          program.uniforms.uProgress,
+          { value: 0 },
+          {
+            value: 1,
+            duration: Math.max(duration, 0.45),
+            ease: "power2.inOut",
+            onComplete: () => {
+              if (currentTextureRef.current?.texture && currentTextureRef.current !== nextTex) {
+                try { gl.deleteTexture(currentTextureRef.current.texture); } catch {}
+              }
+              currentTextureRef.current = nextTex;
+              currentSizeRef.current = nextSize;
+              program.uniforms.tCurrent.value = nextTex;
+              program.uniforms.uCurrentSize.value = nextSize;
+              program.uniforms.uProgress.value = 0;
+              tweenRef.current = null;
+            }
+          }
+        );
+      } catch (err) {
+        console.warn("Kyvra: Morph transition error", err);
+      }
+    };
+
+    nextImg.onload = () => startTransition(nextImg);
+    nextImg.onerror = () => {
+      const fallback = new Image();
+      fallback.onload = () => startTransition(fallback);
+      fallback.src = coverUrl;
+      if (fallback.complete && fallback.naturalWidth > 0) startTransition(fallback);
+    };
+    nextImg.src = coverUrl;
+    if (nextImg.complete && nextImg.naturalWidth > 0) {
+      startTransition(nextImg);
+    }
+  }, [coverUrl, trackId, duration, direction]);
+
+  if (hasWebGlError) {
+    return (
+      <div className={`relative overflow-hidden aspect-square ${className}`} style={{ borderRadius: `${radius}px`, ...style }}>
+        <img
+          src={coverUrl}
+          alt={title || "Capa da música"}
+          className="w-full h-full object-contain"
+          referrerPolicy="no-referrer"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className={`relative overflow-hidden aspect-square select-none pointer-events-auto ${className}`.trim()}
+      style={{
+        borderRadius: `${radius}px`,
+        ...style,
+      }}
+    />
+  );
+});
+MorphCoverTransition.displayName = 'MorphCoverTransition';
+
 export default MorphSlider;
+

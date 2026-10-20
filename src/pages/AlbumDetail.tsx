@@ -24,7 +24,6 @@ export function AlbumDetail() {
   const [album, setAlbum] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [highlightedTrackId, setHighlightedTrackId] = useState<string | null>(null);
   const [queueFeedback, setQueueFeedback] = useState<string | null>(null);
 
   const showFeedback = (msg: string) => {
@@ -98,18 +97,12 @@ export function AlbumDetail() {
 
       if (matched) {
         handlePlayTrack(matched);
-        setHighlightedTrackId(matched.id);
         setTimeout(() => {
           const el = document.getElementById(`track-${matched.id}`);
           if (el) {
             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }
         }, 300);
-
-        const timer = setTimeout(() => {
-          setHighlightedTrackId(null);
-        }, 6000);
-        return () => clearTimeout(timer);
       }
     }
   }, [loading, album, location.search]);
@@ -129,7 +122,6 @@ export function AlbumDetail() {
 
   const handlePlayTrack = (track: any) => {
     if (!album) return;
-    setHighlightedTrackId(track.id);
     const trackToPlay = {
       ...track,
       artist: track.artist || album.artist,
@@ -310,16 +302,14 @@ export function AlbumDetail() {
         <div className="flex flex-col gap-2">
           {album.tracks.map((track, index) => {
             const isCurrentTrack = currentTrack?.id === track.id;
-            const isHighlighted = highlightedTrackId === track.id;
             return (
               <div
                 key={track.id}
                 id={`track-${track.id}`}
                 onClick={() => handlePlayTrack(track)}
                 className={cn(
-                  "track-row-hover flex items-center gap-4 py-3 px-4 cursor-pointer border-b border-border/50 last:border-0 group first:rounded-t-lg last:rounded-b-lg transition-all duration-300 relative",
+                  "track-row-hover flex items-center gap-4 py-3 px-4 cursor-pointer border-b border-border/50 last:border-0 group first:rounded-t-lg last:rounded-b-lg transition-colors relative",
                   isCurrentTrack && "bg-primary/10 border-l-4 border-l-primary shadow-sm",
-                  isHighlighted && "bg-primary/25 ring-2 ring-primary ring-offset-2 ring-offset-void shadow-[0_0_25px_rgba(var(--primary-rgb),0.5)] z-20",
                   openMenuId === track.id && "relative z-[5000]"
                 )}
               >

@@ -20,6 +20,7 @@ import { registerAudioElement, useAudioAnalyser } from "@/hooks/useAudioAnalyser
 import { FrequencyVisualizer } from "@/components/ui/FrequencyVisualizer";
 import { KyvraAudio, isNativeAudioAvailable } from "@/lib/nativeAudio";
 import { getSmoothScrollInstance } from "@/lib/smoothScroll";
+import { MorphCoverTransition } from "@/components/ui/MorphSlider";
 
 const coverVariants: Variants = {
   enter: (direction: 'next' | 'prev') => ({
@@ -336,8 +337,26 @@ export function MiniPlayer() {
   };
 
   const handlePlayPrevious = () => {
-    setSlideDirection('prev');
     hapticFeedback(10);
+    const thresholdSecs = 3;
+
+    // Se a música estiver no meio ou no fim (> 3s), volta para o começo da mesma faixa
+    if (currentTime > thresholdSecs) {
+      if (isNativeAudioAvailable()) {
+        KyvraAudio.seekTo({ positionMs: 0 }).catch(() => {});
+      } else if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+        if (isPlaying) {
+          audioRef.current.play().catch(() => {});
+        }
+      }
+      setCurrentTime(0);
+      setProgress(0);
+      return;
+    }
+
+    // Se estiver no começo (<= 3s), muda para a música anterior
+    setSlideDirection('prev');
     if (isNativeAudioAvailable()) {
       KyvraAudio.skipToPrevious().catch((err) => {
         console.warn("Kyvra: skipToPrevious failed, falling back to Zustand", err);
@@ -347,6 +366,7 @@ export function MiniPlayer() {
       playPrevious();
     }
   };
+
 
   // 1. Sync Queue & Track changes to native player
   useEffect(() => {
@@ -491,11 +511,9 @@ export function MiniPlayer() {
         } else if (action === 'pause') {
           setIsPlaying(false);
         } else if (action === 'next') {
-          hapticFeedback(10);
-          playNext();
+          handlePlayNext();
         } else if (action === 'previous') {
-          hapticFeedback(10);
-          playPrevious();
+          handlePlayPrevious();
         } else if (action === 'close') {
           setIsPlaying(false);
           // Explicitly ask the SW to dismiss the notification
@@ -564,12 +582,10 @@ export function MiniPlayer() {
         setIsPlaying(false);
       });
       navigator.mediaSession.setActionHandler('previoustrack', () => {
-        hapticFeedback(10);
-        playPrevious();
+        handlePlayPrevious();
       });
       navigator.mediaSession.setActionHandler('nexttrack', () => {
-        hapticFeedback(10);
-        playNext();
+        handlePlayNext();
       });
       navigator.mediaSession.setActionHandler('seekbackward', (details) => {
         if (audioRef.current) {
@@ -807,12 +823,12 @@ export function MiniPlayer() {
                 title={isPlayerHidden ? "Expandir Player" : undefined}
                 aria-label={isPlayerHidden ? "Expandir Player" : undefined}
               >
-                {/* Capa do Álbum (Persistente no container, posicionamento contínuo) */}
+                {/* Capa do Álbum */}
                 {currentTrack.coverUrl && (
                   <motion.div
                     layout
                     className={cn(
-                      "relative rounded-full overflow-hidden shrink-0 border border-white/15 bg-black/40 shadow-sm cursor-pointer group/cover",
+                      "rounded-full overflow-hidden shrink-0 border border-white/15 bg-black/40 shadow-sm cursor-pointer group/cover",
                       isPlayerHidden ? "w-9 h-9" : "w-10 h-10 ml-0.5"
                     )}
                     onClick={(e) => {
@@ -824,11 +840,9 @@ export function MiniPlayer() {
                     title={!isPlayerHidden ? "Abrir Player Completo" : undefined}
                   >
                     <img
-                      src={currentTrack.coverUrl || undefined}
-                      alt="cover"
-                      loading="lazy"
-                      decoding="async"
-                      className="w-full h-full object-cover pointer-events-none transition-transform duration-500 group-hover/cover:scale-105"
+                      src={currentTrack.coverUrl}
+                      alt={currentTrack.title}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover/cover:scale-105 pointer-events-none"
                       referrerPolicy="no-referrer"
                     />
                   </motion.div>
@@ -952,26 +966,25 @@ export function MiniPlayer() {
             data-lenis-prevent="true"
             className="fixed inset-0 z-[6000] flex flex-col bg-void"
           >
-            {/* Background Blur optimized for performance with smooth crossfade */}
+            {/* Background Blur */}
             <AnimatePresence initial={false}>
               <motion.div 
-                key={currentTrack.coverUrl || currentTrack.id}
+                key={currentTrack.id}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 0.2 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
-                className="absolute inset-0 z-0 pointer-events-none"
+                transition={{ duration: 0.8 }}
+                className="absolute inset-0 pointer-events-none select-none overflow-hidden"
                 style={{
-                  backgroundImage: `url(${currentTrack.coverUrl})`,
+                  backgroundImage: currentTrack.coverUrl ? `url(${currentTrack.coverUrl})` : undefined,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
-                  filter: 'blur(24px)',
+                  filter: 'blur(30px)',
                   transform: 'scale(1.4)',
                   willChange: 'opacity'
                 }}
               />
             </AnimatePresence>
-            {/* Additional overlay to smooth out the grain from smaller blur */}
             <div className="absolute inset-0 z-[1] bg-void/60 pointer-events-none" />
 
             {/* Subtle frequency wave visualizer */}
@@ -979,13 +992,33 @@ export function MiniPlayer() {
               <FrequencyVisualizer opacity={0.35} />
             </div>
             
-            {/* Header */}
-            <div className="relative z-10 flex items-center justify-between p-6 pt-12 md:py-6 md:px-8 shrink-0 landscape:py-3 landscape:pt-4">
+            {/* Drag Handle superior (puxe para baixo para fechar) */}
+            <div 
+              className="relative z-20 w-full flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing touch-none select-none"
+              onClick={() => setIsFullPlayerOpen(false)}
+              title="Puxe para fechar"
+            >
+              <div className="w-12 h-1.5 rounded-full bg-white/20 hover:bg-white/40 transition-colors" />
+            </div>
+
+            {/* Header com suporte a arrastar para baixo para fechar */}
+            <motion.div
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={{ top: 0, bottom: 0.8 }}
+              onDragEnd={(_e, { offset, velocity }) => {
+                if (offset.y > 50 || velocity.y > 250) {
+                  setIsFullPlayerOpen(false);
+                }
+              }}
+              className="relative z-10 flex items-center justify-between px-6 py-2 md:py-4 md:px-8 shrink-0 landscape:py-1 landscape:pt-2"
+            >
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setIsFullPlayerOpen(false)}
-                className="text-white hover:bg-white/10 rounded-full h-10 w-10"
+                className="text-white hover:bg-white/10 rounded-full h-10 w-10 cursor-pointer"
+                title="Fechar Player"
               >
                 <ChevronDown className="h-6 w-6" />
               </Button>
@@ -1008,7 +1041,7 @@ export function MiniPlayer() {
                 </AnimatePresence>
               </div>
               <div className="w-10"> {/* Balance header */} </div>
-            </div>
+            </motion.div>
 
             {/* Main Content Wrapper */}
             <div 
@@ -1023,54 +1056,31 @@ export function MiniPlayer() {
                 <>
                   {/* Main Content */}
                   <div className="flex-1 flex flex-col md:flex-row items-center justify-center p-4 md:px-8 lg:px-12 md:py-2 gap-6 md:gap-10 lg:gap-14 xl:gap-16 min-h-0">
-                    {/* Cover Art com transição direcional suave e suporte a swipe */}
+                    {/* Cover Art */}
+                    {/* Cover Art com transição MorphSlider (Melt) */}
                     <div 
                       style={{
-                        width: showLyrics 
-                          ? 'min(75vw, 340px, 36vh)' 
-                          : 'min(85vw, 460px, 48vh)',
-                        height: showLyrics 
-                          ? 'min(75vw, 340px, 36vh)' 
-                          : 'min(85vw, 460px, 48vh)',
-                        aspectRatio: '1 / 1',
+                        width: showLyrics ? 'min(75vw, 340px, 36vh)' : 'min(85vw, 460px, 48vh)',
+                        height: showLyrics ? 'min(75vw, 340px, 36vh)' : 'min(85vw, 460px, 48vh)',
+                        aspectRatio: '1 / 1'
                       }}
                       className={cn(
-                        "aspect-square rounded-2xl overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.6)] shrink-0 transition-all duration-500 bg-black/40 border border-white/10 relative flex items-center justify-center cursor-grab active:cursor-grabbing",
-                        showLyrics 
-                          ? "opacity-40 md:opacity-100" 
-                          : ""
+                        "aspect-square rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.6)] shrink-0 transition-all duration-500 bg-black/40 border border-white/10 relative flex items-center justify-center",
+                        showLyrics ? "opacity-40 md:opacity-100" : ""
                       )}
                     >
-                      <AnimatePresence mode="popLayout" custom={slideDirection} initial={false}>
-                        <motion.div 
-                          key={currentTrack.id}
-                          custom={slideDirection}
-                          variants={coverVariants}
-                          initial="enter"
-                          animate="center"
-                          exit="exit"
-                          drag="x"
-                          dragConstraints={{ left: 0, right: 0 }}
-                          dragElastic={0.2}
-                          onDragEnd={(_e, { offset, velocity }) => {
-                            if (offset.x < -50 || velocity.x < -300) {
-                              handlePlayNext();
-                            } else if (offset.x > 50 || velocity.x > 300) {
-                              handlePlayPrevious();
-                            }
-                          }}
-                          className="w-full h-full flex items-center justify-center"
-                        >
-                          <img
-                            src={currentTrack.coverUrl || undefined}
-                            alt={currentTrack.title}
-                            decoding="async"
-                            className="w-full h-full object-contain rounded-2xl select-none pointer-events-none"
-                            referrerPolicy="no-referrer"
-                            draggable={false}
-                          />
-                        </motion.div>
-                      </AnimatePresence>
+                      <MorphCoverTransition
+                        coverUrl={currentTrack.coverUrl}
+                        trackId={currentTrack.id}
+                        title={currentTrack.title}
+                        direction={slideDirection}
+                        intensity={0.55}
+                        aberration={0.35}
+                        drift={0.4}
+                        duration={1.1}
+                        radius={16}
+                        className="w-full h-full"
+                      />
                     </div>
 
                     {/* Lyrics Panel */}
@@ -1247,7 +1257,7 @@ export function MiniPlayer() {
               ) : (
                 /* PAISAGEM MÓVEL (Duas Colunas) */
                 <>
-                  {/* Coluna da Esquerda: Sempre a Capa com animação direcional e swipe */}
+                  {/* Coluna da Esquerda: Capa com transição MorphSlider (Melt) */}
                   <div className="w-[40%] flex items-center justify-center p-2 shrink-0">
                     <div 
                       style={{
@@ -1255,38 +1265,20 @@ export function MiniPlayer() {
                         height: 'min(100%, 200px, 65vh)',
                         aspectRatio: '1 / 1'
                       }}
-                      className="aspect-square rounded-xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.5)] shrink-0 transition-all duration-300 bg-black/40 border border-white/10 flex items-center justify-center relative cursor-grab active:cursor-grabbing"
+                      className="aspect-square rounded-xl overflow-hidden shadow-2xl bg-black/40 border border-white/10 relative flex items-center justify-center shrink-0"
                     >
-                      <AnimatePresence mode="popLayout" custom={slideDirection} initial={false}>
-                        <motion.div
-                          key={currentTrack.id}
-                          custom={slideDirection}
-                          variants={coverVariants}
-                          initial="enter"
-                          animate="center"
-                          exit="exit"
-                          drag="x"
-                          dragConstraints={{ left: 0, right: 0 }}
-                          dragElastic={0.2}
-                          onDragEnd={(_e, { offset, velocity }) => {
-                            if (offset.x < -50 || velocity.x < -300) {
-                              handlePlayNext();
-                            } else if (offset.x > 50 || velocity.x > 300) {
-                              handlePlayPrevious();
-                            }
-                          }}
-                          className="w-full h-full flex items-center justify-center"
-                        >
-                          <img
-                            src={currentTrack.coverUrl || undefined}
-                            alt={currentTrack.title}
-                            decoding="async"
-                            className="w-full h-full object-contain rounded-xl select-none pointer-events-none"
-                            referrerPolicy="no-referrer"
-                            draggable={false}
-                          />
-                        </motion.div>
-                      </AnimatePresence>
+                      <MorphCoverTransition
+                        coverUrl={currentTrack.coverUrl}
+                        trackId={currentTrack.id}
+                        title={currentTrack.title}
+                        direction={slideDirection}
+                        intensity={0.55}
+                        aberration={0.35}
+                        drift={0.4}
+                        duration={1.1}
+                        radius={12}
+                        className="w-full h-full"
+                      />
                     </div>
                   </div>
 

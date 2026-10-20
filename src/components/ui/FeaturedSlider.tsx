@@ -1,8 +1,8 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Play } from 'lucide-react';
 import { useStore } from '@/store/useStore';
-import MorphSlider, { MorphSliderRef } from './MorphSlider';
+import { MorphCoverTransition } from './MorphSlider';
 import NeonButton from './NeonButton';
 
 interface FeaturedTrack {
@@ -27,8 +27,32 @@ export function FeaturedSlider({ tracks }: FeaturedSliderProps) {
   const setIsPlaying = useStore((state) => state.setIsPlaying);
   const setQueue = useStore((state) => state.setQueue);
   
-  const sliderRef = useRef<MorphSliderRef>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [direction, setDirection] = useState<'next' | 'prev'>('next');
+  const [isHovered, setIsHovered] = useState(false);
+
+  // Rotação automática suave iniciando imediatamente no mount
+  useEffect(() => {
+    if (tracks.length <= 1) return;
+    if (isHovered) return;
+
+    const interval = setInterval(() => {
+      setDirection('next');
+      setActiveIndex((prev) => (prev + 1) % tracks.length);
+    }, 7000);
+
+    return () => clearInterval(interval);
+  }, [tracks.length, isHovered]);
+
+  const handleNext = () => {
+    setDirection('next');
+    setActiveIndex((prev) => (prev + 1) % tracks.length);
+  };
+
+  const handlePrev = () => {
+    setDirection('prev');
+    setActiveIndex((prev) => (prev - 1 + tracks.length) % tracks.length);
+  };
 
   const handlePlay = (track: FeaturedTrack, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -48,11 +72,38 @@ export function FeaturedSlider({ tracks }: FeaturedSliderProps) {
     setIsPlaying(true);
   };
 
+  const pointerStartRef = React.useRef<{ x: number; y: number } | null>(null);
+  const swipeTriggeredRef = React.useRef<boolean>(false);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    pointerStartRef.current = { x: e.clientX, y: e.clientY };
+    swipeTriggeredRef.current = false;
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!pointerStartRef.current || swipeTriggeredRef.current) return;
+    const diffX = e.clientX - pointerStartRef.current.x;
+    const diffY = e.clientY - pointerStartRef.current.y;
+
+    // Detecta o gesto de arrastar pro lado sem mover o card fisicamente
+    if (Math.abs(diffX) > 35 && Math.abs(diffX) > Math.abs(diffY)) {
+      swipeTriggeredRef.current = true;
+      if (diffX < 0) {
+        handleNext();
+      } else {
+        handlePrev();
+      }
+    }
+  };
+
+  const handlePointerUp = () => {
+    pointerStartRef.current = null;
+    swipeTriggeredRef.current = false;
+  };
+
   if (!tracks.length) return null;
 
   const activeTrack = tracks[activeIndex] || tracks[0];
-
-  const sliderItems = useMemo(() => tracks.map(t => ({ image: t.coverUrl || '' })), [tracks]);
 
   return (
     <section className="relative w-full py-20 lg:py-32 overflow-hidden">
@@ -65,23 +116,36 @@ export function FeaturedSlider({ tracks }: FeaturedSliderProps) {
         </div>
 
         <div className="w-full max-w-2xl mx-auto flex flex-col items-center">
-          
-          {/* Square Card Container */}
-          <div className="relative aspect-square w-full rounded-2xl overflow-hidden shadow-2xl mb-8">
-            <div className="absolute inset-0 z-0">
-              <MorphSlider
-                ref={sliderRef}
-                items={sliderItems}
-                onActiveIndexChange={setActiveIndex}
-                showCaptions={false}
-                showControls={false}
-                showIndicators={false}
-                transition="melt"
-                duration={1.2}
-                intensity={0.4}
+          {/* Card estático sem deslocamento lateral, com detecção de gesto de arraste e MorphCoverTransition IDÊNTICO ao player */}
+          <div
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            onMouseEnter={() => {
+              if (typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches) {
+                setIsHovered(true);
+              }
+            }}
+            onMouseLeave={() => {
+              setIsHovered(false);
+              handlePointerUp();
+            }}
+            className="relative aspect-square w-full rounded-2xl overflow-hidden shadow-2xl mb-8 border border-white/10 bg-black/40 cursor-grab active:cursor-grabbing select-none touch-pan-y"
+            title="Arraste para o lado para trocar de capa"
+          >
+            <div className="absolute inset-0 z-0 pointer-events-none">
+              <MorphCoverTransition
+                coverUrl={activeTrack.coverUrl}
+                trackId={activeTrack.id}
+                title={activeTrack.title}
+                direction={direction}
+                intensity={0.55}
+                aberration={0.35}
+                drift={0.4}
+                duration={1.1}
                 radius={16}
-                autoplay={true}
-                autoplayDelay={4.5}
+                className="w-full h-full"
               />
             </div>
           </div>
