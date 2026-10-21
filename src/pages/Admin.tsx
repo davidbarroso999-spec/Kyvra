@@ -1375,14 +1375,14 @@ export function Admin() {
             <div className="glass p-6 rounded-xl border border-white/5 relative overflow-hidden group">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-xs font-mono text-text-low tracking-wider">DISPOSITIVOS ÚNICOS</span>
-                <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
                   <Users size={18} />
                 </div>
               </div>
               <div className="text-3xl font-bold font-display text-white mb-1">
                 {analyticsData.uniqueVisitors.toLocaleString('pt-BR')}
               </div>
-              <div className="text-xs text-blue-400 flex items-center gap-1 font-mono">
+              <div className="text-xs text-primary flex items-center gap-1 font-mono">
                 <Check size={12} /> Visitantes distintos verificados
               </div>
             </div>
@@ -1390,14 +1390,14 @@ export function Admin() {
             <div className="glass p-6 rounded-xl border border-white/5 relative overflow-hidden group">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-xs font-mono text-text-low tracking-wider">PLAYS DE MÚSICA (REAIS)</span>
-                <div className="w-9 h-9 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
                   <Music size={18} />
                 </div>
               </div>
               <div className="text-3xl font-bold font-display text-white mb-1">
                 {analyticsData.totalTrackPlays.toLocaleString('pt-BR')}
               </div>
-              <div className="text-xs text-purple-400 flex items-center gap-1 font-mono">
+              <div className="text-xs text-primary flex items-center gap-1 font-mono">
                 <Award size={12} /> Execuções autênticas no player
               </div>
             </div>

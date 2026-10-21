@@ -48,17 +48,17 @@
   }
 
   html.theme-sangue-de-drago {
-    /* Sangue de Drago - Paixão, Ruína, Fogo */
+    /* Sangue de Drago - Paixão, Ruína, Fogo (Monochromático Vermelho e Sangue) */
     --void: #080202;
     --deep: #160606;
     --surface: #220a0a;
-    --overlay: rgba(239, 68, 68, 0.05);
-    --border: rgba(239, 68, 68, 0.12);
+    --overlay: rgba(239, 68, 68, 0.06);
+    --border: rgba(239, 68, 68, 0.15);
     --primary: #ef4444;
-    --secondary: #b91c1c;
-    --accent: #fbbf24;
-    --glow-purple: rgba(239, 68, 68, 0.25);
-    --glow-blue: rgba(251, 191, 36, 0.15);
+    --secondary: #991b1b;
+    --accent: #f87171;
+    --glow-purple: rgba(239, 68, 68, 0.28);
+    --glow-blue: rgba(220, 38, 38, 0.18);
     --text-high: #fff1f1;
     --text-mid: #b89494;
     --text-low: #733d3d;
