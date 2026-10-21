@@ -67,7 +67,7 @@ if (!self.define) {
     });
   };
 }
-define(['./workbox-b3f8dd89'], (function (workbox) { 'use strict';
+define(['./workbox-a1974cce'], (function (workbox) { 'use strict';
 
   importScripts("/sw-custom.js");
   self.addEventListener('message', event => {
@@ -92,39 +92,48 @@ define(['./workbox-b3f8dd89'], (function (workbox) { 'use strict';
     "revision": "4a0cd0d0c2e8ec82876434b854f04a63"
   }, {
     "url": "index.html",
-    "revision": "5ef00149fb51227de66747f8bd3a740c"
+    "revision": "066ad28da760c7e3514ee1f9a72a7600"
   }, {
     "url": "assets/workbox-window.prod.es5-BIl4cyR9.js",
     "revision": null
   }, {
-    "url": "assets/index-ChL9v-r9.js",
+    "url": "assets/search-De622Vu5.js",
     "revision": null
   }, {
-    "url": "assets/index-BWYWLHxY.css",
+    "url": "assets/index-D6ce3PVb.js",
     "revision": null
   }, {
-    "url": "assets/TrackDuration-DPgD_cbD.js",
+    "url": "assets/index-Btf4bXYM.css",
     "revision": null
   }, {
-    "url": "assets/Lore-CBsQrd_g.js",
+    "url": "assets/eye-D5dfiiY7.js",
     "revision": null
   }, {
-    "url": "assets/Home-DzDMcIGG.css",
+    "url": "assets/check-BEP3dykD.js",
     "revision": null
   }, {
-    "url": "assets/Home-CyMC5iBH.js",
+    "url": "assets/book-open-B2riH38n.js",
     "revision": null
   }, {
-    "url": "assets/Archive-CsAtN5F-.js",
+    "url": "assets/TrackDuration-zEh5cam6.js",
     "revision": null
   }, {
-    "url": "assets/Albums-BPf7uKHB.js",
+    "url": "assets/Lore-BYIymo1A.js",
     "revision": null
   }, {
-    "url": "assets/AlbumDetail-L0Mfh6mY.js",
+    "url": "assets/Home-D7TJV3lb.js",
     "revision": null
   }, {
-    "url": "assets/Admin-NEYcxZIG.js",
+    "url": "assets/Archive-DrtyFI5i.js",
+    "revision": null
+  }, {
+    "url": "assets/Albums-COauH_1J.js",
+    "revision": null
+  }, {
+    "url": "assets/AlbumDetail-CnjTbuqT.js",
+    "revision": null
+  }, {
+    "url": "assets/Admin-C7zgGSia.js",
     "revision": null
   }, {
     "url": "manifest.webmanifest",
@@ -150,29 +159,11 @@ define(['./workbox-b3f8dd89'], (function (workbox) { 'use strict';
       statuses: [0, 200]
     })]
   }), 'GET');
-  workbox.registerRoute(/^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/public\/.*/i, new workbox.CacheFirst({
-    "cacheName": "kyvra-audio-cache",
-    plugins: [new workbox.ExpirationPlugin({
-      maxEntries: 400,
-      maxAgeSeconds: 7776000
-    }), new workbox.CacheableResponsePlugin({
-      statuses: [0, 200]
-    }), new workbox.RangeRequestsPlugin()]
-  }), 'GET');
   workbox.registerRoute(/^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i, new workbox.NetworkFirst({
     "cacheName": "supabase-api-cache",
     plugins: [new workbox.ExpirationPlugin({
       maxEntries: 100,
       maxAgeSeconds: 86400
-    }), new workbox.CacheableResponsePlugin({
-      statuses: [0, 200]
-    })]
-  }), 'GET');
-  workbox.registerRoute(/(?:.*\/cdn\/frames\/.*|https:\/\/raw\.githubusercontent\.com\/davidbarroso999-spec\/Aleatoriedades\/main\/.*)/i, new workbox.CacheFirst({
-    "cacheName": "kyvra-frames-cache",
-    plugins: [new workbox.ExpirationPlugin({
-      maxEntries: 200,
-      maxAgeSeconds: 5184000
     }), new workbox.CacheableResponsePlugin({
       statuses: [0, 200]
     })]

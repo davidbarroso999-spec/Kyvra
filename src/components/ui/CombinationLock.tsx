@@ -81,7 +81,7 @@ export function CombinationLock({ length = 4, value, onChange, className }: Comb
   return (
     <div className={cn("flex flex-col items-center select-none w-full max-w-sm", className)} ref={lockRef}>
       {/* Mechanical Vault Capsule / Chassis */}
-      <div className="w-full relative rounded-2xl bg-gradient-to-b from-[#14141d] via-[#0d0d12] to-[#0a0a0e] p-5 sm:p-6 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.1)]">
+      <div className="w-full relative rounded-2xl bg-gradient-to-b from-surface via-deep to-void p-5 sm:p-6 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.1)]">
         
         {/* Hardware details: Machined Hex Bolts */}
         <div className="absolute top-3 left-3 w-2 h-2 rounded-full bg-[#2a2a35] border border-white/10 shadow-inner" />

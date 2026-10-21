@@ -1,12 +1,43 @@
 import React, { useRef, useEffect } from 'react';
 import { useAudioAnalyser } from '@/hooks/useAudioAnalyser';
+import { useStore, Theme } from '@/store/useStore';
 
 interface FrequencyVisualizerProps {
   className?: string;
   opacity?: number;
 }
 
+const THEME_WAVE_COLORS: Record<Theme, string[]> = {
+  abissal: [
+    'rgba(167, 139, 250, 0.08)',
+    'rgba(124, 58, 237, 0.06)',
+    'rgba(245, 243, 255, 0.03)',
+    'rgba(45, 212, 191, 0.05)'
+  ],
+  'sangue-de-drago': [
+    'rgba(239, 68, 68, 0.12)',
+    'rgba(153, 27, 27, 0.09)',
+    'rgba(255, 241, 241, 0.04)',
+    'rgba(248, 113, 113, 0.07)'
+  ],
+  'floresta-negra': [
+    'rgba(16, 185, 129, 0.09)',
+    'rgba(5, 150, 105, 0.07)',
+    'rgba(240, 255, 244, 0.04)',
+    'rgba(132, 204, 22, 0.06)'
+  ],
+  monolito: [
+    'rgba(255, 255, 255, 0.08)',
+    'rgba(163, 163, 163, 0.06)',
+    'rgba(255, 255, 255, 0.03)',
+    'rgba(115, 115, 115, 0.05)'
+  ]
+};
+
 export function FrequencyVisualizer({ className, opacity = 0.25 }: FrequencyVisualizerProps) {
+  const currentTheme = useStore((state) => state.theme);
+  const themeRef = useRef(currentTheme);
+  themeRef.current = currentTheme;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // Usamos fftSize 256 para obter dados de frequência reativos
   const { analyser, isActive } = useAudioAnalyser({ fftSize: 256 });
@@ -88,6 +119,7 @@ export function FrequencyVisualizer({ className, opacity = 0.25 }: FrequencyVisu
 
       // Velocidade do movimento das ondas com base no volume e batida
       phase += 0.01 + smoothedBass.value * 0.03;
+      const themeColors = THEME_WAVE_COLORS[themeRef.current] || THEME_WAVE_COLORS.abissal;
 
       // Desenhamos 4 ondas com características diferentes para profundidade de tema escuro
       const waveConfigs = [
@@ -95,28 +127,28 @@ export function FrequencyVisualizer({ className, opacity = 0.25 }: FrequencyVisu
           amplitude: logicalHeight * 0.28 * (smoothedBass.value + 0.1),
           frequency: 0.0035,
           phaseOffset: phase * 1.0,
-          color: 'rgba(167, 139, 250, 0.08)', // Roxo sutil (Primary)
+          color: themeColors[0],
           lineWidth: 2
         },
         {
           amplitude: logicalHeight * 0.22 * (smoothedVolume.value + 0.1),
           frequency: 0.005,
           phaseOffset: phase * -1.2 + Math.PI / 4,
-          color: 'rgba(139, 92, 246, 0.06)', // Violeta escuro
+          color: themeColors[1],
           lineWidth: 1.5
         },
         {
           amplitude: logicalHeight * 0.18 * (smoothedMid.value + 0.1),
           frequency: 0.007,
           phaseOffset: phase * 1.5 + Math.PI / 2,
-          color: 'rgba(255, 255, 255, 0.03)', // Off-white extremamente opaco
+          color: themeColors[2],
           lineWidth: 1
         },
         {
           amplitude: logicalHeight * 0.32 * (smoothedVolume.value * 0.8 + 0.1),
           frequency: 0.0025,
           phaseOffset: phase * -0.7 + Math.PI,
-          color: 'rgba(99, 102, 241, 0.05)', // Indigo
+          color: themeColors[3],
           lineWidth: 2
         }
       ];

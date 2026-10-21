@@ -86,7 +86,7 @@ const logPerformanceMeasure = (measureName: string, startMark: string, endMark: 
 
 function PsychologicalArc() {
   return (
-    <section className="relative overflow-hidden border-y border-white/[0.06] bg-[#05050b] py-16 sm:py-24 lg:py-28">
+    <section className="relative overflow-hidden border-y border-border bg-void py-16 sm:py-24 lg:py-28">
       <div className="pointer-events-none absolute inset-0 opacity-40" style={{ background: 'radial-gradient(circle at 50% 0%, var(--glow-purple), transparent 42%)' }} />
       <div className="relative z-10 mx-auto w-full max-w-6xl px-6 md:px-12 xl:px-16">
         <div className="mx-auto max-w-2xl text-center">
@@ -419,14 +419,14 @@ export function Home() {
   }, [featuredTracks]);
 
   return (
-    <div className="flex w-full flex-col bg-[#030303]">
+    <div className="flex w-full flex-col bg-void">
       {/* Immersive Responsive Hero Section */}
-      <section className="relative min-h-[100dvh] lg:h-[100dvh] w-full bg-[#030303] text-white overflow-hidden pb-10 lg:pb-0">
+      <section className="relative min-h-[100dvh] lg:h-[100dvh] w-full bg-void text-white overflow-hidden pb-10 lg:pb-0">
         
         {/* UNIFIED HARDWARE-ACCELERATED BACKGROUND ENGINE */}
-        <div ref={backgroundEngineRef} className="absolute inset-0 w-full h-full bg-[#030303] z-0 overflow-hidden pointer-events-none select-none">
+        <div ref={backgroundEngineRef} className="absolute inset-0 w-full h-full bg-void z-0 overflow-hidden pointer-events-none select-none">
           {/* Clean Modern Solid Dark Canvas */}
-          <div className="absolute inset-0 bg-[#030303] opacity-100 z-[1] transition-colors duration-700" />
+          <div className="absolute inset-0 bg-void opacity-100 z-[1] transition-colors duration-700" />
 
           {/* Dual-Video Hardware-Accelerated Crossfade Engine (Max 2 simultaneous players to satisfy low-resource devices and browser limits) */}
           {initialDelayOver && [previousVideoTheme, currentVideoTheme].map((tName) => {
@@ -508,9 +508,9 @@ export function Home() {
 
 
           {/* Unified Vignettes overlays to ensure readability responsive */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#030303]/85 via-[#030303]/20 to-transparent md:block hidden z-20 pointer-events-none" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#030303]/60 via-transparent to-[#030303]/20 md:block hidden z-20 pointer-events-none" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#030303]/85 via-transparent to-[#030303]/35 md:hidden block z-20 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-r from-void/85 via-void/20 to-transparent md:block hidden z-20 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-void/60 via-transparent to-void/20 md:block hidden z-20 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-void/85 via-transparent to-void/35 md:hidden block z-20 pointer-events-none" />
         </div>
 
         {/* DESKTOP/WIDE LANDSCAPE IMMERSIVE LAYOUT */}
@@ -592,14 +592,14 @@ export function Home() {
         </div>
 
         {/* Gradiente na parede de baixo do vídeo para continuidade fluida das seções */}
-        <div className="absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-[#080814] via-[#080814]/60 to-transparent z-30 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-deep via-deep/60 to-transparent z-30 pointer-events-none" />
 
       </section>
 
       {/* Featured Musics section */}
       {featuredTracks.length > 0 && (
         <section id="musicas" className="relative order-2 scroll-mt-20 py-20">
-          <div className="absolute inset-0 bg-[#080814]" />
+          <div className="absolute inset-0 bg-deep" />
           <div className="relative z-10">
             <FeaturedSlider tracks={featuredTracks} />
           </div>
@@ -612,7 +612,7 @@ export function Home() {
       </div>
 
       {/* Three portal paths section */}
-      <section className="relative order-1 overflow-hidden border-b border-white/[0.06] bg-[#030307] py-24 sm:py-32 lg:py-40">
+      <section className="relative order-1 overflow-hidden border-b border-white/[0.06] bg-void py-24 sm:py-32 lg:py-40">
         <div className="pointer-events-none absolute inset-0 opacity-30" style={{ background: 'radial-gradient(circle at 50% 100%, var(--glow-blue), transparent 38%)' }} />
         <div className="relative z-10 mx-auto w-full max-w-6xl px-6 md:px-12 xl:px-16">
           <motion.div
@@ -648,7 +648,7 @@ export function Home() {
                       to={portal.path}
                       className="group flex min-w-0 flex-col items-center text-center"
                     >
-                      <span className="relative flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-[#030307]/90 text-text-mid backdrop-blur-sm transition-all duration-500 group-hover:border-primary/60 group-hover:bg-primary/[0.08] group-hover:text-primary group-hover:shadow-[0_0_22px_var(--glow-purple)] sm:h-20 sm:w-20 sm:shadow-[0_0_28px_var(--glow-purple)]">
+                      <span className="relative flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-void/90 text-text-mid backdrop-blur-sm transition-all duration-500 group-hover:border-primary/60 group-hover:bg-primary/[0.08] group-hover:text-primary group-hover:shadow-[0_0_22px_var(--glow-purple)] sm:h-20 sm:w-20 sm:shadow-[0_0_28px_var(--glow-purple)]">
                         <Icon className="h-5 w-5 stroke-[1.2] sm:h-7 sm:w-7" aria-hidden="true" />
                       </span>
                       <span className="mt-4 font-mono text-[8px] uppercase tracking-[0.16em] text-text-low transition-colors duration-300 group-hover:text-primary sm:mt-7 sm:text-[10px] sm:tracking-[0.35em]">

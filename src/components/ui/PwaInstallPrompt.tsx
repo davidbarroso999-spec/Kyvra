@@ -92,7 +92,7 @@ export function PwaInstallPrompt() {
           className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[10005] w-[92%] max-w-sm"
         >
           {/* Glass background */}
-          <div className="absolute inset-0 bg-[#080814]/90 backdrop-blur-2xl rounded-2xl border border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.6)] overflow-hidden">
+          <div className="absolute inset-0 bg-deep/90 backdrop-blur-2xl rounded-2xl border border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.6)] overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-60" />
             <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-50" />
           </div>

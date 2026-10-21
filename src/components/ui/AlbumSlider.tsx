@@ -91,7 +91,7 @@ export function AlbumSlider({ albums }: AlbumSliderProps) {
             >
               {/* capa — aspecto 1:1 */}
               <div
-                className="relative overflow-hidden transition-all duration-300 group-hover:shadow-[0_0_20px_rgba(167,139,250,0.15)]"
+                className="relative overflow-hidden transition-all duration-300 group-hover:shadow-[0_0_20px_var(--glow-purple)]"
                 style={{ borderRadius: 'var(--radius-md)', aspectRatio: '1 / 1' }}
               >
                 <img

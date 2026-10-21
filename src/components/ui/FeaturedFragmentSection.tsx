@@ -65,7 +65,7 @@ export function FeaturedFragmentSection({ className }: FeaturedFragmentSectionPr
         <div className="max-w-5xl mx-auto">
           <div
             className="rounded-2xl p-8 lg:p-12"
-            style={{ background: 'var(--surface)', border: '1px solid rgba(167,139,250,0.15)' }}
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
           >
             <div className="animate-pulse space-y-4">
               <div className="h-4 bg-white/10 rounded w-1/4" />
@@ -116,9 +116,9 @@ export function FeaturedFragmentSection({ className }: FeaturedFragmentSectionPr
           className="relative rounded-2xl overflow-hidden transition-all duration-500"
           style={{
             background: 'var(--surface)',
-            border: isHovered ? '1.5px solid #a78bfa' : '1px solid rgba(167,139,250,0.15)',
+            border: isHovered ? '1.5px solid var(--primary)' : '1px solid var(--border)',
             boxShadow: isHovered
-              ? '0 0 60px rgba(167,139,250,0.25), inset 0 1px 0 rgba(255,255,255,0.08)'
+              ? '0 0 60px var(--glow-purple), inset 0 1px 0 rgba(255,255,255,0.08)'
               : 'inset 0 1px 0 rgba(255,255,255,0.04)',
           }}
         >
@@ -169,8 +169,8 @@ export function FeaturedFragmentSection({ className }: FeaturedFragmentSectionPr
                 <div
                   className="rounded-xl p-4 mb-8"
                   style={{
-                    background: 'rgba(167,139,250,0.08)',
-                    border: '1px solid rgba(167,139,250,0.2)',
+                    background: 'var(--overlay)',
+                    border: '1px solid var(--border)',
                   }}
                 >
                   <p className="font-sc text-[9px] tracking-[0.2em] text-primary uppercase mb-2">
@@ -208,11 +208,11 @@ export function FeaturedFragmentSection({ className }: FeaturedFragmentSectionPr
                   whileTap={{ scale: 0.95 }}
                   className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300"
                   style={{
-                    background: '#a78bfa',
-                    color: '#050508',
+                    background: 'var(--primary)',
+                    color: 'var(--void)',
                     boxShadow: isHovered
-                      ? '0 0 30px rgba(167,139,250,0.6)'
-                      : '0 0 20px rgba(167,139,250,0.3)',
+                      ? '0 0 30px var(--glow-purple)'
+                      : '0 0 20px var(--glow-purple)',
                   }}
                 >
                   <Play size={20} fill="currentColor" />
