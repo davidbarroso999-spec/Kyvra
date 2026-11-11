@@ -32,8 +32,11 @@ export function useScrollProgress(containerRef: React.RefObject<HTMLElement | nu
     let rafId: number;
     let lastTime = performance.now();
     
-    // Taxa máxima de progresso por segundo (1 / 6.9 = ~0.1449) garante 6.9s no scroll completo
-    const MAX_SPEED = 1 / 6.9; 
+    // Taxa máxima de progresso por segundo. O valor anterior (1 / 6.9 = ~0.145/s)
+    // fazia a sequência ficar para trás em qualquer scroll acima de ~370px/s: a
+    // página chegava ao fim com os frames parados na metade e só completava
+    // segundos depois. 1 / 0.9 ainda suaviza o scrub, mas converge em menos de 1s.
+    const MAX_SPEED = 1 / 0.9; 
     const LERP_SPEED = 5.5; // Fator de suavização independente de framerate
 
     const loop = (time: number) => {
